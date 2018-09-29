@@ -1,0 +1,15 @@
+language: node
+cache:
+  yarn: true
+script:
+- yarn install
+- yarn test
+- yarn run build
+deploy:
+  provider: npm
+  email: frontend@mycoachsport.com
+  api_key:
+    secure: c67nvJFJQ1LJQRKDJA9jEKle9UXGKKsCBzL3jPH5bGvEmOvOGzCzZHIuU8eB+vCFmy+RCKvaEDFa2h8nStpZTu+Gon+Ih/Mite+p+Ar0tOzKApBym0SAdX+ZjALVnqB3BGr+k26vscfY+kTwapwNbhOSye2Kwz6s1y61kRQIO3IQQ3FZzTlO/Vjw3EwlevEsO7Co3Lf8NGuPu6Q9Olv1bUtskN6/LcOL4Wl7mY4RHxxa3Ig5JMFcZS72p3BrCvH5Z9+/UwT1Ysj2zAOx/8ib/6EgV5KULBYqLlp2/1qnhcWPVx9Eo2PijRqVnIxAhOIGQUlPhGfMBjrgLUmvzX2S4I83+NN5wVmdXjxymDwYfrXBqmPitETfw2QKrJnFJurdw/Q/6z3jh/5orTkyWWXPpKuvyTTDpNUXChS6t6XEEOWH3qDLcVXmB8buch9Z+M/vd7giogLzOeHR0uOQCKjDfN5hE9c9TtBb4J2r0O662FAxdChUe+ZmCMAg0FKcf57LIpZm5Nnts1rPgUCCYlDTiU4bdJnBWHQ5hOP+d4RewwkCh9HXTCnZpoE/qV+pboeCTWLFWW9gyWBDcJK57GC+QGrHIUBpsu18PgmOxuSCOzEL73jK/ZMk+9aeGDJZew/uusrhhaL1GKwgN2ZgReuWijd09radSHCgtsjA99ORWUc=
+  on:
+    tags: true
+    repo: GlobalSport/state-decorator

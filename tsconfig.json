@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "noErrorTruncation": true,
+    "module": "es6",
+    "target": "esnext",
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "strictNullChecks": false,
+    "moduleResolution": "node",
+    "noImplicitAny": false,
+    "sourceMap": true,
+    "outDir": "dist/",
+    "jsx": "react",
+    "strict": true,
+    "noUnusedLocals": true,
+    "noImplicitReturns": true,
+    "noImplicitThis": true,
+    "lib": ["es2017", "dom"]
+  },
+  "exclude": ["node_modules", "dist", "tests"]
+}

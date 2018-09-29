@@ -1,0 +1,95 @@
+{
+  "name": "state-decorator",
+  "version": "0.6.2",
+  "description": "React state management component",
+  "main": "dist/StateDecorator.js",
+  "types": "dist/StateDecorator.d.ts",
+  "repository": "git@github.com:GlobalSport/state-decorator.git",
+  "author": "Damien Garbarino <d.garbarino@mycoachsport.com>",
+  "license": "MIT",
+  "scripts": {
+    "precommit": "lint-staged",
+    "test": "jest tests",
+    "bump-version": "yarn run test && yarn run build && bump --prompt --commit --tag --push",
+    "build": "rimraf ./dist && cross-env NODE_ENV=production tsc --declaration",
+    "tslint": "tslint -p ./tsconfig.json --fix"
+  },
+  "dependencies": {
+    "react": "^16.4.0",
+    "react-dom": "^16.4.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.0.0",
+    "@babel/preset-env": "^7.0.0",
+    "@types/jest": "^23.3.2",
+    "@types/react": "^16.4.14",
+    "babel-core": "^7.0.0-0",
+    "babel-jest": "^23.0.1",
+    "cross-env": "^5.2.0",
+    "enzyme": "^3.6.0",
+    "enzyme-adapter-react-16": "^1.5.0",
+    "husky": "^1.0.0-rc.15",
+    "jest": "^23.6.0",
+    "lint-staged": "^7.3.0",
+    "prettier": "^1.14.3",
+    "ts-jest": "^23.0.1",
+    "tslint": "^5.11.0",
+    "tslint-config-airbnb": "^5.11.0",
+    "tslint-config-prettier": "^1.15.0",
+    "typescript": "^3.0.3",
+    "version-bump-prompt": "^4.1.0"
+  },
+  "peerDependencies": {
+    "react": "^16.0.0",
+    "react-dom": "^16.0.0"
+  },
+  "jest": {
+    "globals": {
+      "ts-jest": {
+        "tsConfig": "tsconfig.test.json"
+      }
+    },
+    "collectCoverage": false,
+    "coverageDirectory": "tests/reports",
+    "coveragePathIgnorePatterns": [
+      "/node_modules/",
+      "/tests/",
+      "/jest",
+      "/.history/"
+    ],
+    "moduleFileExtensions": [
+      "js",
+      "jsx",
+      "ts",
+      "tsx"
+    ],
+    "setupFiles": [
+      "<rootDir>/jest/shims.js"
+    ],
+    "setupTestFrameworkScriptFile": "<rootDir>/jest/setup.js",
+    "testPathIgnorePatterns": [
+      "/__snapshots__/",
+      "/.history/",
+      "/node_modules/",
+      "/jest/"
+    ],
+    "testRegex": "/tests/.*/*.test.(j|t)sx?$",
+    "transform": {
+      "\\.js$": "babel-jest",
+      ".(ts|tsx)": "ts-jest"
+    }
+  },
+  "lint-staged": {
+    "src/*.{ts,tsx}": [
+      "tslint -p ./tsconfig.json -e 'tests/**' -e 'dist/**'",
+      "prettier --write",
+      "git add"
+    ]
+  },
+  "keywords": [
+    "state",
+    "typescript",
+    "react",
+    "javascript"
+  ]
+}

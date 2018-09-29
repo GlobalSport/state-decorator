@@ -1,0 +1,5 @@
+node_modules
+.history
+jest
+tests
+tsconfig.test.json

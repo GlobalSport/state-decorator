@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "noErrorTruncation": true,
+    "module": "es6",
+    "target": "es5",
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "strictNullChecks": false,
+    "moduleResolution": "node",
+    "noImplicitAny": false,
+    "sourceMap": true,
+    "outDir": "ts-build/",
+    "jsx": "react",
+    "strict": true,
+    "lib": ["es2017", "dom"]
+  },
+  "exclude": ["node_modules", "dist", "tests"]
+}
