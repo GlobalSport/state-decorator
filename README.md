@@ -16,7 +16,7 @@ The simpler example: the state is a literal value and two synchronous actions to
 
 ```typescript
 import React from 'react';
-import StateDecorator, { StateDecoratorActions } from 'react-state-decorator';
+import StateDecorator, { StateDecoratorActions } from 'state-decorator';
 
 // The state, here a simple number
 type State = number;
@@ -262,7 +262,7 @@ Synchronous and asynchronous actions can be chained.
 
 ```typescript
 import React from 'react';
-import StateDecorator, { StateDecoratorActions } from 'react-state-decorator';
+import StateDecorator, { StateDecoratorActions } from 'state-decorator';
 
 interface Item {
   id?: string;
@@ -456,7 +456,7 @@ The [React 16 context API](https://reactjs.org/docs/context.html) can be used to
 
 ```typescript
 import React from 'react';
-import StateDecorator, { StateDecoratorActions } from 'react-state-decorator';
+import StateDecorator, { StateDecoratorActions } from 'state-decorator';
 
 export type State = {
   color: string;
@@ -610,7 +610,7 @@ Synchronous actions, complex state with normalized storage of todo list.
 
 ```typescript
 import React from 'react';
-import StateDecorator, { StateDecoratorActions } from 'react-state-decorator';
+import StateDecorator, { StateDecoratorActions } from 'state-decorator';
 import produce from 'immer';
 
 enum Filter {
@@ -829,7 +829,7 @@ Show various ways of handling conflicting actions, ie. asynchronous actions trig
 
 ```typescript
 import React from 'react';
-import StateDecorator, { StateDecoratorActions } from 'react-state-decorator';
+import StateDecorator, { StateDecoratorActions } from 'state-decorator';
 
 export type State = {
   counter: number;
