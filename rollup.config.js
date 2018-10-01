@@ -10,6 +10,7 @@ export default {
       format: 'cjs',
       file: 'dist/index.js',
       sourcemap: true,
+      exports: 'named',
     },
     {
       format: 'es',
