@@ -132,7 +132,7 @@ describe('StateDecorator', () => {
   it('handles complex service', (done) => {
     const actions = {
       get: {
-        promise: () => Promise.resolve('coucou'),
+        promise: () => Promise.resolve('text'),
         reducer: (oldState, data, args) => {
           expect(args[0]).toEqual('arg');
           return data;
@@ -146,7 +146,7 @@ describe('StateDecorator', () => {
       expect(actions.post).toBeInstanceOf(Function);
 
       actions.get('arg').then((data) => {
-        expect(data).toEqual('coucou');
+        expect(data).toEqual('text');
         done();
       });
     });
@@ -162,7 +162,7 @@ describe('StateDecorator', () => {
   it('calls correctly reducer', (done) => {
     const actions = {
       get: {
-        promise: () => Promise.resolve('coucou'),
+        promise: () => Promise.resolve('text'),
         reducer: (oldState, data, args, props) => props.id,
       },
     };
@@ -193,7 +193,7 @@ describe('StateDecorator', () => {
   it('ignore correctly change when reducer returns null', (done) => {
     const actions = {
       get: {
-        promise: () => Promise.resolve('coucou'),
+        promise: () => Promise.resolve('text'),
         reducer: () => null,
       },
     };
@@ -223,7 +223,7 @@ describe('StateDecorator', () => {
 
     const actions: StateDecoratorActions<any, any> = {
       get: {
-        promise: () => Promise.resolve('coucou'),
+        promise: () => Promise.resolve('text'),
         successMessage: 'success',
         onDone: () => {
           expect(notifySuccess).toHaveBeenCalled();
@@ -251,7 +251,7 @@ describe('StateDecorator', () => {
 
     const actions: StateDecoratorActions<any, any> = {
       get: {
-        promise: (param) => new Promise((_, reject) => setTimeout(reject, 100, 'coucou')),
+        promise: (param) => new Promise((_, reject) => setTimeout(reject, 100, 'text')),
         errorMessage: 'error message',
         rejectPromiseOnError: true,
       },
@@ -279,7 +279,7 @@ describe('StateDecorator', () => {
 
     const actions: StateDecoratorActions<any, any> = {
       get: {
-        promise: (param) => new Promise((_, reject) => setTimeout(reject, 100, 'coucou')),
+        promise: (param) => new Promise((_, reject) => setTimeout(reject, 100, 'text')),
         getErrorMessage: jest.fn((error, args, props) => 'error message ' + props.id),
         rejectPromiseOnError: true,
       },
@@ -310,7 +310,7 @@ describe('StateDecorator', () => {
 
     const actions: StateDecoratorActions<any, any> = {
       get: {
-        promise: (param) => new Promise((resolve) => setTimeout(resolve, 100, 'coucou')),
+        promise: (param) => new Promise((resolve) => setTimeout(resolve, 100, 'text')),
         getSuccessMessage: jest.fn((result, args, props) => 'success message ' + props.id),
       },
     };
@@ -338,7 +338,7 @@ describe('StateDecorator', () => {
   it('renders default state and all steps correctly', (done) => {
     const actions = {
       get: {
-        promise: () => new Promise((resolve) => setTimeout(resolve, 100, 'coucou')),
+        promise: () => new Promise((resolve) => setTimeout(resolve, 100, 'text')),
         reducer: (old, data) => data,
       },
     };
@@ -356,14 +356,14 @@ describe('StateDecorator', () => {
     let loadingSet = false;
 
     const renderFunction = jestFail(done, (state, actions, loading) => {
-      expect(state === 'initial' || state === 'coucou').toBeTruthy();
+      expect(state === 'initial' || state === 'text').toBeTruthy();
 
       if (loading) {
         loadingSet = true;
       }
 
       if (loadingSet && !loading) {
-        expect(state === 'coucou').toBeTruthy();
+        expect(state === 'text').toBeTruthy();
         done();
       }
 
@@ -377,7 +377,7 @@ describe('StateDecorator', () => {
       get: {
         promise: () => new Promise((_, reject) => setTimeout(reject, 100, 'theError')),
         errorReducer: (s, error, args, props) => ({ ...s, error, id: props.id }),
-        reducer: (s) => ({ ...s, res: 'coucou' }),
+        reducer: (s) => ({ ...s, res: 'text' }),
       },
     };
 
@@ -465,10 +465,10 @@ describe('StateDecorator', () => {
   it('call onDone correctly', (done) => {
     const actions = {
       get: {
-        promise: (param) => Promise.resolve('coucou'),
+        promise: (param) => Promise.resolve('text'),
         reducer: () => 'reducer',
         onDone: jestFail(done, (newData, result, args, props) => {
-          expect(result).toEqual('coucou');
+          expect(result).toEqual('text');
           expect(newData).toEqual('reducer');
           expect(args[0]).toEqual('param');
           expect(props.id).toEqual('10');
@@ -498,7 +498,7 @@ describe('StateDecorator', () => {
     it('call optimisticReducer & reducer correctly', (done) => {
       const actions: StateDecoratorActions<string, { get: (p: string) => Promise<string> }> = {
         get: {
-          promise: (param) => new Promise((resolve) => setTimeout(resolve, 100, 'coucou')),
+          promise: (param) => new Promise((resolve) => setTimeout(resolve, 100, 'text')),
           reducer: (_, result) => result,
           optimisticReducer: jestFail(done, (state, args, props) => {
             expect(state).toEqual(undefined);
@@ -526,7 +526,7 @@ describe('StateDecorator', () => {
           expect(state).toEqual('tempData');
         }
         if (loadingMap.get === false) {
-          expect(state).toEqual('coucou');
+          expect(state).toEqual('text');
           done();
         }
         return <div />;
@@ -640,7 +640,7 @@ describe('StateDecorator', () => {
 
         otherAction: (s) => ({
           ...s,
-          str2: 'coucou',
+          str2: 'text',
         }),
       };
 
@@ -665,7 +665,7 @@ describe('StateDecorator', () => {
         }
         if (loadingMap.asynch === false) {
           expect(state.str).toEqual('init');
-          expect(state.str2).toEqual('coucou');
+          expect(state.str2).toEqual('text');
           done();
         }
         return <div />;
@@ -729,9 +729,9 @@ describe('StateDecorator', () => {
 
       const onMount = (actions: Actions) => {
         actions.asynch1();
-        actions.otherAction('coucou');
+        actions.otherAction('text');
         actions.asynch2();
-        actions.otherAction('coucou2');
+        actions.otherAction('text2');
         actions.endAsynch2().then(() => {
           actions.endAsynch1();
         });
@@ -758,14 +758,14 @@ describe('StateDecorator', () => {
         if (loadingMap.asynch1 === true && loadingMap.asynch2 === false) {
           expect(state.str).toEqual('opti');
           expect(state.str2).toEqual('init');
-          expect(state.str3).toEqual('coucou2');
+          expect(state.str3).toEqual('text2');
           done();
         }
 
         if (loadingMap.asynch1 === false && loadingMap.asynch2 === false) {
           expect(state.str).toEqual('init');
           expect(state.str2).toEqual('init');
-          expect(state.str3).toEqual('coucou2');
+          expect(state.str3).toEqual('text2');
           done();
         }
 
@@ -830,9 +830,9 @@ describe('StateDecorator', () => {
 
       const onMount = (actions: Actions) => {
         actions.asynch1();
-        actions.otherAction('coucou');
+        actions.otherAction('text');
         actions.asynch2();
-        actions.otherAction('coucou2');
+        actions.otherAction('text2');
         actions.endAsynch1().then(() => {
           actions.endAsynch2();
         });
@@ -858,12 +858,12 @@ describe('StateDecorator', () => {
         if (loadingMap.asynch1 === false && loadingMap.asynch2 === true) {
           expect(state.str).toEqual('init');
           expect(state.str2).toEqual('opti');
-          expect(state.str3).toEqual('coucou2');
+          expect(state.str3).toEqual('text2');
         }
         if (loadingMap.asynch2 === false && loadingMap.asynch2 === false) {
           expect(state.str).toEqual('init');
           expect(state.str2).toEqual('init');
-          expect(state.str3).toEqual('coucou2');
+          expect(state.str3).toEqual('text2');
           done();
         }
 
@@ -927,9 +927,9 @@ describe('StateDecorator', () => {
 
       const onMount = (actions: Actions) => {
         actions.asynch1();
-        actions.otherAction('coucou');
+        actions.otherAction('text');
         actions.asynch2();
-        actions.otherAction('coucou2');
+        actions.otherAction('text2');
         actions.endAsynch2().then(() => {
           actions.endAsynch1();
         });
@@ -955,12 +955,12 @@ describe('StateDecorator', () => {
         if (loadingMap.asynch1 === true && loadingMap.asynch2 === false) {
           expect(state.str).toEqual('init');
           expect(state.str2).toEqual('opti');
-          expect(state.str3).toEqual('coucou2');
+          expect(state.str3).toEqual('text2');
         }
         if (loadingMap.asynch2 === false && loadingMap.asynch2 === false) {
           expect(state.str).toEqual('init');
           expect(state.str2).toEqual('opti');
-          expect(state.str3).toEqual('coucou2');
+          expect(state.str3).toEqual('text2');
           done();
         }
 
@@ -1165,7 +1165,7 @@ describe('StateDecorator', () => {
           expect(actions.asyncAction).toBeDefined();
           expect(actions.syncAction).toBeDefined();
           actions.syncAction();
-          return Promise.resolve('coucou');
+          return Promise.resolve('text');
         }),
         successMessage: 'success',
         onDone: () => {
@@ -1194,6 +1194,49 @@ describe('StateDecorator', () => {
     };
 
     const wrapper = shallow(<StateDecorator {...props}>{() => <div />}</StateDecorator>);
+  });
+
+  it('calls optimistic reducer before promise (ease chaining use case)', (done) => {
+    type State = {
+      toSetBefore: boolean;
+      result: any;
+    };
+
+    const initialState: State = {
+      toSetBefore: false,
+      result: undefined,
+    };
+
+    type Actions = {
+      get: () => Promise<any>;
+    };
+
+    const actions: StateDecoratorActions<State, Actions> = {
+      get: {
+        promise: jestFail(done, (state) => {
+          expect(state.toSetBefore).toBeTruthy();
+          return Promise.resolve('result');
+        }),
+        optimisticReducer: (s) => ({ ...s, toSetBefore: true }),
+      },
+    };
+
+    const onMount = (actions) => {
+      actions
+        .get()
+        .then((result) => {
+          expect(result).toEqual('result');
+        })
+        .then(done);
+    };
+
+    const props = {
+      actions,
+      onMount,
+      initialState,
+    };
+
+    shallow(<StateDecorator {...props}>{() => <div />}</StateDecorator>);
   });
 });
 

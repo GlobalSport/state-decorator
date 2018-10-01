@@ -582,7 +582,36 @@ export default class StateDecorator<S, A extends DecoratedActions> extends React
       return this.handleConflictingAction(name, conflictPolicy, args);
     }
 
-    const p = promise(...args, dataState, props, this.actions)
+    const loadingState: Partial<StateDecoratorState<S>> = {
+      loading: true,
+    };
+
+    const isSomeRequestLoadingBefore = this.isSomeRequestLoading();
+
+    this.loadingMap[name] = true;
+
+    if (optimisticReducer) {
+      const newDataState = optimisticReducer(dataState, args, props);
+      if (newDataState !== null) {
+        loadingState.data = newDataState;
+        this.dataState = newDataState;
+        this.optimisticActions[name] = true;
+        this.shouldRecordHistory = true;
+        this.pushActionToHistory(name, 'optimisticReducer', [cloneDeep(args), cloneDeep(props)], cloneDeep(dataState));
+
+        // During optimistic request, we do not want to see the loading state.
+        // However, the loading state is available in the loading map.
+        loadingState.loading = isSomeRequestLoadingBefore;
+
+        if (logEnabled) {
+          this.logStateChange(name, newDataState, args);
+        }
+      }
+    }
+
+    this.setState(loadingState);
+
+    const p = promise(...args, this.dataState, props, this.actions)
       .then((result) => {
         // Need to get the data here because when chaining action the above variable is NOT up to date.
         const dataState = this.dataState;
@@ -604,7 +633,7 @@ export default class StateDecorator<S, A extends DecoratedActions> extends React
 
             this.logStateChange(name, newState.data, args);
           }
-        } else if (logEnabled) {
+        } else if (!optimisticReducer && logEnabled) {
           console.group(`[StateDecorator] Action ${name}`);
           if (Object.keys(args).length > 0) {
             console.group('Arguments');
@@ -702,33 +731,7 @@ export default class StateDecorator<S, A extends DecoratedActions> extends React
         return result;
       });
 
-    // Asynchronous action was just trigerred, manage loading & optimistic state.
-    const loadingState: Partial<StateDecoratorState<S>> = {
-      loading: true,
-    };
-
     this.promises[name] = p;
-
-    const isSomeRequestLoadingBefore = this.isSomeRequestLoading();
-
-    this.loadingMap[name] = true;
-
-    if (optimisticReducer) {
-      const newDataState = optimisticReducer(dataState, args, props);
-      if (newDataState !== null) {
-        loadingState.data = newDataState;
-        this.dataState = newDataState;
-        this.optimisticActions[name] = true;
-        this.shouldRecordHistory = true;
-        this.pushActionToHistory(name, 'optimisticReducer', [cloneDeep(args), cloneDeep(props)], cloneDeep(dataState));
-
-        // During optimistic request, we do not want to see the loading state.
-        // However, the loading state is available in the loading map.
-        loadingState.loading = isSomeRequestLoadingBefore;
-      }
-    }
-
-    this.setState(loadingState);
 
     return p;
   };
