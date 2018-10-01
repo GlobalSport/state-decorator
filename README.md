@@ -1,3 +1,5 @@
+![travis static](https://travis-ci.com/GlobalSport/state-decorator.svg?branch=master)
+
 The StateDecorator is a React component that manages a local or global state.
 
 # Features
