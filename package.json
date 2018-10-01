@@ -10,7 +10,6 @@
   "author": "Damien Garbarino <d.garbarino@mycoachsport.com>",
   "license": "MIT",
   "scripts": {
-    "precommit": "lint-staged",
     "test": "jest tests",
     "bump-version": "yarn test && yarn clean && yarn build && bump --prompt --commit --tag --push",
     "clean": "rimraf ./dist",
@@ -102,5 +101,10 @@
     "typescript",
     "react",
     "javascript"
-  ]
+  ],
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
+  }
 }
