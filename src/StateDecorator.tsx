@@ -146,7 +146,7 @@ interface StateDecoratorProps<S, A extends DecoratedActions> {
    */
   props?: Props;
   /**
-   * Show logs in the console.
+   * Show logs in the console in development mode.
    */
   logEnabled?: boolean;
   /**
@@ -234,6 +234,12 @@ export default class StateDecorator<S, A extends DecoratedActions> extends React
   static defaultProps = {
     logEnabled: false,
   };
+
+  /**
+   * Handles asynchronous promise rejection error.
+   * @param error The promise error.
+   */
+  static onAsyncError(error: any) {}
 
   private mounted = undefined;
   private loadingMap: LoadingMap<A>;
@@ -452,7 +458,7 @@ export default class StateDecorator<S, A extends DecoratedActions> extends React
     const { data } = this.state;
     const { logEnabled } = this.props;
 
-    if (logEnabled) {
+    if (process.env.NODE_ENV === 'development' && logEnabled) {
       console.group(`[StateDecorator] Action ${name} ${failed ? 'FAILED' : ''}`);
       if (Object.keys(args).length > 0) {
         console.group('Arguments');
@@ -535,7 +541,7 @@ export default class StateDecorator<S, A extends DecoratedActions> extends React
       return Promise.resolve();
     }
 
-    if (logEnabled) {
+    if (process.env.NODE_ENV === 'development' && logEnabled) {
       console.group(`[StateDecorator] Action ${name}`);
       console.group('Arguments');
       Object.keys(args).forEach((prop) => console.log(prop, ':', args[prop]));
@@ -603,9 +609,7 @@ export default class StateDecorator<S, A extends DecoratedActions> extends React
         // However, the loading state is available in the loading map.
         loadingState.loading = isSomeRequestLoadingBefore;
 
-        if (logEnabled) {
-          this.logStateChange(name, newDataState, args);
-        }
+        this.logStateChange(name, newDataState, args);
       }
     }
 
@@ -633,7 +637,7 @@ export default class StateDecorator<S, A extends DecoratedActions> extends React
 
             this.logStateChange(name, newState.data, args);
           }
-        } else if (!optimisticReducer && logEnabled) {
+        } else if (process.env.NODE_ENV === 'development' && !optimisticReducer && logEnabled) {
           console.group(`[StateDecorator] Action ${name}`);
           if (Object.keys(args).length > 0) {
             console.group('Arguments');
@@ -716,9 +720,9 @@ export default class StateDecorator<S, A extends DecoratedActions> extends React
           }
         }
 
-        if (logEnabled) {
-          this.logStateChange(name, newState.data, args);
-        }
+        StateDecorator.onAsyncError(error);
+
+        this.logStateChange(name, newState.data, args);
 
         const result = !errorHandled || rejectPromiseOnError ? Promise.reject(error) : undefined;
 
