@@ -39,7 +39,7 @@ export const getInitialState = (): State => ({
 export default class ParallelActions extends React.PureComponent {
   static actions: StateDecoratorActions<State, Actions> = {
     onChange: {
-      promise: (id, value) => new Promise((res) => setTimeout(res, 2000, value)),
+      promise: (id, value) => new Promise((res) => setTimeout(res, 3000, value)),
       conflictPolicy: ConflictPolicy.PARALLEL,
       getPromiseId: (id) => id,
       reducer: (s, value, [id]) =>
@@ -52,15 +52,15 @@ export default class ParallelActions extends React.PureComponent {
   render() {
     return (
       <StateDecorator actions={ParallelActions.actions} initialState={getInitialState()}>
-        {({ items }, { onChange }, _, loadingMap) => (
+        {({ items }, { onChange }, loading, loadingMap, loadingParallel) => (
           <div style={{ border: '1px solid grey', marginBottom: 10 }}>
             <h2>Parallel actions</h2>
             <p>Actions are launched on blur, in parallel for 2s</p>
             {items.map((item) => {
-              const loading = loadingMap.onChange && loadingMap.onChange[item.id];
+              const loading = loadingParallel.onChange[item.id];
               return (
                 <div key={item.id}>
-                  {item.id}{' '}
+                  {item.id}
                   <input
                     onBlur={(e) => onChange(item.id, e.target.value)}
                     disabled={loading}

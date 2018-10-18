@@ -1192,13 +1192,15 @@ describe('StateDecorator', () => {
         } as State,
       };
 
-      const renderFunction = jestFail(done, (state: State, actions, loading, loadingMap) => {
+      const renderFunction = jestFail(done, (state: State, actions, loading, loadingMap, loadingParallelMap) => {
         if (state.count > 0 && state.count !== 5) {
-          if (!loadingMap.asynch['user1']) {
+          if (!loadingParallelMap.asynch['user1']) {
             expect(state.users['user1']).toEqual('value 1');
           }
         }
-
+        if (loadingMap.asyncAction) {
+          expect(Object.keys(loadingParallelMap.asyncAction).length).toBeGreaterThan(0);
+        }
         if (state.count === 5) {
           done();
         }

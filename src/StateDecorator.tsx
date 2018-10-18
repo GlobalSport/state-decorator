@@ -55,6 +55,8 @@ export type SynchAction<S> = (state: S, ...args: any[]) => S | null;
 type PromiseIdMap = { [promiseId: string]: boolean };
 
 type LoadingMap<A> = { [P in keyof A]: undefined | boolean | PromiseIdMap };
+type LoadingMapBool<A> = { [P in keyof A]: undefined | boolean };
+type LoadingMapParallel<A> = { [P in keyof A]: PromiseIdMap };
 
 type Props = any;
 
@@ -181,7 +183,8 @@ interface StateDecoratorProps<S, A extends DecoratedActions> {
     state: S,
     actions: A,
     loading: boolean,
-    loadingByAction: LoadingMap<A>
+    loadingByAction: LoadingMapBool<A>,
+    loadingParallelActions: LoadingMapParallel<A>
   ) => JSX.Element | JSX.Element[] | string;
 }
 
@@ -817,6 +820,46 @@ export default class StateDecorator<S, A extends DecoratedActions> extends React
     }
   }
 
+  private computeLoadingMap() {
+    return Object.keys(this.loadingMap).reduce(
+      (acc, name) => {
+        const v = this.props.actions[name];
+        let res: boolean | undefined = false;
+        if (isAsyncAction(v)) {
+          if (v.conflictPolicy === ConflictPolicy.PARALLEL) {
+            res = this.loadingMap[name] !== undefined && Object.keys(this.loadingMap[name]).length > 0;
+          } else {
+            res = this.loadingMap[name] as boolean;
+          }
+        } else {
+          res = this.loadingMap[name] as boolean;
+        }
+        acc[name] = res;
+        return acc;
+      },
+      {} as LoadingMapBool<A>
+    );
+  }
+
+  private computeParallelLoadingMap() {
+    return Object.keys(this.loadingMap).reduce(
+      (acc, name) => {
+        const v = this.props.actions[name];
+        if (isAsyncAction(v)) {
+          if (v.conflictPolicy === ConflictPolicy.PARALLEL) {
+            if (this.loadingMap[name] === undefined) {
+              acc[name] = {};
+            } else {
+              acc[name] = this.loadingMap[name] as PromiseIdMap;
+            }
+          }
+        }
+        return acc;
+      },
+      {} as LoadingMapParallel<A>
+    );
+  }
+
   /**
    * The decorated action, passed the children render function
    */
@@ -831,6 +874,6 @@ export default class StateDecorator<S, A extends DecoratedActions> extends React
     const { children } = this.props;
     const { loading } = this.state;
 
-    return children(this.dataState, this.actions, loading, { ...(this.loadingMap as any) });
+    return children(this.dataState, this.actions, loading, this.computeLoadingMap(), this.computeParallelLoadingMap());
   }
 }
