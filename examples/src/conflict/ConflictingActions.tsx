@@ -55,7 +55,7 @@ export default class ConflictApp extends React.Component {
   render() {
     return (
       <div>
-        {/* <ConflictingActionsContainer
+        <ConflictingActionsContainer
           title="Keep All"
           conflictPolicy={ConflictPolicy.KEEP_ALL}
           description="Chain all action calls"
@@ -74,7 +74,7 @@ export default class ConflictApp extends React.Component {
           title="Reject"
           conflictPolicy={ConflictPolicy.REJECT}
           description="Return a rejected promise on a conflicting action call."
-        /> */}
+        />
         <ParallelActions />
       </div>
     );
