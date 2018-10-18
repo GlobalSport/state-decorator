@@ -1,5 +1,6 @@
 import React from 'react';
 import StateDecorator, { StateDecoratorActions, ConflictPolicy } from '../../../src/StateDecorator';
+import ParallelActions from './ParallelActions';
 
 export type State = {
   counter: number;
@@ -74,6 +75,7 @@ export default class ConflictApp extends React.Component {
           conflictPolicy={ConflictPolicy.REJECT}
           description="Return a rejected promise on a conflicting action call."
         />
+        <ParallelActions />
       </div>
     );
   }

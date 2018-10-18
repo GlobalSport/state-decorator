@@ -1148,6 +1148,67 @@ describe('StateDecorator', () => {
 
       const wrapper = shallow(<StateDecorator {...props}>{renderFunction}</StateDecorator>);
     });
+
+    it('handles 3 calls to an asynchronous action (parallel)', (done) => {
+      type State = { users: { [k: string]: string }; count: number };
+      type Actions = {
+        asynch: (userId: string, value: string, timeout: number) => Promise<string>;
+      };
+
+      const actions: StateDecoratorActions<State, Actions> = {
+        asynch: {
+          promise: (userId, value, timeout) => new Promise((res) => setTimeout(res, timeout, value)),
+          reducer: (s, res, [userId, value]): State => ({
+            users: {
+              ...s.users,
+              [userId]: value,
+            },
+            count: s.count + 1,
+          }),
+          conflictPolicy: ConflictPolicy.PARALLEL,
+          getPromiseId: (userId) => userId,
+        },
+      };
+
+      const onMount = (actions: Actions) => {
+        Promise.all([
+          actions.asynch('user1', 'value 1', 100).catch((e) => done.fail(e)),
+          actions.asynch('user2', 'value 2', 300).catch((e) => done.fail(e)),
+          actions.asynch('user3', 'value 3', 200).catch((e) => done.fail(e)),
+        ]).then(() => {
+          setTimeout(() => {
+            actions.asynch('user4', 'value 4', 100).catch((e) => done.fail(e));
+            actions.asynch('user5', 'value 5', 300).catch((e) => done.fail(e));
+          }, 300);
+        });
+      };
+
+      const props = {
+        actions,
+        onMount,
+        initialState: {
+          users: {},
+          count: 0,
+        } as State,
+      };
+
+      const renderFunction = jestFail(done, (state: State, actions, loading, loadingMap) => {
+        console.log(state, loading, loadingMap);
+        if (state.count > 0 && state.count !== 5) {
+          if (!loadingMap.asynch['user1']) {
+            expect(state.users['user1']).toEqual('value 1');
+          }
+        }
+
+        if (state.count === 5) {
+          done();
+        }
+
+        return <div />;
+      });
+
+      const wrapper = shallow(<StateDecorator {...props}>{renderFunction}</StateDecorator>);
+    });
   });
 
   it('exposes the actions in the Asynch action', (done) => {

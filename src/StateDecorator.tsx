@@ -41,13 +41,20 @@ export enum ConflictPolicy {
    * Execute all calls one after another.
    */
   KEEP_ALL = 'keepAll',
+
+  /**
+   * Execute all calls one after another.
+   */
+  PARALLEL = 'parallel',
 }
 
 type PromiseFunc = (...args) => Promise<any | void>;
 
 export type SynchAction<S> = (state: S, ...args: any[]) => S | null;
 
-type LoadingMap<A> = { [P in keyof A]: boolean | undefined };
+type PromiseIdMap = { [promiseId: string]: boolean };
+
+type LoadingMap<A> = { [P in keyof A]: undefined | boolean | PromiseIdMap };
 
 type Props = any;
 
@@ -122,6 +129,12 @@ export interface AsynchAction<S> {
    * Policy to apply when a call to an asynchronous action is done but a previous call is still not resolved.
    */
   conflictPolicy?: ConflictPolicy;
+
+  /**
+   * Get an identifier for an action call. Used only when conflictPolicy is ConflictPolicy.PARALLEL.
+   * This information will be available in loadingMap. loadingMap[actionName] will be an array of promise identifiers.
+   */
+  getPromiseId?: (...args: any[]) => string;
 }
 
 export type StateDecoratorAction<S> = AsynchAction<S> | SynchAction<S>;
@@ -482,7 +495,20 @@ export default class StateDecorator<S, A extends DecoratedActions> extends React
     }
   };
 
-  private isSomeRequestLoading = () => Object.keys(this.loadingMap).some((name) => this.loadingMap[name]);
+  private isSomeRequestLoading = () =>
+    Object.keys(this.loadingMap).some((name) => {
+      const v = this.loadingMap[name];
+
+      if (v === undefined) {
+        return false;
+      }
+
+      if (typeof v === 'boolean') {
+        return v;
+      }
+
+      return Object.keys(v).length > 0;
+    });
 
   private handleConflictingAction(name: string, conflictPolicy: ConflictPolicy, args: any[]) {
     return new Promise((resolve, reject) => {
@@ -512,6 +538,9 @@ export default class StateDecorator<S, A extends DecoratedActions> extends React
           stack.push(futureAction);
           break;
         }
+        case ConflictPolicy.PARALLEL:
+          // no-op
+          break;
         default:
           // will trigger a compilation error if one of the enum values is not processed.
           const exhaustiveCheck: never = conflictPolicy;
@@ -565,6 +594,33 @@ export default class StateDecorator<S, A extends DecoratedActions> extends React
     }
   }
 
+  private markActionAsLoading(name: string, conflictPolicy: ConflictPolicy, promiseId: string) {
+    if (conflictPolicy === ConflictPolicy.PARALLEL) {
+      let v = this.loadingMap[name];
+      if (!v) {
+        v = { [promiseId]: true };
+      } else {
+        v[promiseId] = true;
+      }
+
+      this.loadingMap[name] = v;
+    } else {
+      this.loadingMap[name] = true;
+    }
+  }
+
+  private markActionAsLoaded = (name: string, conflictPolicy: ConflictPolicy, promiseId: string) => {
+    if (conflictPolicy === ConflictPolicy.PARALLEL) {
+      const v = this.loadingMap[name];
+      delete v[promiseId];
+      if (Object.keys(v).length === 0) {
+        this.loadingMap[name] = false;
+      }
+    } else {
+      this.loadingMap[name] = false;
+    }
+  };
+
   private getDecoratedAsynchAction = (
     name,
     {
@@ -579,22 +635,28 @@ export default class StateDecorator<S, A extends DecoratedActions> extends React
       getSuccessMessage,
       conflictPolicy = ConflictPolicy.KEEP_LAST,
       rejectPromiseOnError,
+      getPromiseId = () => {
+        throw new Error(
+          'If conflict policy is set to ConflictPolicy.PARALLEL, getPromiseId must be set and returns a string.'
+        );
+      },
     }: AsynchAction<S>
   ) => (...args) => {
     const dataState = this.dataState;
     const { logEnabled, notifySuccess, notifyError, props } = this.props;
-
-    if (this.loadingMap[name]) {
+    if (conflictPolicy !== ConflictPolicy.PARALLEL && this.loadingMap[name]) {
       return this.handleConflictingAction(name, conflictPolicy, args);
     }
 
-    const loadingState: Partial<StateDecoratorState<S>> = {
-      loading: true,
-    };
+    const loadingState: Partial<StateDecoratorState<S>> = {};
 
     const isSomeRequestLoadingBefore = this.isSomeRequestLoading();
 
-    this.loadingMap[name] = true;
+    const isParallelActions = conflictPolicy === ConflictPolicy.PARALLEL;
+
+    const promiseId = isParallelActions && getPromiseId(...args);
+
+    this.markActionAsLoading(name, conflictPolicy, promiseId);
 
     if (optimisticReducer) {
       const newDataState = optimisticReducer(dataState, args, props);
@@ -611,16 +673,23 @@ export default class StateDecorator<S, A extends DecoratedActions> extends React
 
         this.logStateChange(name, newDataState, args);
       }
+    } else {
+      loadingState.loading = true;
     }
 
     this.setState(loadingState);
+
+    if (conflictPolicy === ConflictPolicy.PARALLEL) {
+      this.forceUpdate();
+    }
 
     const p = promise(...args, this.dataState, props, this.actions)
       .then((result) => {
         // Need to get the data here because when chaining action the above variable is NOT up to date.
         const dataState = this.dataState;
 
-        this.loadingMap[name] = false;
+        const promiseId = isParallelActions && getPromiseId(...args);
+        this.markActionAsLoaded(name, conflictPolicy, promiseId);
 
         const newState: Partial<StateDecoratorState<S>> = {
           loading: this.isSomeRequestLoading(),
@@ -679,7 +748,9 @@ export default class StateDecorator<S, A extends DecoratedActions> extends React
       .catch((error) => {
         const dataState = this.dataState;
 
-        this.loadingMap[name] = false;
+        const promiseId = isParallelActions && getPromiseId(...args);
+        this.markActionAsLoaded(name, conflictPolicy, promiseId);
+
         const newState: Partial<StateDecoratorState<S>> = {
           data: dataState,
           loading: this.isSomeRequestLoading(),
