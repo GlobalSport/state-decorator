@@ -1193,7 +1193,6 @@ describe('StateDecorator', () => {
       };
 
       const renderFunction = jestFail(done, (state: State, actions, loading, loadingMap) => {
-        console.log(state, loading, loadingMap);
         if (state.count > 0 && state.count !== 5) {
           if (!loadingMap.asynch['user1']) {
             expect(state.users['user1']).toEqual('value 1');
