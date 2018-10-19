@@ -232,9 +232,7 @@ static actions: StateDecoratorActions<State, Actions> = {
 
 ### <a name="ConflictingActions"></a>Conflicting actions
 
-The StateDecorator is managing the asynchronous action calls one at a time **per name**, ie. you can execute two different actions let's say _action 1_ and _action 2_ in parallel but only one call to _action 1_ at a time.
-
-A promise can, of course, be a `Promise.all(tonsOfPromises)`, but a decorated action can be executed one call at a time
+The StateDecorator is managing the asynchronous action calls one at a time or in parallel
 
 In lots of situations, the UI is disabled using the _loading_ or _loadingMap_ parameters, but in other situation one may want to manage such use case (a search bar, autosave feature of an editor etc.).
 
@@ -250,6 +248,7 @@ It can takes the following values (use ConflictPolicy enum), choose the one the 
 - **ConflictPolicy.REJECT**: Conflicting action calls are unwanted, they will be rejected with an error.
 - **ConflictPolicy.KEEP_ALL**: All conflicting action calls will be chained and executed one after the other.
 - **ConflictPolicy.KEEP_LAST** (default): Only the more recent conflicting action call will be executed after the previously ongoing call is resolved.
+- **ConflictPolicy.PARALLEL**: Actions are executed in parallel. A _getPromiseId_ function must be provided to assign an identifier to each call. The _loadingParallelMap_ of the render prop function contains for each parallel action the promise identifiers that are ongoing.
 
 Run the "Conflicting actions" example to see for yourself.
 
@@ -603,6 +602,7 @@ Type:
 | getErrorMessage      | Error message provider function to pass to the **notifyError** function of the StateDecorator                                                                                                                                           |                                                                              |           |                          |
 | rejectPromiseOnError | When an errorReducer or an error message is provided the outer promise is marked as resolved to prevent error in console or other error management. Set this property to true to reject the promise and process it in a catch function. | boolean                                                                      |           | false                    |
 | conflictPolicy       | Policy to apply when a call to an asynchronous action is done but a previous call is still not resolved.                                                                                                                                | ConflictPolicy                                                               |           | ConflictPolicy.KEEP_LAST |
+| getPromiseId         | A function that returns the promise identifier from the arguments.                                                                                                                                                                      | (...args:any[]) => string                                                    |           |                          |
 
 # Examples
 
@@ -890,6 +890,88 @@ export default class ConflictApp extends React.Component {
         <ConflictingActionsContainer title="Ignore" conflictPolicy={ConflictPolicy.IGNORE} />
         <ConflictingActionsContainer title="Reject" conflictPolicy={ConflictPolicy.REJECT} />
       </div>
+    );
+  }
+}
+```
+
+## Parallel actions
+
+The _onChange_ action calls are executed in parallel. The map of ongoing action calls is available on _loadingParallelMap_.
+
+```typescript
+import React from 'react';
+import StateDecorator, { StateDecoratorActions, ConflictPolicy } from 'state-decorator';
+import produce from 'immer';
+
+type Item = {
+  id: string;
+  value: string;
+};
+
+export type State = {
+  items: Item[];
+};
+
+export type Actions = {
+  onChange: (id: string, value: string) => Promise<any>;
+};
+
+export const getInitialState = (): State => ({
+  items: [
+    {
+      id: 'user1',
+      value: '',
+    },
+    {
+      id: 'user2',
+      value: '',
+    },
+    {
+      id: 'user3',
+      value: '',
+    },
+    {
+      id: 'user4',
+      value: '',
+    },
+  ],
+});
+
+export default class ParallelActions extends React.PureComponent {
+  static actions: StateDecoratorActions<State, Actions> = {
+    onChange: {
+      promise: (id, value) => new Promise((res) => setTimeout(res, 3000, value)),
+      conflictPolicy: ConflictPolicy.PARALLEL,
+      getPromiseId: (id) => id,
+      reducer: (s, value, [id]) =>
+        produce(s, ({ items }) => {
+          items.find((i) => i.id === id).value = value;
+        }),
+    },
+  };
+
+  render() {
+    return (
+      <StateDecorator actions={ParallelActions.actions} initialState={getInitialState()}>
+        {({ items }, { onChange }, loading, loadingMap, loadingParallelMap) => (
+          <div style={{ border: '1px solid grey', marginBottom: 10 }}>
+            {items.map((item) => {
+              const isItemLoading = loadingParallelMap.onChange[item.id];
+              return (
+                <div key={item.id}>
+                  {item.id}
+                  <input
+                    onBlur={(e) => onChange(item.id, e.target.value)}
+                    disabled={isItemLoading}
+                    style={{ backgroundColor: isItemLoading ? 'grey' : null }}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </StateDecorator>
     );
   }
 }

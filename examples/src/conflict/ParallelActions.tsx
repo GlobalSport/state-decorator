@@ -52,19 +52,19 @@ export default class ParallelActions extends React.PureComponent {
   render() {
     return (
       <StateDecorator actions={ParallelActions.actions} initialState={getInitialState()}>
-        {({ items }, { onChange }, loading, loadingMap, loadingParallel) => (
+        {({ items }, { onChange }, loading, loadingMap, loadingParallelMap) => (
           <div style={{ border: '1px solid grey', marginBottom: 10 }}>
             <h2>Parallel actions</h2>
-            <p>Actions are launched on blur, in parallel for 2s</p>
+            <p>Actions are launched on blur, in parallel for 3s</p>
             {items.map((item) => {
-              const loading = loadingParallel.onChange[item.id];
+              const isItemLoading = loadingParallelMap.onChange[item.id];
               return (
                 <div key={item.id}>
                   {item.id}
                   <input
                     onBlur={(e) => onChange(item.id, e.target.value)}
-                    disabled={loading}
-                    style={{ backgroundColor: loading ? 'grey' : null }}
+                    disabled={isItemLoading}
+                    style={{ backgroundColor: isItemLoading ? 'grey' : null }}
                   />
                 </div>
               );
