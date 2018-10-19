@@ -265,6 +265,7 @@ export default class StateDecorator<S, A extends DecoratedActions> extends React
   private dataState: S = this.props.initialState === undefined ? undefined : this.props.initialState;
   private promises: { [name: string]: Promise<any> } = {};
   private conflictActions: ConflictActionsMap = {};
+  private hasParallelActions = false;
 
   /**
    * Adds an action to the action history (only when at least one optimistic action is ongoing).
@@ -379,15 +380,19 @@ export default class StateDecorator<S, A extends DecoratedActions> extends React
   }
 
   decorateActions = (actions: StateDecoratorActions<S, A>): A => {
-    this.loadingMap = Object.keys(actions)
-      .filter((k) => !(actions[k] instanceof Function))
-      .reduce(
-        (acc, key) => {
-          acc[key] = undefined;
-          return acc;
-        },
-        {} as LoadingMap<A>
-      );
+    const asynchActionNames = Object.keys(actions).filter((k) => isAsyncAction(actions[k]));
+
+    this.loadingMap = asynchActionNames.reduce(
+      (acc, name) => {
+        acc[name] = undefined;
+        return acc;
+      },
+      {} as LoadingMap<A>
+    );
+
+    this.hasParallelActions = asynchActionNames.some(
+      (name) => (actions[name] as AsynchAction<S>).conflictPolicy === ConflictPolicy.PARALLEL
+    );
 
     return Object.keys(actions)
       .map((name) => {
@@ -823,16 +828,17 @@ export default class StateDecorator<S, A extends DecoratedActions> extends React
   private computeLoadingMap() {
     return Object.keys(this.loadingMap).reduce(
       (acc, name) => {
-        const v = this.props.actions[name];
+        const rawAction = this.props.actions[name];
+        const v = this.loadingMap[name];
         let res: boolean | undefined = false;
-        if (isAsyncAction(v)) {
-          if (v.conflictPolicy === ConflictPolicy.PARALLEL) {
-            res = this.loadingMap[name] !== undefined && Object.keys(this.loadingMap[name]).length > 0;
+        if (isAsyncAction(rawAction)) {
+          if (rawAction.conflictPolicy === ConflictPolicy.PARALLEL) {
+            res = v !== undefined && Object.keys(v).length > 0;
           } else {
-            res = this.loadingMap[name] as boolean;
+            res = v as boolean;
           }
         } else {
-          res = this.loadingMap[name] as boolean;
+          res = v as boolean;
         }
         acc[name] = res;
         return acc;
@@ -842,11 +848,14 @@ export default class StateDecorator<S, A extends DecoratedActions> extends React
   }
 
   private computeParallelLoadingMap() {
+    if (!this.hasParallelActions) {
+      return {} as LoadingMapParallel<A>;
+    }
     return Object.keys(this.loadingMap).reduce(
       (acc, name) => {
-        const v = this.props.actions[name];
-        if (isAsyncAction(v)) {
-          if (v.conflictPolicy === ConflictPolicy.PARALLEL) {
+        const rawAction = this.props.actions[name];
+        if (isAsyncAction(rawAction)) {
+          if (rawAction.conflictPolicy === ConflictPolicy.PARALLEL) {
             if (this.loadingMap[name] === undefined) {
               acc[name] = {};
             } else {
