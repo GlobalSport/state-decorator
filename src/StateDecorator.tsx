@@ -137,6 +137,25 @@ export interface AsynchAction<S> {
    * This information will be available in loadingMap. loadingMap[actionName] will be an array of promise identifiers.
    */
   getPromiseId?: (...args: any[]) => string;
+
+  /**
+   * Number of retries in case of error (failed to fetch).
+   * Do not use this if you are creating objects...
+   * Default value is 0 (no retry).
+   */
+  retryCount?: number;
+
+  /**
+   * Seed of delay between each retry in milliseconds.
+   * The applied delay is retryDelaySeed * retry count.
+   * Default value is 1000 (1 second).
+   */
+  retryDelaySeed?: number;
+
+  /**
+   * Function to test if the error will trigger an action retry or will fail directly.
+   */
+  isTriggerRetryError?: (e: Error) => boolean;
 }
 
 export type StateDecoratorAction<S> = AsynchAction<S> | SynchAction<S>;
@@ -152,30 +171,37 @@ interface StateDecoratorProps<S, A extends DecoratedActions> {
    * The action definitions.
    */
   actions: StateDecoratorActions<S, A>;
+
   /**
    * The initial state. Ie before any reducer is called.
    */
   initialState?: S;
+
   /**
    * Optional properties to pass to actions.
    */
   props?: Props;
+
   /**
    * Show logs in the console in development mode.
    */
   logEnabled?: boolean;
+
   /**
    * The callback function called if an asynchronous function succeeded and a success messsage is defined.
    */
   notifySuccess?: (message: string) => void;
+
   /**
    * The callback function called if an asynchronous function fails and an error messsage is defined.
    */
   notifyError?: (message: string) => void;
+
   /**
    * Function to call when the StateDecorator is mounted. Usually used to call an initial action.
    */
   onMount?: (actions: A, props: Props) => void;
+
   /**
    * Child function,
    */
@@ -219,6 +245,38 @@ interface ConflictActionsMap {
 
 const IS_JEST_ENV = typeof process !== 'undefined' && process && !(process as any).browser;
 
+export function retryDecorator(
+  promiseProvider: PromiseFunc,
+  maxCalls = 1,
+  delay = 1000,
+  isRetryError = StateDecorator.isTriggerRetryError
+) {
+  if (maxCalls === 1) {
+    return promiseProvider;
+  }
+  return (...args) => {
+    function call(callCount, resolve, reject) {
+      return promiseProvider(...args)
+        .then((res) => resolve(res))
+        .catch((e) => {
+          if (isRetryError(e)) {
+            if (callCount === maxCalls) {
+              reject(e);
+            } else {
+              setTimeout(call, delay * callCount, callCount + 1, resolve, reject);
+            }
+          } else {
+            reject(e);
+          }
+        });
+    }
+
+    return new Promise((resolve, reject) => {
+      call(1, resolve, reject);
+    });
+  };
+}
+
 /**
  * Type guard function to test if an action is a asynchronous action.
  */
@@ -256,6 +314,15 @@ export default class StateDecorator<S, A extends DecoratedActions> extends React
    * @param error The promise error.
    */
   static onAsyncError(error: any) {}
+
+  /**
+   * Tests if the error will trigger a retry of the action or will fail directly.
+   * Default implementation is returning true for TypeError instances only.
+   * @param error an error
+   */
+  static isTriggerRetryError(error: Error) {
+    return error instanceof TypeError;
+  }
 
   private mounted = undefined;
   private loadingMap: LoadingMap<A>;
@@ -648,6 +715,9 @@ export default class StateDecorator<S, A extends DecoratedActions> extends React
           'If conflict policy is set to ConflictPolicy.PARALLEL, getPromiseId must be set and returns a string.'
         );
       },
+      retryCount,
+      retryDelaySeed,
+      isTriggerRetryError,
     }: AsynchAction<S>
   ) => (...args) => {
     const dataState = this.dataState;
@@ -691,7 +761,12 @@ export default class StateDecorator<S, A extends DecoratedActions> extends React
       this.forceUpdate();
     }
 
-    const p = promise(...args, this.dataState, props, this.actions)
+    const p = retryDecorator(promise, 1 + retryCount, retryDelaySeed, isTriggerRetryError)(
+      ...args,
+      this.dataState,
+      props,
+      this.actions
+    )
       .then((result) => {
         // Need to get the data here because when chaining action the above variable is NOT up to date.
         const dataState = this.dataState;
