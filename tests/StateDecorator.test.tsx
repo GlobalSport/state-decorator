@@ -5,6 +5,7 @@ import StateDecorator, {
   isSyncAction,
   StateDecoratorActions,
   ConflictPolicy,
+  retryDecorator,
 } from '../src/StateDecorator';
 
 // Jest is not handling properly the failure in asynchronous functions
@@ -280,7 +281,7 @@ describe('StateDecorator', () => {
     const actions: StateDecoratorActions<any, any> = {
       get: {
         promise: (param) => new Promise((_, reject) => setTimeout(reject, 100, 'text')),
-        getErrorMessage: jest.fn((error, args, props) => 'error message ' + props.id),
+        getErrorMessage: jest.fn((error, args, props) => `error message ${props.id}`),
         rejectPromiseOnError: true,
       },
     };
@@ -311,7 +312,7 @@ describe('StateDecorator', () => {
     const actions: StateDecoratorActions<any, any> = {
       get: {
         promise: (param) => new Promise((resolve) => setTimeout(resolve, 100, 'text')),
-        getSuccessMessage: jest.fn((result, args, props) => 'success message ' + props.id),
+        getSuccessMessage: jest.fn((result, args, props) => `success message ${props.id}`),
       },
     };
 
@@ -1326,5 +1327,99 @@ describe('Type guards', () => {
   it('test synchronous actions correctly', () => {
     expect(isSyncAction(actions.syncAction)).toBeTruthy();
     expect(isAsyncAction(actions.syncAction)).toBeFalsy();
+  });
+});
+
+describe('retryDecorator', () => {
+  it('3 retries, immediate success', () => {
+    const arg1 = 'arg1';
+    const arg2 = 'arg2';
+
+    const f = (arg1, arg2) => {
+      expect(arg1).toBe(arg1);
+      expect(arg2).toBe(arg2);
+      return Promise.resolve('OK');
+    };
+
+    return retryDecorator(f, 3)(arg1, arg2).then((res) => expect(res).toBe('OK'));
+  });
+
+  it('3 retries, 1 error, 1 success', () => {
+    const arg1 = 'arg1';
+    const arg2 = 'arg2';
+
+    let count = 1;
+    const f = (arg1, arg2) => {
+      expect(arg1).toBe(arg1);
+      expect(arg2).toBe(arg2);
+      if (count++ === 1) {
+        return Promise.reject(new TypeError());
+      }
+      return Promise.resolve('OK');
+    };
+
+    return retryDecorator(f, 3, 0)(arg1, arg2).then((res) => expect(res).toBe('OK'));
+  });
+
+  it('3 retries, 3 failures', (done) => {
+    const arg1 = 'arg1';
+    const arg2 = 'arg2';
+
+    const f = (arg1, arg2) => {
+      expect(arg1).toBe(arg1);
+      expect(arg2).toBe(arg2);
+      return Promise.reject(new TypeError());
+    };
+
+    return retryDecorator(f, 3, 0)(arg1, arg2)
+      .then(() => done.fail())
+      .catch((e) => {
+        expect(e).toBeInstanceOf(TypeError);
+        done();
+      });
+  });
+
+  it('3 retries, 1 different failure', (done) => {
+    const arg1 = 'arg1';
+    const arg2 = 'arg2';
+
+    const f = (arg1, arg2) => {
+      expect(arg1).toBe(arg1);
+      expect(arg2).toBe(arg2);
+      throw new Error();
+    };
+
+    return retryDecorator(f, 3)(arg1, arg2)
+      .then(() => done.fail())
+      .catch((e) => {
+        expect(e).not.toBeInstanceOf(TypeError);
+        done();
+      });
+  });
+
+  it('3 retries, 1 retry error', (done) => {
+    const arg1 = 'arg1';
+    const arg2 = 'arg2';
+
+    const isRetryError = (e: Error) => {
+      return e.message === 'OK';
+    };
+
+    let count = 1;
+    const f = (arg1, arg2) => {
+      expect(arg1).toBe(arg1);
+      expect(arg2).toBe(arg2);
+      if (count++ === 1) {
+        return Promise.reject(new Error('OK'));
+      }
+      return Promise.resolve('OK');
+    };
+
+    return retryDecorator(f, 3, 0, isRetryError)(arg1, arg2)
+      .then((res) => {
+        expect(res).toEqual('OK');
+        done();
+      })
+      .catch(done.fail);
   });
 });
