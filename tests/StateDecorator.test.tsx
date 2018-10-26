@@ -219,6 +219,125 @@ describe('StateDecorator', () => {
     const wrapper = shallow(<StateDecorator {...props}>{renderFunction}</StateDecorator>);
   });
 
+  it('calls correctly pre-reducer', (done) => {
+    type State = {
+      value: string;
+    };
+
+    type Actions = {
+      get: (arg1: string) => Promise<string>;
+    };
+
+    const initialState: State = {
+      value: null,
+    };
+
+    const actions: StateDecoratorActions<State, Actions> = {
+      get: {
+        promise: (arg1, s) => {
+          // preReducer is executed before the promise
+          expect(s.value).toEqual('pre');
+          return new Promise((res, rej) => setTimeout(res, 300));
+        },
+        preReducer: (s, args, props) => {
+          expect(args[0]).toEqual('arg1');
+          expect(props.id).toEqual('10');
+
+          return {
+            ...s,
+            value: 'pre',
+          };
+        },
+        reducer: (s, data, args, props) => ({ ...s, value: 'final' }),
+      },
+    };
+
+    const onMount = (actions) => {
+      actions.get('arg1');
+    };
+
+    const props = {
+      actions,
+      onMount,
+      initialState,
+      props: {
+        id: '10',
+      },
+    };
+
+    const renderFunction = jestFail(done, (state, actions, loading, loadingMap) => {
+      if (state.value === 'pre') {
+        expect(loading).toBeTruthy();
+        expect(loadingMap.get).toBeTruthy();
+      }
+      if (state.value === 'final') {
+        done();
+      }
+      return <div />;
+    });
+    const wrapper = shallow(<StateDecorator {...props}>{renderFunction}</StateDecorator>);
+  });
+
+  it('calls correctly pre-reducer with optimistic reducer', (done) => {
+    type State = {
+      value: string;
+    };
+
+    type Actions = {
+      get: (arg1: string) => Promise<string>;
+    };
+
+    const initialState: State = {
+      value: null,
+    };
+
+    const actions: StateDecoratorActions<State, Actions> = {
+      get: {
+        promise: (arg1, s) => {
+          // preReducer is executed before the promise
+          expect(s.value).toEqual('pre');
+          return new Promise((res, rej) => setTimeout(res, 300));
+        },
+        preReducer: (s, args, props) => {
+          expect(args[0]).toEqual('arg1');
+          expect(props.id).toEqual('10');
+
+          return {
+            ...s,
+            value: 'pre',
+          };
+        },
+        optimisticReducer: (s) => {
+          // preReducer is executed before the optimistic reducer
+          expect(s.value).toEqual('pre');
+          return s;
+        },
+        reducer: (s, data, args, props) => ({ ...s, value: 'final' }),
+      },
+    };
+
+    const onMount = (actions) => {
+      actions.get('arg1');
+    };
+
+    const props = {
+      actions,
+      onMount,
+      initialState,
+      props: {
+        id: '10',
+      },
+    };
+
+    const renderFunction = jestFail(done, (state) => {
+      if (state && state.value === 'final') {
+        done();
+      }
+      return <div />;
+    });
+    const wrapper = shallow(<StateDecorator {...props}>{renderFunction}</StateDecorator>);
+  });
+
   it('calls notify success function correctly', (done) => {
     const notifySuccess = jest.fn();
 

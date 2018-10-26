@@ -71,6 +71,7 @@ type SuccessMessageFunc = (result: any, args: any[], props: Props) => string;
 type PromiseDoneFunc<S> = (state: S, result: any, args: any[], props: Props) => void;
 
 type PromiseOptimisticReducer<S> = (state: S, args: any[], props: Props) => S | null;
+type PromisePreReducer<S> = (state: S, args: any[], props: Props) => S | null;
 
 export interface AsynchAction<S> {
   /**
@@ -120,6 +121,12 @@ export interface AsynchAction<S> {
    * @param args The argument during the call of the request function
    */
   onDone?: PromiseDoneFunc<S>;
+
+  /**
+   * Retrieve the state to set as current data before the promise is resolved.
+   * If the there's no reducer, this data will be used after the promise is done.
+   */
+  preReducer?: PromisePreReducer<S>;
 
   /**
    * Retrieve the state to set as current data before the promise is resolved.
@@ -542,12 +549,12 @@ export default class StateDecorator<S, A extends DecoratedActions> extends React
     return res;
   }
 
-  private logStateChange = (name: string, newState: S, args: any[], failed = false) => {
+  private logStateChange = (name: string, newState: S, args: any[], source: string, failed = false) => {
     const { data } = this.state;
     const { logEnabled } = this.props;
 
     if (process.env.NODE_ENV === 'development' && logEnabled) {
-      console.group(`[StateDecorator] Action ${name} ${failed ? 'FAILED' : ''}`);
+      console.group(`[StateDecorator] Action ${name} ${source || ''} ${failed ? 'FAILED' : ''}`);
       if (Object.keys(args).length > 0) {
         console.group('Arguments');
         Object.keys(args).forEach((prop) => console.log(prop, ':', args[prop]));
@@ -634,7 +641,7 @@ export default class StateDecorator<S, A extends DecoratedActions> extends React
     if (newDataState !== null) {
       this.pushActionToHistory(name, null, [...args, props]);
 
-      this.logStateChange(name, newDataState, args);
+      this.logStateChange(name, newDataState, args, 'synch reducer');
 
       this.dataState = newDataState;
       this.setState({
@@ -703,6 +710,7 @@ export default class StateDecorator<S, A extends DecoratedActions> extends React
       reducer,
       errorReducer,
       onDone,
+      preReducer,
       optimisticReducer,
       successMessage,
       errorMessage,
@@ -721,7 +729,9 @@ export default class StateDecorator<S, A extends DecoratedActions> extends React
     }: AsynchAction<S>
   ) => (...args) => {
     const dataState = this.dataState;
+
     const { logEnabled, notifySuccess, notifyError, props } = this.props;
+
     if (conflictPolicy !== ConflictPolicy.PARALLEL && this.loadingMap[name]) {
       return this.handleConflictingAction(name, conflictPolicy, args);
     }
@@ -736,8 +746,17 @@ export default class StateDecorator<S, A extends DecoratedActions> extends React
 
     this.markActionAsLoading(name, conflictPolicy, promiseId);
 
+    if (preReducer) {
+      const newDataState = preReducer(dataState, args, props);
+      if (newDataState !== null) {
+        loadingState.data = newDataState;
+        this.dataState = newDataState;
+        this.logStateChange(name, newDataState, args, 'pre reducer');
+      }
+    }
+
     if (optimisticReducer) {
-      const newDataState = optimisticReducer(dataState, args, props);
+      const newDataState = optimisticReducer(loadingState.data || dataState, args, props);
       if (newDataState !== null) {
         loadingState.data = newDataState;
         this.dataState = newDataState;
@@ -749,7 +768,7 @@ export default class StateDecorator<S, A extends DecoratedActions> extends React
         // However, the loading state is available in the loading map.
         loadingState.loading = isSomeRequestLoadingBefore;
 
-        this.logStateChange(name, newDataState, args);
+        this.logStateChange(name, newDataState, args, 'optimistic reducer');
       }
     } else {
       loadingState.loading = true;
@@ -787,7 +806,7 @@ export default class StateDecorator<S, A extends DecoratedActions> extends React
             newState.data = newDataState;
             this.dataState = newState.data;
 
-            this.logStateChange(name, newState.data, args);
+            this.logStateChange(name, newState.data, args, 'reducer');
           }
         } else if (process.env.NODE_ENV === 'development' && !optimisticReducer && logEnabled) {
           console.group(`[StateDecorator] Action ${name}`);
@@ -876,7 +895,7 @@ export default class StateDecorator<S, A extends DecoratedActions> extends React
 
         StateDecorator.onAsyncError(error);
 
-        this.logStateChange(name, newState.data, args);
+        this.logStateChange(name, newState.data, args, 'error reducer', true);
 
         const result = !errorHandled || rejectPromiseOnError ? Promise.reject(error) : undefined;
 
