@@ -173,7 +173,7 @@ export type StateDecoratorAction<S> = AsynchAction<S> | SynchAction<S>;
  */
 export type StateDecoratorActions<S, A extends DecoratedActions> = { [P in keyof A]: StateDecoratorAction<S> };
 
-interface StateDecoratorProps<S, A extends DecoratedActions> {
+export interface StateDecoratorProps<S, A extends DecoratedActions> {
   /**
    * The action definitions.
    */
@@ -195,6 +195,22 @@ interface StateDecoratorProps<S, A extends DecoratedActions> {
   logEnabled?: boolean;
 
   /**
+   * Get a list of values that will be use as reference values.
+   * If they are different (shallow compare), onPropsChangeReducer then onPropsChange will be called.
+   */
+  getPropsRefValues?: (props: any) => unknown[];
+
+  /**
+   * Triggered when values of reference from props have changed. Allow to update state after a prop change.
+   */
+  onPropsChangeReducer?: (s: S, newProps: any) => S;
+
+  /**
+   * Triggered when values of reference from props have changed. Allow to call actions after a prop change.
+   */
+  onPropsChange?: (s: S, newProps: any, actions: A) => void;
+
+  /**
    * The callback function called if an asynchronous function succeeded and a success messsage is defined.
    */
   notifySuccess?: (message: string) => void;
@@ -212,7 +228,7 @@ interface StateDecoratorProps<S, A extends DecoratedActions> {
   /**
    * Child function,
    */
-  children: (
+  children?: (
     state: S,
     actions: A,
     loading: boolean,
@@ -221,9 +237,10 @@ interface StateDecoratorProps<S, A extends DecoratedActions> {
   ) => JSX.Element | JSX.Element[] | string;
 }
 
-interface StateDecoratorState<S> {
+interface StateDecoratorState<S, A> {
   data?: S;
   loading?: boolean;
+  actions?: A;
 }
 
 interface ActionHistory<S> {
@@ -310,7 +327,7 @@ export function isSyncAction<S>(action: StateDecoratorAction<S>): action is Sync
  */
 export default class StateDecorator<S, A extends DecoratedActions> extends React.PureComponent<
   StateDecoratorProps<S, A>,
-  StateDecoratorState<S>
+  StateDecoratorState<S, A>
 > {
   static defaultProps = {
     logEnabled: false,
@@ -441,8 +458,51 @@ export default class StateDecorator<S, A extends DecoratedActions> extends React
     this.mounted = true;
   }
 
-  componentDidUpdate(nextProps) {
-    if (nextProps.actions !== this.props.actions) {
+  static getDerivedStateFromProps(nextProps, prevState) {
+    let newState = null;
+    if (nextProps.getPropsRefValues && nextProps.props) {
+      const { data, refValues } = prevState;
+
+      const values = nextProps.getPropsRefValues(nextProps.props);
+      let propsChanged = false;
+
+      // test null cases + different lengths
+      if ((!refValues && values) || (!values && refValues) || values.length !== refValues.length) {
+        propsChanged = true;
+      }
+
+      // test values
+      if (!propsChanged) {
+        propsChanged = refValues.some((v, i) => v !== values[i]);
+      }
+
+      let newData = null;
+      if (propsChanged) {
+        newData = nextProps.onPropsChangeReducer ? nextProps.onPropsChangeReducer(data, nextProps.props) : null;
+
+        if (newData !== null) {
+          newState = {
+            refValues: values,
+            data: newData,
+          };
+        } else {
+          newState = {
+            refValues: values,
+          };
+        }
+
+        if (nextProps.onPropsChange) {
+          setTimeout(() => {
+            nextProps.onPropsChange(newData || data, nextProps.props, prevState.actions);
+          });
+        }
+      }
+    }
+    return newState;
+  }
+
+  componentDidUpdate(prevProps) {
+    if (prevProps.actions !== this.props.actions) {
       throw new Error(
         'StateDecorator: actions have changed. This is not managed, please make sure to not change the service definition'
       );
@@ -736,7 +796,7 @@ export default class StateDecorator<S, A extends DecoratedActions> extends React
       return this.handleConflictingAction(name, conflictPolicy, args);
     }
 
-    const loadingState: Partial<StateDecoratorState<S>> = {};
+    const loadingState: Partial<StateDecoratorState<S, A>> = {};
 
     const isSomeRequestLoadingBefore = this.isSomeRequestLoading();
 
@@ -780,7 +840,7 @@ export default class StateDecorator<S, A extends DecoratedActions> extends React
       this.forceUpdate();
     }
 
-    const p = retryDecorator(promise, 1 + retryCount, retryDelaySeed, isTriggerRetryError)(
+    const p = retryDecorator(promise, retryCount ? 1 + retryCount : 1, retryDelaySeed, isTriggerRetryError)(
       ...args,
       this.dataState,
       props,
@@ -793,7 +853,7 @@ export default class StateDecorator<S, A extends DecoratedActions> extends React
         const promiseId = isParallelActions && getPromiseId(...args);
         this.markActionAsLoaded(name, conflictPolicy, promiseId);
 
-        const newState: Partial<StateDecoratorState<S>> = {
+        const newState: Partial<StateDecoratorState<S, A>> = {
           loading: this.isSomeRequestLoading(),
         };
 
@@ -853,7 +913,7 @@ export default class StateDecorator<S, A extends DecoratedActions> extends React
         const promiseId = isParallelActions && getPromiseId(...args);
         this.markActionAsLoaded(name, conflictPolicy, promiseId);
 
-        const newState: Partial<StateDecoratorState<S>> = {
+        const newState: Partial<StateDecoratorState<S, A>> = {
           data: dataState,
           loading: this.isSomeRequestLoading(),
         };
@@ -971,12 +1031,21 @@ export default class StateDecorator<S, A extends DecoratedActions> extends React
   state = {
     data: this.props.initialState === undefined ? undefined : this.props.initialState,
     loading: false,
+    refValues: this.props.getPropsRefValues && this.props.props && this.props.getPropsRefValues(this.props.props),
+    actions: this.actions,
   };
 
   render() {
     const { children } = this.props;
-    const { loading } = this.state;
+    const { loading, data } = this.state;
 
-    return children(this.dataState, this.actions, loading, this.computeLoadingMap(), this.computeParallelLoadingMap());
+    // getDerivedStateFromProps
+    if (data !== this.dataState) {
+      this.dataState = data;
+    }
+
+    return children
+      ? children(this.dataState, this.actions, loading, this.computeLoadingMap(), this.computeParallelLoadingMap())
+      : '';
   }
 }
