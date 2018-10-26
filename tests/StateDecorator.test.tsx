@@ -655,7 +655,7 @@ describe('StateDecorator', () => {
       const wrapper = shallow(<StateDecorator {...props}>{renderFunction}</StateDecorator>);
     });
 
-    it('reset data if optimisticReducer is called and the request fails with no reducer', (done) => {
+    it.only('reset data if optimisticReducer is called and the request fails with no reducer', (done) => {
       const actions = {
         get: {
           promise: (param) => new Promise((_, reject) => setTimeout(reject, 100, 'error')),

@@ -975,8 +975,7 @@ export default class StateDecorator<S, A extends DecoratedActions> extends React
 
   render() {
     const { children } = this.props;
-
-    const loading = this.isSomeRequestLoading();
+    const { loading } = this.state;
 
     return children(this.dataState, this.actions, loading, this.computeLoadingMap(), this.computeParallelLoadingMap());
   }
