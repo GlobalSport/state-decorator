@@ -44,5 +44,5 @@
     "webpack": "4.17.1",
     "webpack-cli": "^2.0.9",
     "webpack-node-externals": "^1.6.0"
-  },
+  }
 }

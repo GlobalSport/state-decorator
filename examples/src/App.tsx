@@ -3,6 +3,7 @@ import TodoContainer from './todo/Todos';
 import ConflictingActionsApp from './conflict/ConflictingActions';
 import CounterContainer from './counter/Counter';
 import Retry from './retry/Retry';
+import PropsChangeApp from './propsChange/PropsChange';
 
 export default class App extends React.Component {
   render() {
@@ -22,6 +23,9 @@ export default class App extends React.Component {
         </section>
         <section>
           <Retry />
+        </section>
+        <section>
+          <PropsChangeApp />
         </section>
       </div>
     );
