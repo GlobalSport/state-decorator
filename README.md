@@ -211,9 +211,9 @@ If the action fails, the action can be retried a specified amount of times.
 
 The following properties of an asynchronous action are used:
 
-- retryCount: Number of retries in case of "retry error".
-- retryDelaySeed: Seed of delay between each retry in milliseconds. The applied delay is retryDelaySeed \* retry count. Default is 1000ms.
-- isTriggerRetryError: A function that returns if the passed error will trigger a retry or if the action fails directly. Default function is returning _true_ for _TypeError_ instances.
+- **retryCount**: Number of retries in case of "retry error".
+- **retryDelaySeed**: Seed of delay between each retry in milliseconds. The applied delay is retryDelaySeed \* retry count. Default is 1000ms.
+- **isTriggerRetryError**: A function that returns if the passed error will trigger a retry or if the action fails directly. Default function is returning _true_ for _TypeError_ instances.
 
 ### Optimistic action
 
@@ -339,9 +339,9 @@ Sometimes the state is built from one of several _prop_. If these props change t
 
 3 props of the StateDecorator are used for this.
 
-- getPropsRefValues: a function that computes from the props the reference values that will be used to detect a prop change. For example: `(p) => [p.item.id];`
-- onPropsChangeReducer: a reducer function to update the state from new props. For example: `(state, props) => ({...state, item: {...p.item})`
-- onPropsChange: a callback to trigger an action. For example: `(state, props, actions) => actions.loadData(props.id)`. The reducer of the _loadData_ action will then update the state.
+- **getPropsRefValues**: a function that computes from the props the reference values that will be used to detect a prop change. For example: `(p) => [p.item.id];`
+- **onPropsChangeReducer**: a reducer function to update the state from new props. For example: `(state, props) => ({...state, item: {...props.item})`
+- **onPropsChange**: a callback to trigger an action. For example: `(state, props, actions) => actions.loadData(props.id)`. The reducer of the _loadData_ action will then update the state.
 
 # Debug actions
 
