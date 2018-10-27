@@ -177,6 +177,7 @@ There are two properties:
   - undefined: the action was not called
   - true: the action is ongoing
   - false: the action has finished (successfully or not)
+- **loadingParallelMap**: a map action name => list of promise identifiers. Used only of parallel actions, see [Conflicting actions](#ConflictingActions) section.
 
 ### Success / error notification
 
@@ -203,6 +204,16 @@ static actions: StateDecoratorActions<State, Actions> = {
 ```
 
 **Note:** If an error message or an error reducer is defined, the error will be trapped to prevent other error management (console traces...). If, for any reason, you need to have the promise to be rejected, set **rejectPromiseOnError** to _true_.
+
+### Retry
+
+If the action fails, the action can be retried a specified amount of times.
+
+The following properties of an asynchronous action are used:
+
+- retryCount: Number of retries in case of "retry error".
+- retryDelaySeed: Seed of delay between each retry in milliseconds. The applied delay is retryDelaySeed \* retry count. Default is 1000ms.
+- isTriggerRetryError: A function that returns if the passed error will trigger a retry or if the action fails directly. Default function is returning _true_ for _TypeError_ instances.
 
 ### Optimistic action
 
@@ -250,9 +261,11 @@ It can takes the following values (use ConflictPolicy enum), choose the one the 
 - **ConflictPolicy.REJECT**: Conflicting action calls are unwanted, they will be rejected with an error.
 - **ConflictPolicy.KEEP_ALL**: All conflicting action calls will be chained and executed one after the other.
 - **ConflictPolicy.KEEP_LAST** (default): Only the more recent conflicting action call will be executed after the previously ongoing call is resolved.
-- **ConflictPolicy.PARALLEL**: Actions are executed in parallel. A _getPromiseId_ function must be provided to assign an identifier to each call. The _loadingParallelMap_ of the render prop function contains for each parallel action the promise identifiers that are ongoing.
+- **ConflictPolicy.PARALLEL**: Actions are executed in parallel.
+  - A _getPromiseId_ function must be provided to assign an identifier to each call from call arguments.
+  - The _loadingParallelMap_ of the render prop function contains for each parallel action the promise identifiers that are ongoing.
 
-Run the "Conflicting actions" example to see for yourself.
+Run the "Conflicting actions" example.
 
 _Note_: In conjunction to this parameter, you can use [lodash debounce](https://lodash.com/docs/4.17.10#debounce) to call actions every _n_ ms at most
 
@@ -317,6 +330,18 @@ export default class ChainContainer extends React.PureComponent<{}> {
   }
 }
 ```
+
+# Update the state after a prop change
+
+The _props_ property of the StateDecorator is passed to nearly all action callbacks. It's usually used to pass some context data.
+
+Sometimes the state is built from one of several _prop_. If these props change the state must be recomputed.
+
+3 props of the StateDecorator are used for this.
+
+- getPropsRefValues: a function that computes from the props the reference values that will be used to detect a prop change. For example: `(p) => [p.item.id];`
+- onPropsChangeReducer: a reducer function to update the state from new props. For example: `(state, props) => ({...state, item: {...p.item})`
+- onPropsChange: a callback to trigger an action. For example: `(state, props, actions) => actions.loadData(props.id)`. The reducer of the _loadData_ action will then update the state.
 
 # Debug actions
 
