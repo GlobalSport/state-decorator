@@ -198,7 +198,7 @@ export interface StateDecoratorProps<S, A extends DecoratedActions> {
    * Get a list of values that will be use as reference values.
    * If they are different (shallow compare), onPropsChangeReducer then onPropsChange will be called.
    */
-  getPropsRefValues?: (props: any) => unknown[];
+  getPropsRefValues?: (props: any) => any[];
 
   /**
    * Triggered when values of reference from props have changed. Allow to update state after a prop change.

@@ -203,7 +203,7 @@ static actions: StateDecoratorActions<State, Actions> = {
 };
 ```
 
-**Note:** If an error message or an error reducer is defined, the error will be trapped to prevent other error management (console traces...). If, for any reason, you need to have the promise to be rejected, set **rejectPromiseOnError** to _true_.
+**Note:** If an error message or an error reducer is defined, the error will be trapped to prevent other error management (console traces...). If, for any reason, you need to have the promise to be rejected, set _rejectPromiseOnError_ to _true_.
 
 ### Retry
 
@@ -214,6 +214,8 @@ The following properties of an asynchronous action are used:
 - **retryCount**: Number of retries in case of "retry error".
 - **retryDelaySeed**: Seed of delay between each retry in milliseconds. The applied delay is retryDelaySeed \* retry count. Default is 1000ms.
 - **isTriggerRetryError**: A function that returns if the passed error will trigger a retry or if the action fails directly. Default function is returning _true_ for _TypeError_ instances.
+
+Note: _StateDecorator.isTriggerRetryError_ static function can be overridden to determine which error will trigger a retry globally.
 
 ### Optimistic action
 
