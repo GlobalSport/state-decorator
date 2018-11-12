@@ -9,8 +9,8 @@
  */
 
 import React from 'react';
-import isEqual from 'lodash/isEqual';
-import cloneDeep from 'lodash/cloneDeep';
+import isEqual from 'fast-deep-equal';
+import cloneDeep from 'fast-clone';
 
 // https://github.com/Microsoft/TypeScript/issues/15300
 export interface DecoratedActions {
