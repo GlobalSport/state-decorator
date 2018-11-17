@@ -339,8 +339,18 @@ export default class StateDecorator<S, A extends DecoratedActions> extends React
    */
   static onAsyncError(error: any) {}
 
+  /**
+   * Clones an object. Used when managing optimistic reducer and conflicting actions.
+   * @param obj The object to clone.
+   */
   static clone(obj) {
-    return fastClone(obj);
+    try {
+      return fastClone(obj);
+    } catch (e) {
+      console.error(
+        'StateDecorator: Cannot clone object. Override StateDecorator.clone with another implementation like lodash/cloneDeep.'
+      );
+    }
   }
 
   /**

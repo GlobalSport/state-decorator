@@ -277,6 +277,7 @@ Synchronous and asynchronous actions can be chained.
 
 - Synchronous actions can be chained naturally (one action after the other) in the user code.
 - Asynchronous actions can internally call another action. The promise provider function has the decorated actions in parameter (see [API](#API)) so they can return a promise by calling another action.
+- To chain an asynchronous action to a synchronous action, create a new asynchronous action that will call the synchronous action and returns the asynchronous action.
 
 ```typescript
 import React from 'react';
@@ -337,7 +338,7 @@ export default class ChainContainer extends React.PureComponent<{}> {
 
 The _props_ property of the StateDecorator is passed to nearly all action callbacks. It's usually used to pass some context data.
 
-Sometimes the state is built from one of several _prop_. If these props change the state must be recomputed.
+Sometimes the state is built from one of several _props_. If one of these props change the state must be recomputed.
 
 3 props of the StateDecorator are used for this.
 
@@ -544,10 +545,18 @@ export default class ContextContainer extends React.Component {
 
 # Limitations
 
-- Only one asynchronous action can be triggered at a time. See [Conflicting actions](#ConflictingActions) section.
+- Due to bundle size constraints and used in specific use cases only, _fast-clone_ library is used to clone state / props / arguments in conflicting actions and optimistic reducer use cases. In some edge cases, _fast-clone_ will fail. In that case, use Lodash cloneDeep implementation:
+
+```typescript
+import cloneDeep from 'lodash.cloneDeep';
+import StateDecorator from 'state-decorator';
+
+StateDecorator.clone = cloneDeep;
+```
+
 - "Index signature is missing in type" or "'XxxXxx' does not satisfy the constraint 'DecoratedActions'" error during TS compilation:
   - https://github.com/Microsoft/TypeScript/issues/15300
-  - Solution: the **Actions** interface must either extends **DecoratedActions** interface or be a type.
+  - Solution: the **Actions** interface must either extends **DecoratedActions** interface or be a **type**.
 
 # StateDecorator & Redux comparison
 
