@@ -347,9 +347,13 @@ export default class StateDecorator<S, A extends DecoratedActions> extends React
     try {
       return fastClone(obj);
     } catch (e) {
-      console.error(
-        'StateDecorator: Cannot clone object. Override StateDecorator.clone with another implementation like lodash/cloneDeep.'
-      );
+      const msg =
+        'StateDecorator: Cannot clone object. Override StateDecorator.clone with another implementation like lodash/cloneDeep.';
+      if (process.env.NODE_ENV === 'development') {
+        console.error(msg);
+        console.error(e.toString());
+      }
+      throw new Error(msg);
     }
   }
 
