@@ -545,7 +545,7 @@ export default class ContextContainer extends React.Component {
 
 # Limitations
 
-- Due to bundle size constraints and used in specific use cases only, _fast-clone_ library is used to clone state / props / arguments in conflicting actions and optimistic reducer use cases. In some edge cases, _fast-clone_ will fail. In that case, use Lodash cloneDeep implementation:
+- Due to bundle size constraints and used in specific use cases only, _fast-clone_ library is used to clone state / props / arguments in conflicting actions and optimistic reducer use cases. In some edge cases (like clone moment objects), _fast-clone_ will fail. In that case, use Lodash cloneDeep implementation:
 
 ```typescript
 import cloneDeep from 'lodash.cloneDeep';
