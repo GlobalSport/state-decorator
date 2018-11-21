@@ -10,7 +10,7 @@
 
 import React from 'react';
 import isEqual from 'fast-deep-equal';
-import cloneDeep from 'fast-clone';
+import fastClone from 'fast-clone';
 
 // https://github.com/Microsoft/TypeScript/issues/15300
 export interface DecoratedActions {
@@ -340,6 +340,24 @@ export default class StateDecorator<S, A extends DecoratedActions> extends React
   static onAsyncError(error: any) {}
 
   /**
+   * Clones an object. Used when managing optimistic reducer and conflicting actions.
+   * @param obj The object to clone.
+   */
+  static clone(obj) {
+    try {
+      return fastClone(obj);
+    } catch (e) {
+      const msg =
+        'StateDecorator: Cannot clone object. Override StateDecorator.clone with another implementation like lodash/cloneDeep.';
+      if (process.env.NODE_ENV === 'development') {
+        console.error(msg);
+        console.error(e.toString());
+      }
+      throw new Error(msg);
+    }
+  }
+
+  /**
    * Tests if the error will trigger a retry of the action or will fail directly.
    * Default implementation is returning true for TypeError instances only.
    * @param error an error
@@ -657,7 +675,7 @@ export default class StateDecorator<S, A extends DecoratedActions> extends React
       const futureAction = {
         resolve,
         reject,
-        args: cloneDeep(args),
+        args: StateDecorator.clone(args),
         timestamp: Date.now(),
       };
 
@@ -822,7 +840,12 @@ export default class StateDecorator<S, A extends DecoratedActions> extends React
         this.dataState = newDataState;
         this.optimisticActions[name] = true;
         this.shouldRecordHistory = true;
-        this.pushActionToHistory(name, 'optimisticReducer', [cloneDeep(args), cloneDeep(props)], cloneDeep(dataState));
+        this.pushActionToHistory(
+          name,
+          'optimisticReducer',
+          [StateDecorator.clone(args), StateDecorator.clone(props)],
+          StateDecorator.clone(dataState)
+        );
 
         // During optimistic request, we do not want to see the loading state.
         // However, the loading state is available in the loading map.
