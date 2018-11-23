@@ -336,8 +336,9 @@ export default class StateDecorator<S, A extends DecoratedActions> extends React
   /**
    * Handles asynchronous promise rejection error.
    * @param error The promise error.
+   * @param isHandled Whether the error was handled with an error message or an error reducer.
    */
-  static onAsyncError(error: any) {}
+  static onAsyncError(error: any, isHandled: boolean) {}
 
   /**
    * Clones an object. Used when managing optimistic reducer and conflicting actions.
@@ -976,7 +977,7 @@ export default class StateDecorator<S, A extends DecoratedActions> extends React
           }
         }
 
-        StateDecorator.onAsyncError(error);
+        StateDecorator.onAsyncError(error, errorHandled);
 
         this.logStateChange(name, newState.data, args, 'error reducer', true);
 
