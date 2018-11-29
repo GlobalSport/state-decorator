@@ -342,9 +342,19 @@ Sometimes the state is built from one of several _props_. If one of these props 
 
 3 props of the StateDecorator are used for this.
 
-- **getPropsRefValues**: a function that computes from the props the reference values that will be used to detect a prop change. For example: `(p) => [p.item.id];`
-- **onPropsChangeReducer**: a reducer function to update the state from new props. For example: `(state, props) => ({...state, item: {...props.item})`
-- **onPropsChange**: a callback to trigger an action. For example: `(state, props, actions) => actions.loadData(props.id)`. The reducer of the _loadData_ action will then update the state.
+- **getPropsRefValues**: a function that computes from the props the reference values that will be used to detect a prop change. For example: `(p) => [p.item.id, p.otherProps];`
+- **onPropsChangeReducer**: a reducer function to update the state from new props. For example: `(state, newProps, updatedIndices) => ({...state, item: {...newProps.item})`
+- **onPropsChange**: a callback to trigger an action. The reducer of the _loadData_ action will then update the state.
+  For example:
+
+```
+(state, newProps, actions, updatedIndices) => {
+  // Result at index 1 of getPropsRefValues has changed.
+  if (updateIndices.includes(1)) {
+    actions.loadData(newProps.id)
+  }
+}
+```
 
 # Debug actions
 
@@ -616,9 +626,9 @@ _Actions_ is the generic actions class passed to the StateDecorator.
 | notifySuccess        | Callback function triggered when an asynchronous actions succeeds and an success message is provided.                                                       | (message: string) => void                                                                               |           |               |
 | onMount              | Function to invoke when the StateDecorator is mounted. Used to execute initial actions.                                                                     | (actions: DecoratedActions) => void                                                                     |           |               |
 | children             | The child of the StateDecorator is a function that renders a component tree.                                                                                | (state: State, actions: Actions, loading: boolean, loadingMap: {[name: string]:boolean}) => JSX.Element | true      |               |
-| getPropsRefValues    | Get a list of values that will be use as reference values. If they are different (shallow compare), onPropsChangeReducer then onPropsChange will be called. | (s: State, newProps: any) => State;                                                                     |           |               |
-| onPropsChangeReducer | Triggered when values of reference from props have changed. Allow to update state after a prop change.                                                      | (s: State, newProps: any) => State;                                                                     |           |               |  |
-| onPropsChange        | Triggered when values of reference from props have changed. Allow to call actions after a prop change.                                                      | (s: State, newProps: any, actions: Actions) => void;                                                    |           |               |  |
+| getPropsRefValues    | Get a list of values that will be use as reference values. If they are different (shallow compare), onPropsChangeReducer then onPropsChange will be called. | (props: any) => any[];                                                                                  |           |               |
+| onPropsChangeReducer | Triggered when values of reference from props have changed. Allow to update state after a prop change.                                                      | (s: State, newProps: any, updatedIndices: number[]) => State;                                           |           |               |  |
+| onPropsChange        | Triggered when values of reference from props have changed. Allow to call actions after a prop change.                                                      | (s: State, newProps: any, actions: Actions, updatedIndices: number[]) => void;                          |           |               |  |
 
 ### Synchronous action
 

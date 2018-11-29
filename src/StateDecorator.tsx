@@ -202,13 +202,14 @@ export interface StateDecoratorProps<S, A extends DecoratedActions> {
 
   /**
    * Triggered when values of reference from props have changed. Allow to update state after a prop change.
+   * <b>null</b> means no change.
    */
-  onPropsChangeReducer?: (s: S, newProps: any) => S;
+  onPropsChangeReducer?: (s: S, newProps: any, updatedIndices: number[]) => S;
 
   /**
    * Triggered when values of reference from props have changed. Allow to call actions after a prop change.
    */
-  onPropsChange?: (s: S, newProps: any, actions: A) => void;
+  onPropsChange?: (s: S, newProps: any, actions: A, updatedIndices: number[]) => void;
 
   /**
    * The callback function called if an asynchronous function succeeded and a success messsage is defined.
@@ -483,21 +484,34 @@ export default class StateDecorator<S, A extends DecoratedActions> extends React
       const { data, refValues } = prevState;
 
       const values = nextProps.getPropsRefValues(nextProps.props);
-      let propsChanged = false;
+      let changedIndices = null;
 
       // test null cases + different lengths
       if ((!refValues && values) || (!values && refValues) || values.length !== refValues.length) {
-        propsChanged = true;
+        // invalidate all, non-optimized case because values array must be stable.
+        changedIndices = Array.from(Array(values.length).keys());
       }
 
       // test values
-      if (!propsChanged) {
-        propsChanged = refValues.some((v, i) => v !== values[i]);
+      if (!changedIndices) {
+        changedIndices = refValues.reduce((acc, value, index) => {
+          let res = acc;
+          if (value !== values[index]) {
+            if (res === null) {
+              res = [index];
+            } else {
+              res.push(index);
+            }
+          }
+          return res;
+        }, null);
       }
 
       let newData = null;
-      if (propsChanged) {
-        newData = nextProps.onPropsChangeReducer ? nextProps.onPropsChangeReducer(data, nextProps.props) : null;
+      if (changedIndices) {
+        newData = nextProps.onPropsChangeReducer
+          ? nextProps.onPropsChangeReducer(data, nextProps.props, changedIndices)
+          : null;
 
         if (newData !== null) {
           newState = {
@@ -512,7 +526,7 @@ export default class StateDecorator<S, A extends DecoratedActions> extends React
 
         if (nextProps.onPropsChange) {
           setTimeout(() => {
-            nextProps.onPropsChange(newData || data, nextProps.props, prevState.actions);
+            nextProps.onPropsChange(newData || data, nextProps.props, prevState.actions, changedIndices);
           });
         }
       }

@@ -1572,17 +1572,22 @@ describe('StateDecorator', () => {
       const props: StateDecoratorProps<State, Actions> = {
         actions,
         initialState,
-        getPropsRefValues: (p) => [p && p.item.id],
-        onPropsChange: jest.fn((s, p, a) => {
+        getPropsRefValues: (p) => [p && p.item.id, p && p.item2.id],
+        onPropsChange: jest.fn((s, p, a, indices) => {
           expect(s.item.id).toEqual('id2');
           expect(p.item.id).toEqual('id2');
           expect(a.get).toBeInstanceOf(Function);
+          expect(indices).toEqual([0]);
           a.action2();
           done();
         }),
         onPropsChangeReducer: jest.fn((s, p) => ({ ...s, item: p.item })),
         props: {
           item: {
+            id: 'id1',
+            value: 'value1',
+          },
+          item2: {
             id: 'id1',
             value: 'value1',
           },
@@ -1603,6 +1608,7 @@ describe('StateDecorator', () => {
 
       wrapper.setProps({
         props: {
+          ...props.props,
           item: {
             id: 'id2',
             value: 'value2',
