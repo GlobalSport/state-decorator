@@ -6,7 +6,7 @@ export type State = {
 };
 
 export type Actions = {
-  get: (param) => Promise<any>;
+  get: (param: string) => Promise<any>;
 };
 
 export const getInitialState = (): State => ({
@@ -19,9 +19,8 @@ type PropsChangeProps = { value: string };
 export class PropsChange extends React.PureComponent<PropsChangeProps> {
   static actions: StateDecoratorActions<State, Actions> = {
     get: {
-      promise: (param) => new Promise((resolve) => setTimeout(resolve, 1000, param)),
+      promise: ([param]) => new Promise((resolve) => setTimeout(resolve, 1000, param)),
       reducer: (s, param) => {
-        debugger;
         return { ...s, value: param };
       },
     },
@@ -29,7 +28,7 @@ export class PropsChange extends React.PureComponent<PropsChangeProps> {
 
   render() {
     return (
-      <StateDecorator<State, Actions>
+      <StateDecorator<State, Actions, PropsChangeProps>
         actions={PropsChange.actions}
         initialState={getInitialState()}
         props={this.props}

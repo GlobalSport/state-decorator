@@ -25,7 +25,7 @@ interface Props {
 class ConflictingActionsContainer extends React.PureComponent<Props> {
   actions: StateDecoratorActions<State, Actions> = {
     updateText: {
-      promise: (text: string) => new Promise((res) => setTimeout(res, 1000, text)),
+      promise: ([text]) => new Promise((res) => setTimeout(res, 1000, text)),
       reducer: (s, text) => ({ ...s, text, counter: s.counter + 1 }),
       conflictPolicy: this.props.conflictPolicy,
     },
@@ -37,7 +37,7 @@ class ConflictingActionsContainer extends React.PureComponent<Props> {
       <StateDecorator<State, Actions> actions={this.actions} initialState={getInitialState()}>
         {({ counter, text }, actions) => (
           <div style={{ border: '1px solid grey', marginBottom: 10 }}>
-            <h2>{title}</h2>
+            <h3>{title}</h3>
             <p>{description}</p>
             <div>
               <input onChange={(e) => actions.updateText(e.target.value)} />

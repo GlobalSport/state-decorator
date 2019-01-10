@@ -12,9 +12,11 @@ import React from 'react';
 import isEqual from 'fast-deep-equal';
 import fastClone from 'fast-clone';
 
+type Args = any[];
+
 // https://github.com/Microsoft/TypeScript/issues/15300
 export interface DecoratedActions {
-  [name: string]: (...args: any[]) => Promise<any> | void;
+  [name: string]: (...args: Args) => Promise<any> | void;
 }
 
 /**
@@ -48,32 +50,21 @@ export enum ConflictPolicy {
   PARALLEL = 'parallel',
 }
 
-type PromiseFunc = (...args) => Promise<any | void>;
+export type PromiseProvider<S, A, P> = (args: Args, state: S, props: P, actions: A) => Promise<any | void>;
 
-export type SynchAction<S> = (state: S, ...args: any[]) => S | null;
+export type SynchAction<S, P> = (state: S, args: Args, props: P) => S | null;
 
 type PromiseIdMap = { [promiseId: string]: boolean };
 
-type LoadingMap<A> = { [P in keyof A]: undefined | boolean | PromiseIdMap };
-type LoadingMapBool<A> = { [P in keyof A]: undefined | boolean };
-type LoadingMapParallel<A> = { [P in keyof A]: PromiseIdMap };
+type InternalLoadingMap<A> = { [P in keyof A]: undefined | boolean | PromiseIdMap };
+export type LoadingMap<A> = { [P in keyof A]: undefined | boolean };
+export type LoadingMapParallelActions<A> = { [P in keyof A]: PromiseIdMap };
 
-type Props = any;
+type ErrorMessageFunc<P> = (e: Error, args: Args, props: P) => string;
 
-type PromiseReducer<S> = (state: S, data: any, args: any[], props: Props) => S | null;
+type SuccessMessageFunc<P> = (result: any, args: Args, props: P) => string;
 
-type PromiseErrorReducer<S> = (state: S, error: any, args: any[], props: Props) => S | null;
-
-type ErrorMessageFunc = (e: Error, args: any[], props: Props) => string;
-
-type SuccessMessageFunc = (result: any, args: any[], props: Props) => string;
-
-type PromiseDoneFunc<S> = (state: S, result: any, args: any[], props: Props) => void;
-
-type PromiseOptimisticReducer<S> = (state: S, args: any[], props: Props) => S | null;
-type PromisePreReducer<S> = (state: S, args: any[], props: Props) => S | null;
-
-export interface AsynchAction<S> {
+export interface AsynchAction<S, A, P> {
   /**
    * The success message to pass to the notifySuccess function passed as property to the StateDecorator.
    */
@@ -82,7 +73,7 @@ export interface AsynchAction<S> {
   /**
    * A function that provides the success message to pass to the notifySuccess function passed as property to the StateDecorator.
    */
-  getSuccessMessage?: SuccessMessageFunc;
+  getSuccessMessage?: SuccessMessageFunc<P>;
 
   /**
    * The error message to pass to the notifyError function passed as property to the StateDecorator.
@@ -92,22 +83,22 @@ export interface AsynchAction<S> {
   /**
    * A function that provides the error message to pass to the notifyError function passed as property to the StateDecorator.
    */
-  getErrorMessage?: ErrorMessageFunc;
+  getErrorMessage?: ErrorMessageFunc<P>;
 
   /**
    * The request, returns a promise
    */
-  promise: PromiseFunc;
+  promise: PromiseProvider<S, A, P>;
 
   /**
    * If set, called with the result of the promise to update the current state.
    */
-  reducer?: PromiseReducer<S>;
+  reducer?: (state: S, data: any, args: Args, props: P) => S | null;
 
   /**
    * If set, called with the error of the promise to update the current state.
    */
-  errorReducer?: PromiseErrorReducer<S>;
+  errorReducer?: (state: S, error: any, args: Args, props: P) => S | null;
 
   /**
    * Whether reject the promise instead of handling it.
@@ -120,19 +111,19 @@ export interface AsynchAction<S> {
    * @param newData The data after the reducer is applied
    * @param args The argument during the call of the request function
    */
-  onDone?: PromiseDoneFunc<S>;
+  onDone?: (state: S, result: any, args: Args, props: P) => void;
 
   /**
    * Retrieve the state to set as current data before the promise is resolved.
    * If the there's no reducer, this data will be used after the promise is done.
    */
-  preReducer?: PromisePreReducer<S>;
+  preReducer?: (state: S, args: Args, props: P) => S | null;
 
   /**
    * Retrieve the state to set as current data before the promise is resolved.
    * If the there's no reducer, this data will be used after the promise is done.
    */
-  optimisticReducer?: PromiseOptimisticReducer<S>;
+  optimisticReducer?: (state: S, args: Args, props: P) => S | null;
 
   /**
    * Policy to apply when a call to an asynchronous action is done but a previous call is still not resolved.
@@ -143,7 +134,7 @@ export interface AsynchAction<S> {
    * Get an identifier for an action call. Used only when conflictPolicy is ConflictPolicy.PARALLEL.
    * This information will be available in loadingMap. loadingMap[actionName] will be an array of promise identifiers.
    */
-  getPromiseId?: (...args: any[]) => string;
+  getPromiseId?: (...args: Args) => string;
 
   /**
    * Number of retries in case of error (failed to fetch).
@@ -165,19 +156,21 @@ export interface AsynchAction<S> {
   isTriggerRetryError?: (e: Error) => boolean;
 }
 
-export type StateDecoratorAction<S> = AsynchAction<S> | SynchAction<S>;
+export type StateDecoratorAction<S, A, P> = AsynchAction<S, A, P> | SynchAction<S, P>;
 
 /**
  * S: The type of the state
  * A: The type of the actions to pass to the children (used to check keys only).
  */
-export type StateDecoratorActions<S, A extends DecoratedActions> = { [P in keyof A]: StateDecoratorAction<S> };
+export type StateDecoratorActions<S, A extends DecoratedActions, P = {}> = {
+  [Prop in keyof A]: StateDecoratorAction<S, A, P>
+};
 
-export interface StateDecoratorProps<S, A extends DecoratedActions> {
+export interface StateDecoratorProps<S, A extends DecoratedActions, P = {}> {
   /**
    * The action definitions.
    */
-  actions: StateDecoratorActions<S, A>;
+  actions: StateDecoratorActions<S, A, P>;
 
   /**
    * The initial state. Ie before any reducer is called.
@@ -187,7 +180,7 @@ export interface StateDecoratorProps<S, A extends DecoratedActions> {
   /**
    * Optional properties to pass to actions.
    */
-  props?: Props;
+  props?: P;
 
   /**
    * Show logs in the console in development mode.
@@ -224,7 +217,7 @@ export interface StateDecoratorProps<S, A extends DecoratedActions> {
   /**
    * Function to call when the StateDecorator is mounted. Usually used to call an initial action.
    */
-  onMount?: (actions: A, props: Props) => void;
+  onMount?: (actions: A, props: P) => void;
 
   /**
    * Child function,
@@ -233,8 +226,8 @@ export interface StateDecoratorProps<S, A extends DecoratedActions> {
     state: S,
     actions: A,
     loading: boolean,
-    loadingByAction: LoadingMapBool<A>,
-    loadingParallelActions: LoadingMapParallel<A>
+    loadingByAction: LoadingMap<A>,
+    loadingParallelActions: LoadingMapParallelActions<A>
   ) => JSX.Element | JSX.Element[] | string;
 }
 
@@ -270,18 +263,18 @@ interface ConflictActionsMap {
 
 const IS_JEST_ENV = typeof process !== 'undefined' && process && !(process as any).browser;
 
-export function retryDecorator(
-  promiseProvider: PromiseFunc,
+export function retryDecorator<S, A, P>(
+  promiseProvider: PromiseProvider<S, A, P>,
   maxCalls = 1,
   delay = 1000,
   isRetryError = StateDecorator.isTriggerRetryError
-) {
+): PromiseProvider<S, A, P> {
   if (maxCalls === 1) {
     return promiseProvider;
   }
-  return (...args) => {
-    function call(callCount, resolve, reject) {
-      return promiseProvider(...args)
+  return (args: any[], state: S, props: P, actions: A) => {
+    function call(callCount: number, resolve: (res: any) => any, reject: (e: Error) => any) {
+      return promiseProvider(args, state, props, actions)
         .then((res) => resolve(res))
         .catch((e) => {
           if (isRetryError(e)) {
@@ -305,14 +298,14 @@ export function retryDecorator(
 /**
  * Type guard function to test if an action is a asynchronous action.
  */
-export function isAsyncAction<S>(action: StateDecoratorAction<S>): action is AsynchAction<S> {
+export function isAsyncAction<S, A, P>(action: StateDecoratorAction<S, A, P>): action is AsynchAction<S, A, P> {
   return !(action instanceof Function);
 }
 
 /**
  * Type guard function to test if an action is a synchronous action.
  */
-export function isSyncAction<S>(action: StateDecoratorAction<S>): action is SynchAction<S> {
+export function isSyncAction<S, A, P>(action: StateDecoratorAction<S, A, P>): action is SynchAction<S, P> {
   return !isAsyncAction(action);
 }
 
@@ -326,8 +319,8 @@ export function isSyncAction<S>(action: StateDecoratorAction<S>): action is Sync
  *
  * The child of this component is a function with the action, current state and aynchronous action related properties.
  */
-export default class StateDecorator<S, A extends DecoratedActions> extends React.PureComponent<
-  StateDecoratorProps<S, A>,
+export default class StateDecorator<S, A extends DecoratedActions, P = {}> extends React.PureComponent<
+  StateDecoratorProps<S, A, P>,
   StateDecoratorState<S, A>
 > {
   static defaultProps = {
@@ -369,7 +362,7 @@ export default class StateDecorator<S, A extends DecoratedActions> extends React
   }
 
   private mounted = undefined;
-  private loadingMap: LoadingMap<A>;
+  private loadingMap: InternalLoadingMap<A>;
   private history: ActionHistory<S>[] = [];
   private optimisticActions: OptimisticActionsMap = {};
   private shouldRecordHistory: boolean = false;
@@ -430,7 +423,7 @@ export default class StateDecorator<S, A extends DecoratedActions> extends React
       if (isAsyncAction(rawAction)) {
         state = rawAction[action.reducer](state, ...action.args);
       } else {
-        state = rawAction(state, ...action.args);
+        state = (rawAction as any)(state, ...action.args);
       }
     }
 
@@ -546,7 +539,7 @@ export default class StateDecorator<S, A extends DecoratedActions> extends React
     this.mounted = false;
   }
 
-  decorateActions = (actions: StateDecoratorActions<S, A>): A => {
+  decorateActions = (actions: StateDecoratorActions<S, A, P>): A => {
     const asynchActionNames = Object.keys(actions).filter((k) => isAsyncAction(actions[k]));
 
     this.loadingMap = asynchActionNames.reduce(
@@ -554,11 +547,11 @@ export default class StateDecorator<S, A extends DecoratedActions> extends React
         acc[name] = undefined;
         return acc;
       },
-      {} as LoadingMap<A>
+      {} as InternalLoadingMap<A>
     );
 
     this.hasParallelActions = asynchActionNames.some(
-      (name) => (actions[name] as AsynchAction<S>).conflictPolicy === ConflictPolicy.PARALLEL
+      (name) => (actions[name] as AsynchAction<S, A, P>).conflictPolicy === ConflictPolicy.PARALLEL
     );
 
     return Object.keys(actions)
@@ -725,14 +718,14 @@ export default class StateDecorator<S, A extends DecoratedActions> extends React
     });
   }
 
-  private getDecoratedSynchAction = (name: string, action: SynchAction<S>) => (...args) => {
+  private getDecoratedSynchAction = (name: string, action: SynchAction<S, P>) => (...args: Args) => {
     const data = this.dataState;
     const { props, logEnabled } = this.props;
 
-    const newDataState = action(data, ...args, props);
+    const newDataState = action(data, args, props);
 
     if (newDataState !== null) {
-      this.pushActionToHistory(name, null, [...args, props]);
+      this.pushActionToHistory(name, null, [args, props]);
 
       this.logStateChange(name, newDataState, args, 'synch reducer');
 
@@ -819,8 +812,8 @@ export default class StateDecorator<S, A extends DecoratedActions> extends React
       retryCount,
       retryDelaySeed,
       isTriggerRetryError,
-    }: AsynchAction<S>
-  ) => (...args) => {
+    }: AsynchAction<S, A, P>
+  ) => (...args: Args) => {
     const dataState = this.dataState;
 
     const { logEnabled, notifySuccess, notifyError, props } = this.props;
@@ -879,7 +872,7 @@ export default class StateDecorator<S, A extends DecoratedActions> extends React
     }
 
     const p = retryDecorator(promise, retryCount ? 1 + retryCount : 1, retryDelaySeed, isTriggerRetryError)(
-      ...args,
+      args,
       this.dataState,
       props,
       this.actions
@@ -1035,13 +1028,13 @@ export default class StateDecorator<S, A extends DecoratedActions> extends React
         acc[name] = res;
         return acc;
       },
-      {} as LoadingMapBool<A>
+      {} as LoadingMap<A>
     );
   }
 
   private computeParallelLoadingMap() {
     if (!this.hasParallelActions) {
-      return {} as LoadingMapParallel<A>;
+      return {} as LoadingMapParallelActions<A>;
     }
     return Object.keys(this.loadingMap).reduce(
       (acc, name) => {
@@ -1057,7 +1050,7 @@ export default class StateDecorator<S, A extends DecoratedActions> extends React
         }
         return acc;
       },
-      {} as LoadingMapParallel<A>
+      {} as LoadingMapParallelActions<A>
     );
   }
 

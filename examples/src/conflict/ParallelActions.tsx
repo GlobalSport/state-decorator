@@ -39,7 +39,7 @@ export const getInitialState = (): State => ({
 export default class ParallelActions extends React.PureComponent {
   static actions: StateDecoratorActions<State, Actions> = {
     onChange: {
-      promise: (id, value) => new Promise((res) => setTimeout(res, 3000, value)),
+      promise: ([id, value]) => new Promise((res) => setTimeout(res, 3000, value)),
       conflictPolicy: ConflictPolicy.PARALLEL,
       getPromiseId: (id) => id,
       reducer: (s, value, [id]) =>

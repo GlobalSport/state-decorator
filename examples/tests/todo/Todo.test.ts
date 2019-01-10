@@ -10,7 +10,7 @@ describe('Todo', () => {
 
     const onCreate = TodoContainer.actions.onCreate;
     if (isSyncAction(onCreate)) {
-      const newState = onCreate(state);
+      const newState = onCreate(state, null, null);
       expect(newState).not.toBe(state);
       expect(newState.todoIds).toHaveLength(1);
       expect(newState.todoMap[newState.todoIds[0]].completed).toBeFalsy();
@@ -33,7 +33,7 @@ describe('Todo', () => {
 
     const onEdit = TodoContainer.actions.onEdit;
     if (isSyncAction(onEdit)) {
-      const newState = onEdit(state, 'id', 'new todo');
+      const newState = onEdit(state, ['id', 'new todo'], null);
       expect(newState).not.toBe(state);
       expect(newState.todoIds).toHaveLength(1);
       expect(newState.todoMap[newState.todoIds[0]].completed).toBeFalsy();
@@ -62,7 +62,7 @@ describe('Todo', () => {
 
     const onDelete = TodoContainer.actions.onDelete;
     if (isSyncAction(onDelete)) {
-      const newState = onDelete(state, 'id');
+      const newState = onDelete(state, ['id'], null);
       expect(newState).not.toBe(state);
       expect(state.todoIds).toHaveLength(2);
       expect(newState.todoIds).toHaveLength(1);
@@ -86,12 +86,12 @@ describe('Todo', () => {
 
     const onToggle = TodoContainer.actions.onToggle;
     if (isSyncAction(onToggle)) {
-      const newState = onToggle(state, 'id');
+      const newState = onToggle(state, ['id'], null);
       expect(newState).not.toBe(state);
       expect(state.todoMap[state.todoIds[0]].completed).toBeTruthy();
       expect(newState.todoMap[newState.todoIds[0]].completed).toBeFalsy();
 
-      const newState2 = onToggle(newState, 'id');
+      const newState2 = onToggle(newState, ['id'], null);
       expect(newState2.todoMap[newState2.todoIds[0]].completed).toBeTruthy();
     }
   });
@@ -116,7 +116,7 @@ describe('Todo', () => {
 
     const onClearCompleted = TodoContainer.actions.onClearCompleted;
     if (isSyncAction(onClearCompleted)) {
-      const newState = onClearCompleted(state);
+      const newState = onClearCompleted(state, null, null);
       expect(newState).not.toBe(state);
       expect(state.todoIds).toHaveLength(2);
       expect(newState.todoIds).toHaveLength(1);
@@ -133,7 +133,7 @@ describe('Todo', () => {
 
     const onSetNewTitle = TodoContainer.actions.onSetNewTitle;
     if (isSyncAction(onSetNewTitle)) {
-      const newState = onSetNewTitle(state, 'new title');
+      const newState = onSetNewTitle(state, ['new title'], null);
       expect(newState).not.toBe(state);
       expect(state.newTitle).toEqual('title');
       expect(newState.newTitle).toEqual('new title');
@@ -148,11 +148,11 @@ describe('Todo', () => {
 
     const onSetFilter = TodoContainer.actions.onSetFilter;
     if (isSyncAction(onSetFilter)) {
-      const newState = onSetFilter(state, Filter.COMPLETED);
+      const newState = onSetFilter(state, [Filter.COMPLETED], null);
       expect(newState).not.toBe(state);
       expect(state.filter).toEqual(Filter.ALL);
       expect(newState.filter).toEqual(Filter.COMPLETED);
-      const newState2 = onSetFilter(state, Filter.NON_COMPLETED);
+      const newState2 = onSetFilter(state, [Filter.NON_COMPLETED], null);
       expect(newState2.filter).toEqual(Filter.NON_COMPLETED);
     }
   });
