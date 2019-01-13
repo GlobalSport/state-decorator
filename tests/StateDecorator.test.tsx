@@ -8,6 +8,8 @@ import StateDecorator, {
   retryDecorator,
   StateDecoratorProps,
   PromiseProvider,
+  testSyncAction,
+  testAsyncAction,
 } from '../src/StateDecorator';
 
 // Jest is not handling properly the failure in asynchronous functions
@@ -1764,5 +1766,63 @@ describe('retryDecorator', () => {
         done();
       })
       .catch(done.fail);
+  });
+
+  describe('Testing utilities', () => {
+    type State = {
+      value: number;
+    };
+    type Actions = {
+      increment: (v: number) => void;
+      incrAsync: (v: number) => Promise<number>;
+    };
+    type Props = {};
+
+    const actions: StateDecoratorActions<State, Actions, Props> = {
+      increment: (s, [incr], props) => {
+        return {
+          value: s.value + incr,
+        };
+      },
+      incrAsync: {
+        promise: ([incr]) => Promise.resolve(incr),
+        reducer: (s, incr) => ({ value: s.value + incr }),
+      },
+    };
+
+    it('testSyncAction (correct type)', (done) => {
+      const p = testSyncAction(actions.increment, (action) => {
+        expect(action).toBeDefined();
+        done();
+      });
+
+      p && p.catch((e) => done.fail(e));
+    });
+
+    it('testSyncAction (incorrect type)', (done) => {
+      const testFunc = jest.fn();
+
+      testSyncAction(actions.incrAsync, testFunc).catch((e) => {
+        expect(testFunc).not.toHaveBeenCalled();
+        done();
+      });
+    });
+
+    it('testAsyncAction (correct type)', (done) => {
+      const p = testAsyncAction(actions.incrAsync, (action) => {
+        expect(action).toBeDefined();
+        done();
+      });
+      p && p.catch((e) => done.fail(e));
+    });
+
+    it('testAsyncAction (incorrect type)', (done) => {
+      const testFunc = jest.fn();
+
+      testAsyncAction(actions.increment, testFunc).catch((e) => {
+        expect(testFunc).not.toHaveBeenCalled();
+        done();
+      });
+    });
   });
 });

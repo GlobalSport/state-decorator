@@ -60,10 +60,6 @@ type InternalLoadingMap<A> = { [P in keyof A]: undefined | boolean | PromiseIdMa
 export type LoadingMap<A> = { [P in keyof A]: undefined | boolean };
 export type LoadingMapParallelActions<A> = { [P in keyof A]: PromiseIdMap };
 
-type ErrorMessageFunc<P> = (e: Error, args: Args, props: P) => string;
-
-type SuccessMessageFunc<P> = (result: any, args: Args, props: P) => string;
-
 export interface AsynchAction<S, A, P> {
   /**
    * The success message to pass to the notifySuccess function passed as property to the StateDecorator.
@@ -73,7 +69,7 @@ export interface AsynchAction<S, A, P> {
   /**
    * A function that provides the success message to pass to the notifySuccess function passed as property to the StateDecorator.
    */
-  getSuccessMessage?: SuccessMessageFunc<P>;
+  getSuccessMessage?: (result: any, args: Args, props: P) => string;
 
   /**
    * The error message to pass to the notifyError function passed as property to the StateDecorator.
@@ -83,7 +79,7 @@ export interface AsynchAction<S, A, P> {
   /**
    * A function that provides the error message to pass to the notifyError function passed as property to the StateDecorator.
    */
-  getErrorMessage?: ErrorMessageFunc<P>;
+  getErrorMessage?: (e: Error, args: Args, props: P) => string;
 
   /**
    * The request, returns a promise
@@ -307,6 +303,36 @@ export function isAsyncAction<S, A, P>(action: StateDecoratorAction<S, A, P>): a
  */
 export function isSyncAction<S, A, P>(action: StateDecoratorAction<S, A, P>): action is SynchAction<S, P> {
   return !isAsyncAction(action);
+}
+
+/**
+ * Utility to test an asynchronous action.
+ * @param action The action to test
+ * @param test The test function that takes the discrimined action type and cam return a promise
+ */
+export function testAsyncAction<S, A, P>(
+  action: StateDecoratorAction<S, A, P>,
+  test: (action: AsynchAction<S, A, P>) => any | Promise<any>
+) {
+  if (isAsyncAction(action)) {
+    return test(action);
+  }
+  return Promise.reject(new Error('This action is not an asynchronous action'));
+}
+
+/**
+ * Utility to test an synchronous action.
+ * @param action The action to test
+ * @param test The test function that takes the discrimined action type and cam return a promise
+ */
+export function testSyncAction<S, A, P>(
+  action: StateDecoratorAction<S, A, P>,
+  test: (action: SynchAction<S, P>) => any | Promise<any>
+) {
+  if (isSyncAction(action)) {
+    return test(action);
+  }
+  return Promise.reject(new Error('This action is not a synchronous action'));
 }
 
 /**
