@@ -14,8 +14,8 @@ export const initialState: State = 0;
 const CounterView: React.SFC<{ counter: number } & Actions> = ({ counter, increment, decrement }) => (
   <div>
     {counter}
-    <button onClick={() => decrement(10)}>Adds 10</button>
-    <button onClick={() => increment(10)}>Substracts 10</button>
+    <button onClick={() => decrement(10)}>Substracts 10</button>
+    <button onClick={() => increment(10)}>Adds 10</button>
   </div>
 );
 

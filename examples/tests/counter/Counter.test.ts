@@ -1,4 +1,4 @@
-import { isSyncAction, testSyncAction } from '../../../src/StateDecorator';
+import { testSyncAction } from '../../../src/StateDecorator';
 import CounterContainer, { initialState } from '../../src/counter/Counter';
 
 describe('Counter', () => {
