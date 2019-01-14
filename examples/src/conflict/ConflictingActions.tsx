@@ -8,7 +8,7 @@ export type State = {
 };
 
 export type Actions = {
-  updateText: (text) => Promise<string>;
+  updateText: (text: string) => Promise<string>;
 };
 
 export const getInitialState = (): State => ({

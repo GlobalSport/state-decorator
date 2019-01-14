@@ -4,8 +4,8 @@ import StateDecorator, { StateDecoratorActions } from '../../../src/StateDecorat
 type State = number;
 
 type Actions = {
-  increment: () => void;
-  decrement: () => void;
+  increment: (incr: number) => void;
+  decrement: (incr: number) => void;
 };
 
 export const initialState: State = 0;
@@ -14,16 +14,16 @@ export const initialState: State = 0;
 const CounterView: React.SFC<{ counter: number } & Actions> = ({ counter, increment, decrement }) => (
   <div>
     {counter}
-    <button onClick={decrement}>Decrement</button>
-    <button onClick={increment}>Increment</button>
+    <button onClick={() => decrement(10)}>Adds 10</button>
+    <button onClick={() => increment(10)}>Substracts 10</button>
   </div>
 );
 
 // Container that is managing the state.
 export default class CounterContainer extends React.Component {
   static actions: StateDecoratorActions<State, Actions> = {
-    decrement: (counter) => counter - 1,
-    increment: (counter) => counter + 1,
+    decrement: (counter, [incr]) => counter - incr,
+    increment: (counter, [incr]) => counter + incr,
   };
 
   render() {

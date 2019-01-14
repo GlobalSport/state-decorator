@@ -35,7 +35,7 @@ describe('StateDecorator', () => {
       id: string;
     };
     type Actions = {
-      action: (name: string, value: string) => void;
+      action: (name: string, value: number) => void;
     };
     type Props = {
       id: string;
@@ -1680,7 +1680,7 @@ describe('retryDecorator', () => {
     const arg1 = 'arg1';
     const arg2 = 'arg2';
 
-    const f: PromiseProvider<any, any, any> = ([arg1, arg2]) => {
+    const f: PromiseProvider<any, any, any, any> = ([arg1, arg2]) => {
       expect(arg1).toBe(arg1);
       expect(arg2).toBe(arg2);
       return Promise.resolve('OK');

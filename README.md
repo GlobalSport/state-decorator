@@ -23,7 +23,6 @@ import StateDecorator, { StateDecoratorActions } from 'state-decorator';
 // The state, here a simple number
 type State = number;
 
-// The actions to change the state.
 type Actions = {
   increment: () => void;
   decrement: () => void;
@@ -42,7 +41,6 @@ const CounterView: React.SFC<{ counter: number } & Actions> = ({ counter, increm
 
 // Container that is managing the state.
 export default class CounterContainer extends React.Component {
-  // implementation of actions.
   static actions: StateDecoratorActions<State, Actions> = {
     decrement: (counter) => counter - 1,
     increment: (counter) => counter + 1,
@@ -51,7 +49,10 @@ export default class CounterContainer extends React.Component {
   render() {
     return (
       <StateDecorator<State, Actions> actions={CounterContainer.actions} initialState={initialState}>
-        {(counter, actions) => <CounterView counter={counter} {...actions} />}
+        {(counter, actions) => {
+          console.log(counter);
+          return <CounterView counter={counter} {...actions} />;
+        }}
       </StateDecorator>
     );
   }
@@ -88,7 +89,7 @@ When the StateDecorator is mounted, the **onMount** property is called with the 
 
 ```typescript
 export default class CounterContainer extends React.Component {
-  static actions: StateDecoratorActions<State, Actions> = {
+  static actions: StateDecoratorActions<State, Actions, Props> = {
     initialAction: () => 100,
   };
 
@@ -115,7 +116,7 @@ A synchronous action is a function that takes the current state and an optional 
 
 ```typescript
 static actions: StateDecoratorActions<State, Actions> = {
-  setText: (s, text: string, props: any) => ({ ...s, text })
+  setText: (s, [text], props) => ({ ...s, text })
 };
 ```
 
@@ -131,10 +132,11 @@ and
 
 ```typescript
 export default class MyContainer extends React.Component {
-  static actions: StateDecoratorActions<State, Actions> = {
+  static actions: StateDecoratorActions<State, Actions, Props> = {
     loadList: {
-      promise: () => new Promise((resolve) => setTimeout(resolve, 500, ['hello', 'world'])),
-      reducer: (state, list, args, props) => ({ ...state, list }),
+      promise: ([arg1, arg2], state, props, actions) =>
+        new Promise((resolve) => setTimeout(resolve, 500, ['hello', 'world'])),
+      reducer: (state, result, args, props) => ({ ...state, list: result }),
     },
   };
 
@@ -236,7 +238,7 @@ Example:
 ```typescript
 static actions: StateDecoratorActions<State, Actions> = {
   deleteItem: {
-    promise: (id) => new Promise((resolve) => setTimeout(resolve, 500)),
+    promise: ([id]) => new Promise((resolve) => setTimeout(resolve, 500)),
     optimisticReducer: (state, args) => ({ ...state, list: list.filter(item => item.id === args[0]) }),
     errorReducer: (state, error: Error) => ({ ...state, error: error.message })
   }
@@ -305,6 +307,7 @@ class APIClient {
   static getItems(): Promise<Item[]> {
     return Promise.resolve([]);
   }
+
   // addItem is silly and is not returning the created object!!
   static addItem(item: Item): Promise<any> {
     return Promise.resolve();
@@ -319,8 +322,8 @@ export default class ChainContainer extends React.PureComponent<{}> {
     },
     addItem: {
       // As addItem is silly, we must reload the list after having added the item...
-      promise: (item: Item, state, props, actions: Actions) => APIClient.addItem(item).then(() => actions.getItems()),
-      // No reducer needed, the getItems decorated action will call its own reducer
+      promise: ([item], state, props, actions) => APIClient.addItem(item).then(() => actions.getItems()),
+      // No reducer needed, the decorated action will call its reducer
     },
   };
 
@@ -385,6 +388,8 @@ If the asynchronous action is processing the result before passing it to the red
 
 The synchronous actions and the asynchronous reducers are all pure functions, ie. all the data you need is provided by the user (arguments) or injected (state & props).
 
+Use _testSyncAction_ and _testAsyncAction_ utility function that allows to easily test actions in a typed manner.
+
 ## Example
 
 ### Class
@@ -397,11 +402,11 @@ export class MyContainer extends React.Component {
       reducer: (state, list: Item[]): State => ({ ...state, list }),
     },
     addItem: {
-      promise: (item: Item) => Promise.resolve(),
+      promise: ([item]) => Promise.resolve(),
       optimisticReducer: (s, [item]: Item[]): State => ({ ...s, list: [...s.list, item] }),
     },
     removeItem: {
-      promise: (id: string) => Promise.resolve(),
+      promise: ([id]) => Promise.resolve(),
       optimisticReducer: (s, [id]): State => ({ ...s, list: s.list.filter((i) => i.id !== id) }),
     },
   };
@@ -421,6 +426,8 @@ export class MyContainer extends React.Component {
 This example is using [Jest](https://jestjs.io/).
 
 ```typescript
+import StateDecoratorActions, { testSyncAction } from 'state-decorator';
+
 const actions: StateDecoratorActions<State, Actions> = MyContainer.actions;
 
 describe('MyContainer', () => {
@@ -429,37 +436,44 @@ describe('MyContainer', () => {
       const initialState = { list: [] };
       const list = [{ id: '1', value: 'item1' }, { id: '2', value: 'item2' }];
 
-      const newState = actions.loadList.reducer(initialState, list);
-
-      expect(newState.list).toBe(list);
+      return testSyncAction(actions.loadList, (action) => {
+        const newState = action.reducer(initialState, list);
+        expect(newState.list).toBe(list);
+      });
     });
   });
+
   describe('addItem', () => {
     it('reducer add item list correctly', () => {
       const list = [{ id: '1', value: 'item1' }, { id: '2', value: 'item2' }];
       const item = { id: '3', value: 'item3' };
       const initialState = { list };
 
-      const newState = actions.addItem.optimisticReducer(initialState, [item]);
+      return testSyncAction(actions.addItem, (action) => {
+        const newState = action.optimisticReducer(initialState, [item]);
 
-      expect(newState.list).not.toBe(list);
-      expect(newState.list).toHaveLength(3);
-      expect(newState.list[0].id).toBe('1');
-      expect(newState.list[1].id).toBe('2');
-      expect(newState.list[2].id).toBe('3');
+        expect(newState.list).not.toBe(list);
+        expect(newState.list).toHaveLength(3);
+        expect(newState.list[0].id).toBe('1');
+        expect(newState.list[1].id).toBe('2');
+        expect(newState.list[2].id).toBe('3');
+      });
     });
   });
+
   describe('removeItem', () => {
     it('reducer remove item from list correctly', () => {
       const list = [{ id: '1', value: 'item1' }, { id: '2', value: 'item2' }, { id: '3', value: 'item3' }];
       const initialState = { list };
 
-      const newState = actions.removeItem.optimisticReducer(initialState, ['2']);
+      return testSyncAction(actions.removeItem, (action) => {
+        const newState = action.optimisticReducer(initialState, ['2']);
 
-      expect(newState.list).not.toBe(list);
-      expect(newState.list).toHaveLength(2);
-      expect(newState.list[0].id).toBe('1');
-      expect(newState.list[1].id).toBe('3');
+        expect(newState.list).not.toBe(list);
+        expect(newState.list).toHaveLength(2);
+        expect(newState.list[0].id).toBe('1');
+        expect(newState.list[1].id).toBe('3');
+      });
     });
   });
 });
@@ -532,7 +546,7 @@ const MainComponent = () => <SubComponent />;
 
 export default class ContextContainer extends React.Component {
   static actions: StateDecoratorActions<State, Actions> = {
-    setColor: (s, color) => ({ ...s, color }),
+    setColor: (s, [color]) => ({ ...s, color }),
   };
   render() {
     return (
@@ -635,29 +649,29 @@ _Actions_ is the generic actions class passed to the StateDecorator.
 Type:
 
 ```
-(state: State, ...args: any[], props: any) => State | null;
+(state: State, args: Arguments<Action>, props: Props) => State | null;
 ```
 
 ### Asynchronous action
 
-| Property             | Description                                                                                                                                                                                                                             | Type                                                                         | Mandatory                                                     | Default value                             |
-| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------- | ----------------------------------------- |
-| promise              | The asynchronous action promise provider.                                                                                                                                                                                               | (...args: any[], state:State, props: any, actions:Actions) => Promise<any>   | true                                                          |                                           |
-| preReducer           | The state update function triggered before optimisticReducer and the promise provider                                                                                                                                                   | (state: State, args: any[], props: any) => State \| null                     |                                                               |                                           |
-| reducer              | The state update function triggered when the promise is resolved.                                                                                                                                                                       | (state: State, promiseResult: any, args: any[], props: any) => State \| null |                                                               |                                           |
-| errorReducer         | The state update function triggered when the promise is rejected.                                                                                                                                                                       | (state: State, error: any, args: any[], props: Props) => State \| null       |                                                               |                                           |
-| optimisticReducer    | The state update function triggered when promise started                                                                                                                                                                                | (state: State, args: any[], props: Props) => State \| null                   |                                                               |                                           |
-| onDone               | Callback executed when the promise is resolved.                                                                                                                                                                                         | (state: State, promiseResult: any, args: any[], props: Props) => void        |                                                               |                                           |
-| successMessage       | Success message provided to the **notifySuccess** function of the StateDecorator                                                                                                                                                        | string                                                                       |                                                               |                                           |
-| getSuccessMessage    | Success message provider function to pass to the **notifySuccess** function of the StateDecorator                                                                                                                                       | (promiseResult: any, args: any[], props: Props) => string                    |                                                               |                                           |
-| errorMessage         | Error message provided to the **notifyError** function of the StateDecorator                                                                                                                                                            |                                                                              |                                                               |                                           |
-| getErrorMessage      | Error message provider function to pass to the **notifyError** function of the StateDecorator                                                                                                                                           |                                                                              |                                                               |                                           |
-| rejectPromiseOnError | When an errorReducer or an error message is provided the outer promise is marked as resolved to prevent error in console or other error management. Set this property to true to reject the promise and process it in a catch function. | boolean                                                                      |                                                               | false                                     |
-| conflictPolicy       | Policy to apply when a call to an asynchronous action is done but a previous call is still not resolved.                                                                                                                                | ConflictPolicy                                                               |                                                               | ConflictPolicy.KEEP_LAST                  |
-| getPromiseId         | A function that returns the promise identifier from the arguments.                                                                                                                                                                      | (...args:any[]) => string                                                    | Mandatory if conflictPolicy is set to ConflictPolicy.PARALLEL |                                           |
-| retryCount           | Number of tentative call to promise function.                                                                                                                                                                                           | number                                                                       |                                                               | 0                                         |
-| retryDelaySeed       | Seed of delay between each retry in milliseconds. The applied delay is retryDelaySeed x retry count.                                                                                                                                    | number                                                                       |                                                               | 1000                                      |
-| isTriggerRetryError  | Function to test if the error will trigger an action retry or will fail directly.                                                                                                                                                       | (e:Error) => boolean                                                         |                                                               | A function that tests TypeError instances |
+| Property             | Description                                                                                                                                                                                                                             | Type                                                                                             | Mandatory                                                     | Default value                             |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------- | ----------------------------------------- |
+| promise              | The asynchronous action promise provider.                                                                                                                                                                                               | (args: Arguments&lt;Action&gt;, state:State, props: Props, actions:Actions) => Promise<any>      | true                                                          |                                           |
+| preReducer           | The state update function triggered before optimisticReducer and the promise provider                                                                                                                                                   | (state: State, args: Arguments&lt;Action&gt;, props: Props) => State \| null                     |                                                               |                                           |
+| reducer              | The state update function triggered when the promise is resolved.                                                                                                                                                                       | (state: State, promiseResult: any, args: Arguments&lt;Action&gt;, props: Props) => State \| null |                                                               |                                           |
+| errorReducer         | The state update function triggered when the promise is rejected.                                                                                                                                                                       | (state: State, error: any, args: Arguments&lt;Action&gt;, props: Props) => State \| null         |                                                               |                                           |
+| optimisticReducer    | The state update function triggered when promise started                                                                                                                                                                                | (state: State, args: Arguments&lt;Action&gt;, props: Props) => State \| null                     |                                                               |                                           |
+| onDone               | Callback executed when the promise is resolved.                                                                                                                                                                                         | (state: State, promiseResult: any, args: Arguments&lt;Action&gt;, props: Props) => void          |                                                               |                                           |
+| successMessage       | Success message provided to the **notifySuccess** function of the StateDecorator                                                                                                                                                        | string                                                                                           |                                                               |                                           |
+| getSuccessMessage    | Success message provider function to pass to the **notifySuccess** function of the StateDecorator                                                                                                                                       | (promiseResult: any, args: Arguments&lt;Action&gt;, props: Props) => string                      |                                                               |                                           |
+| errorMessage         | Error message provided to the **notifyError** function of the StateDecorator                                                                                                                                                            |                                                                                                  |                                                               |                                           |
+| getErrorMessage      | Error message provider function to pass to the **notifyError** function of the StateDecorator                                                                                                                                           |                                                                                                  |                                                               |                                           |
+| rejectPromiseOnError | When an errorReducer or an error message is provided the outer promise is marked as resolved to prevent error in console or other error management. Set this property to true to reject the promise and process it in a catch function. | boolean                                                                                          |                                                               | false                                     |
+| conflictPolicy       | Policy to apply when a call to an asynchronous action is done but a previous call is still not resolved.                                                                                                                                | ConflictPolicy                                                                                   |                                                               | ConflictPolicy.KEEP_LAST                  |
+| getPromiseId         | A function that returns the promise identifier from the arguments.                                                                                                                                                                      | (...args:Arguments&lt;Action&gt;) => string                                                      | Mandatory if conflictPolicy is set to ConflictPolicy.PARALLEL |                                           |
+| retryCount           | Number of tentative call to promise function.                                                                                                                                                                                           | number                                                                                           |                                                               | 0                                         |
+| retryDelaySeed       | Seed of delay between each retry in milliseconds. The applied delay is retryDelaySeed x retry count.                                                                                                                                    | number                                                                                           |                                                               | 1000                                      |
+| isTriggerRetryError  | Function to test if the error will trigger an action retry or will fail directly.                                                                                                                                                       | (e:Error) => boolean                                                                             |                                                               | A function that tests TypeError instances |
 
 # Examples
 
@@ -668,9 +682,9 @@ Synchronous actions, complex state with normalized storage of todo list.
 ```typescript
 import React from 'react';
 import StateDecorator, { StateDecoratorActions } from 'state-decorator';
-import produce from 'immer';
+import { pick } from 'lodash';
 
-enum Filter {
+export enum Filter {
   ALL = 'all',
   COMPLETED = 'completed',
   NON_COMPLETED = 'non_completed',
@@ -704,7 +718,7 @@ export type Actions = {
   onDelete: (id: string) => void;
   onToggle: (id: string) => void;
   onClearCompleted: () => void;
-  onSetNewTitle: (title) => void;
+  onSetNewTitle: (title: string) => void;
   onSetFilter: (filter: Filter) => void;
 };
 
@@ -825,18 +839,18 @@ export default class TodoContainer extends React.Component {
         draftState.newTitle = '';
       }),
 
-    onEdit: (state, id: string, title: string) =>
+    onEdit: (state, [id, title]) =>
       produce<State>(state, (draftState) => {
         draftState.todoMap[id].title = title;
       }),
 
-    onDelete: (state, id: string) =>
+    onDelete: (state, [id]) =>
       produce<State>(state, (draftState) => {
         delete draftState.todoMap[id];
         draftState.todoIds = draftState.todoIds.filter((todoId) => todoId !== id);
       }),
 
-    onToggle: (state, id: string) =>
+    onToggle: (state, [id]) =>
       produce<State>(state, (draftState) => {
         const todo = draftState.todoMap[id];
         todo.completed = !todo.completed;
@@ -853,12 +867,12 @@ export default class TodoContainer extends React.Component {
         });
       }),
 
-    onSetNewTitle: (s, newTitle) => ({
+    onSetNewTitle: (s, [newTitle]) => ({
       ...s,
       newTitle,
     }),
 
-    onSetFilter: (s, filter) => ({
+    onSetFilter: (s, [filter]) => ({
       ...s,
       filter,
     }),
@@ -867,13 +881,16 @@ export default class TodoContainer extends React.Component {
   render() {
     return (
       <StateDecorator<State, Actions> actions={TodoContainer.actions} initialState={getInitialState()}>
-        {(state, actions) => (
-          <div>
-            <Header {...actions} newTitle={state.newTitle} />
-            <Todos {...actions} todoIds={state.todoIds} todoMap={state.todoMap} filter={state.filter} />
-            <Footer {...actions} filter={state.filter} />
-          </div>
-        )}
+        {(state, actions) => {
+          const todoProps = pick(state, 'todoMap', 'todoIds', 'filter');
+          return (
+            <div>
+              <Header {...actions} newTitle={state.newTitle} />
+              <Todos {...actions} {...todoProps} />
+              <Footer {...actions} filter={state.filter} />
+            </div>
+          );
+        }}
       </StateDecorator>
     );
   }
@@ -894,7 +911,7 @@ export type State = {
 };
 
 export type Actions = {
-  updateText: (text) => Promise<string>;
+  updateText: (text: string) => Promise<string>;
 };
 
 export const getInitialState = (): State => ({
@@ -910,8 +927,8 @@ interface Props {
 class ConflictingActionsContainer extends React.PureComponent<Props> {
   actions: StateDecoratorActions<State, Actions> = {
     updateText: {
-      promise: (text: string) => new Promise((res) => setTimeout(res, 1000, text)),
-      reducer: (s, text) => ({ ...s, text, counter: s.counter + 1 }),
+      promise: ([text]) => new Promise((res) => setTimeout(res, 1000, text)),
+      reducer: (s, [text]) => ({ ...s, text, counter: s.counter + 1 }),
       conflictPolicy: this.props.conflictPolicy,
       debounceTimeout: 250,
     },
@@ -996,7 +1013,7 @@ export const getInitialState = (): State => ({
 export default class ParallelActions extends React.PureComponent {
   static actions: StateDecoratorActions<State, Actions> = {
     onChange: {
-      promise: (id, value) => new Promise((res) => setTimeout(res, 3000, value)),
+      promise: ([id, value]) => new Promise((res) => setTimeout(res, 3000, value)),
       conflictPolicy: ConflictPolicy.PARALLEL,
       getPromiseId: (id) => id,
       reducer: (s, value, [id]) =>
@@ -1011,6 +1028,8 @@ export default class ParallelActions extends React.PureComponent {
       <StateDecorator actions={ParallelActions.actions} initialState={getInitialState()}>
         {({ items }, { onChange }, loading, loadingMap, loadingParallelMap) => (
           <div style={{ border: '1px solid grey', marginBottom: 10 }}>
+            <h2>Parallel actions</h2>
+            <p>Actions are launched on blur, in parallel for 3s</p>
             {items.map((item) => {
               const isItemLoading = loadingParallelMap.onChange[item.id];
               return (
@@ -1040,36 +1059,47 @@ Add this code to File > Preferences > User snippets > typescriptreact.json
 
 ```json
 {
-  "Create StateDecorator types": {
-    "prefix": "rclassStateDecorator",
+  "Create StateDecorator class": {
+    "prefix": "createStateDecoratorClass",
     "body": [
-      "export type State = {",
-      "  $1",
-      "};",
-      "",
-      "export type Actions = {",
+      "export type $1Props = {",
       "  $2",
       "};",
       "",
-      "export const getInitialState = ():State => ({",
+      "type Props = $1Props;",
+      "",
+      "export type $1State = {",
       "  $3",
+      "};",
+      "",
+      "type State = $1State;",
+      "",
+      "export type $1Actions = {",
+      "  $4",
+      "};",
+      "",
+      "export const getInitialState = ():State => ({",
+      "  $5",
       "});",
       "",
-      "export default class $4 extends React.PureComponent<$5> {",
-      "  static actions: StateDecoratorActions<State, Actions> = {",
+      "type Actions = $1Actions;",
+      "",
+      "export default class $1 extends React.PureComponent<$1Props> {",
+      "  static actions: StateDecoratorActions<State, Actions, Props> = {",
       "    $6",
       "  };",
       "",
-      "  static onMount(actions:Actions) {",
+      "  static onMount(actions:Actions, props:Props) {",
       "    $7",
       "  }",
       "",
       "  render() {",
       "    return (",
-      "      <StateDecorator<State, Actions>",
-      "        actions={$4.actions}",
+      "      <StateDecorator<State, Actions, Props>",
+      "        actions={$1.actions}",
+      "        props={this.props}",
       "        initialState={getInitialState()}",
-      "        onMount={$4.onMount}",
+      "        onMount={$1.onMount}",
       "      >",
       "        {(state, actions) => <div/>$0}",
       "      </StateDecorator>",
@@ -1077,7 +1107,7 @@ Add this code to File > Preferences > User snippets > typescriptreact.json
       "  }",
       "}"
     ],
-    "description": "Create a new StateDecorator'ed class"
+    "description": "Create a new State decorated class"
   }
 }
 ```

@@ -12,7 +12,7 @@ export type State = {
 };
 
 export type Actions = {
-  onChange: (id: string, value: string) => Promise<any>;
+  onChange: (id: string, value: string) => Promise<string>;
 };
 
 export const getInitialState = (): State => ({
