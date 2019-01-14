@@ -55,7 +55,7 @@ export type PromiseProvider<S, F extends (...args: any[]) => any, A, P> = (
   state: S,
   props: P,
   actions: A
-) => Promise<any | void>;
+) => ReturnType<F>;
 
 export type SynchAction<S, F extends (...args: any[]) => any, P> = (
   state: S,
@@ -270,7 +270,7 @@ interface ConflictActionsMap {
 
 const IS_JEST_ENV = typeof process !== 'undefined' && process && !(process as any).browser;
 
-export function retryDecorator<S, F extends (...args: any[]) => any, A, P>(
+export function retryDecorator<S, F extends (...args: any[]) => Promise<any>, A, P>(
   promiseProvider: PromiseProvider<S, F, A, P>,
   maxCalls = 1,
   delay = 1000,
@@ -279,7 +279,7 @@ export function retryDecorator<S, F extends (...args: any[]) => any, A, P>(
   if (maxCalls === 1) {
     return promiseProvider;
   }
-  return (args: any, state: S, props: P, actions: A) => {
+  return (args: any, state: S, props: P, actions: A): ReturnType<F> => {
     function call(callCount: number, resolve: (res: any) => any, reject: (e: Error) => any) {
       return promiseProvider(args, state, props, actions)
         .then((res) => resolve(res))
@@ -298,7 +298,7 @@ export function retryDecorator<S, F extends (...args: any[]) => any, A, P>(
 
     return new Promise((resolve, reject) => {
       call(1, resolve, reject);
-    });
+    }) as any;
   };
 }
 
