@@ -4,6 +4,7 @@ import ConflictingActionsApp from './conflict/ConflictingActions';
 import CounterContainer from './counter/Counter';
 import Retry from './retry/Retry';
 import PropsChangeApp from './propsChange/PropsChange';
+import WrappedComponent from './hoc/WrappedComponent';
 
 export default class App extends React.Component {
   render() {
@@ -26,6 +27,10 @@ export default class App extends React.Component {
         </section>
         <section>
           <PropsChangeApp />
+        </section>
+        <section>
+          <h1>HOC</h1>
+          <WrappedComponent value={10} />
         </section>
       </div>
     );
