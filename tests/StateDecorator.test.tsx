@@ -1363,7 +1363,7 @@ describe('StateDecorator', () => {
 
     type Actions = {
       get: () => Promise<string>;
-      asyncAction: () => Promise<void>;
+      asyncAction: () => Promise<string>;
       syncAction: () => void;
     };
 
@@ -1651,7 +1651,7 @@ describe('Type guards', () => {
   const actions: StateDecoratorActions<
     string,
     {
-      asyncAction: () => Promise<void>;
+      asyncAction: () => Promise<string>;
       syncAction: () => void;
     },
     {}
