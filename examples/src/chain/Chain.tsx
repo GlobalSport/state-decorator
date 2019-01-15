@@ -38,7 +38,7 @@ export default class ChainContainer extends React.PureComponent<{}> {
     },
     addItem: {
       // As addItem is silly, we must reload the list after having added the item...
-      promise: (item: Item, state, props, actions: Actions) => APIClient.addItem(item).then(() => actions.getItems()),
+      promise: ([item], state, props, actions) => APIClient.addItem(item).then(() => actions.getItems()),
       // No reducer needed, the decorated action will call its reducer
     },
   };

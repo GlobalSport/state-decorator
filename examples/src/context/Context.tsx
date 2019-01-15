@@ -32,7 +32,7 @@ const MainComponent = () => <SubComponent />;
 
 export default class ContextContainer extends React.Component {
   static actions: StateDecoratorActions<State, Actions> = {
-    setColor: (s, color) => ({ ...s, color }),
+    setColor: (s, [color]) => ({ ...s, color }),
   };
   render() {
     return (

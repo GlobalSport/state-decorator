@@ -37,7 +37,7 @@ export type Actions = {
   onDelete: (id: string) => void;
   onToggle: (id: string) => void;
   onClearCompleted: () => void;
-  onSetNewTitle: (title) => void;
+  onSetNewTitle: (title: string) => void;
   onSetFilter: (filter: Filter) => void;
 };
 
@@ -158,18 +158,18 @@ export default class TodoContainer extends React.Component {
         draftState.newTitle = '';
       }),
 
-    onEdit: (state, id: string, title: string) =>
+    onEdit: (state, [id, title]) =>
       produce<State>(state, (draftState) => {
         draftState.todoMap[id].title = title;
       }),
 
-    onDelete: (state, id: string) =>
+    onDelete: (state, [id]) =>
       produce<State>(state, (draftState) => {
         delete draftState.todoMap[id];
         draftState.todoIds = draftState.todoIds.filter((todoId) => todoId !== id);
       }),
 
-    onToggle: (state, id: string) =>
+    onToggle: (state, [id]) =>
       produce<State>(state, (draftState) => {
         const todo = draftState.todoMap[id];
         todo.completed = !todo.completed;
@@ -186,12 +186,12 @@ export default class TodoContainer extends React.Component {
         });
       }),
 
-    onSetNewTitle: (s, newTitle) => ({
+    onSetNewTitle: (s, [newTitle]) => ({
       ...s,
       newTitle,
     }),
 
-    onSetFilter: (s, filter) => ({
+    onSetFilter: (s, [filter]) => ({
       ...s,
       filter,
     }),

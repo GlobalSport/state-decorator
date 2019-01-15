@@ -1,5 +1,5 @@
 import TodoContainer, { getInitialState, Filter } from '../../src/todo/Todos';
-import { isSyncAction } from '../../../src/StateDecorator';
+import { testSyncAction } from '../../../src/StateDecorator';
 
 describe('Todo', () => {
   it('onCreate', () => {
@@ -8,14 +8,13 @@ describe('Todo', () => {
       newTitle: 'new todo',
     };
 
-    const onCreate = TodoContainer.actions.onCreate;
-    if (isSyncAction(onCreate)) {
-      const newState = onCreate(state);
+    return testSyncAction(TodoContainer.actions.onCreate, (action) => {
+      const newState = action(state, null, null);
       expect(newState).not.toBe(state);
       expect(newState.todoIds).toHaveLength(1);
       expect(newState.todoMap[newState.todoIds[0]].completed).toBeFalsy();
       expect(newState.todoMap[newState.todoIds[0]].title).toEqual('new todo');
-    }
+    });
   });
 
   it('onEdit', () => {
@@ -31,15 +30,14 @@ describe('Todo', () => {
       },
     };
 
-    const onEdit = TodoContainer.actions.onEdit;
-    if (isSyncAction(onEdit)) {
-      const newState = onEdit(state, 'id', 'new todo');
+    return testSyncAction(TodoContainer.actions.onEdit, (action) => {
+      const newState = action(state, ['id', 'new todo'], null);
       expect(newState).not.toBe(state);
       expect(newState.todoIds).toHaveLength(1);
       expect(newState.todoMap[newState.todoIds[0]].completed).toBeFalsy();
       expect(state.todoMap[newState.todoIds[0]].title).toEqual('old todo');
       expect(newState.todoMap[newState.todoIds[0]].title).toEqual('new todo');
-    }
+    });
   });
 
   it('onDelete', () => {
@@ -60,15 +58,14 @@ describe('Todo', () => {
       },
     };
 
-    const onDelete = TodoContainer.actions.onDelete;
-    if (isSyncAction(onDelete)) {
-      const newState = onDelete(state, 'id');
+    return testSyncAction(TodoContainer.actions.onDelete, (action) => {
+      const newState = action(state, ['id'], null);
       expect(newState).not.toBe(state);
       expect(state.todoIds).toHaveLength(2);
       expect(newState.todoIds).toHaveLength(1);
       expect(newState.todoMap[newState.todoIds[0]].completed).toBeFalsy();
       expect(newState.todoMap[newState.todoIds[0]].title).toEqual('todo 2');
-    }
+    });
   });
 
   it('onToggle', () => {
@@ -84,16 +81,15 @@ describe('Todo', () => {
       },
     };
 
-    const onToggle = TodoContainer.actions.onToggle;
-    if (isSyncAction(onToggle)) {
-      const newState = onToggle(state, 'id');
+    return testSyncAction(TodoContainer.actions.onToggle, (action) => {
+      const newState = action(state, ['id'], null);
       expect(newState).not.toBe(state);
       expect(state.todoMap[state.todoIds[0]].completed).toBeTruthy();
       expect(newState.todoMap[newState.todoIds[0]].completed).toBeFalsy();
 
-      const newState2 = onToggle(newState, 'id');
+      const newState2 = action(newState, ['id'], null);
       expect(newState2.todoMap[newState2.todoIds[0]].completed).toBeTruthy();
-    }
+    });
   });
 
   it('onClearCompleted', () => {
@@ -114,15 +110,14 @@ describe('Todo', () => {
       },
     };
 
-    const onClearCompleted = TodoContainer.actions.onClearCompleted;
-    if (isSyncAction(onClearCompleted)) {
-      const newState = onClearCompleted(state);
+    return testSyncAction(TodoContainer.actions.onClearCompleted, (action) => {
+      const newState = action(state, null, null);
       expect(newState).not.toBe(state);
       expect(state.todoIds).toHaveLength(2);
       expect(newState.todoIds).toHaveLength(1);
       expect(newState.todoMap[newState.todoIds[0]].completed).toBeFalsy();
       expect(newState.todoMap[newState.todoIds[0]].title).toEqual('todo 2');
-    }
+    });
   });
 
   it('onSetNewTitle', () => {
@@ -131,13 +126,12 @@ describe('Todo', () => {
       newTitle: 'title',
     };
 
-    const onSetNewTitle = TodoContainer.actions.onSetNewTitle;
-    if (isSyncAction(onSetNewTitle)) {
-      const newState = onSetNewTitle(state, 'new title');
+    return testSyncAction(TodoContainer.actions.onSetNewTitle, (action) => {
+      const newState = action(state, ['new title'], null);
       expect(newState).not.toBe(state);
       expect(state.newTitle).toEqual('title');
       expect(newState.newTitle).toEqual('new title');
-    }
+    });
   });
 
   it('onSetFilter', () => {
@@ -147,13 +141,13 @@ describe('Todo', () => {
     };
 
     const onSetFilter = TodoContainer.actions.onSetFilter;
-    if (isSyncAction(onSetFilter)) {
-      const newState = onSetFilter(state, Filter.COMPLETED);
+    return testSyncAction(TodoContainer.actions.onSetFilter, (action) => {
+      const newState = action(state, [Filter.COMPLETED], null);
       expect(newState).not.toBe(state);
       expect(state.filter).toEqual(Filter.ALL);
       expect(newState.filter).toEqual(Filter.COMPLETED);
-      const newState2 = onSetFilter(state, Filter.NON_COMPLETED);
+      const newState2 = action(state, [Filter.NON_COMPLETED], null);
       expect(newState2.filter).toEqual(Filter.NON_COMPLETED);
-    }
+    });
   });
 });

@@ -7,6 +7,9 @@ import StateDecorator, {
   ConflictPolicy,
   retryDecorator,
   StateDecoratorProps,
+  PromiseProvider,
+  testSyncAction,
+  testAsyncAction,
 } from '../src/StateDecorator';
 
 // Jest is not handling properly the failure in asynchronous functions
@@ -20,12 +23,26 @@ const jestFail = (done, func) => (...args) => {
   }
 };
 
+type ItemMap = { [k: string]: { id: string; value: string } };
+
 describe('StateDecorator', () => {
   it('handles synchronous action on mount', (done) => {
     let wrapper;
 
-    const actions = {
-      action: (state, name, value, props) => ({ name, value, id: props.id }),
+    type State = {
+      name: string;
+      value: number;
+      id: string;
+    };
+    type Actions = {
+      action: (name: string, value: number) => void;
+    };
+    type Props = {
+      id: string;
+    };
+
+    const actions: StateDecoratorActions<State, Actions, Props> = {
+      action: (state, [name, value], props) => ({ name, value, id: props.id }),
     };
 
     const onMount = (actions) => {
@@ -68,7 +85,7 @@ describe('StateDecorator', () => {
       str2: string;
     }
 
-    const actions: StateDecoratorActions<S, A> = {
+    const actions: StateDecoratorActions<S, A, any> = {
       action1: (s) => ({ ...s, str1: 'changed' }),
       action2: (s) => {
         expect(s.str1).toBe('changed');
@@ -93,13 +110,13 @@ describe('StateDecorator', () => {
       initialState,
     };
 
-    wrapper = shallow(<StateDecorator<S, A> {...props}>{() => <div />}</StateDecorator>);
+    wrapper = shallow(<StateDecorator<S, A, any> {...props}>{() => <div />}</StateDecorator>);
   });
 
   it('load on mount', (done) => {
     const actions = {
       get: {
-        promise: (state, props) =>
+        promise: (arg, state, props) =>
           Promise.resolve({
             user: state,
             id: props.id,
@@ -229,11 +246,15 @@ describe('StateDecorator', () => {
       get: (arg1: string) => Promise<string>;
     };
 
+    type Props = {
+      id: string;
+    };
+
     const initialState: State = {
       value: null,
     };
 
-    const actions: StateDecoratorActions<State, Actions> = {
+    const actions: StateDecoratorActions<State, Actions, Props> = {
       get: {
         promise: (arg1, s) => {
           // preReducer is executed before the promise
@@ -288,11 +309,15 @@ describe('StateDecorator', () => {
       get: (arg1: string) => Promise<string>;
     };
 
+    type Props = {
+      id: string;
+    };
+
     const initialState: State = {
       value: null,
     };
 
-    const actions: StateDecoratorActions<State, Actions> = {
+    const actions: StateDecoratorActions<State, Actions, Props> = {
       get: {
         promise: (arg1, s) => {
           // preReducer is executed before the promise
@@ -342,7 +367,7 @@ describe('StateDecorator', () => {
   it('calls notify success function correctly', (done) => {
     const notifySuccess = jest.fn();
 
-    const actions: StateDecoratorActions<any, any> = {
+    const actions: StateDecoratorActions<any, any, any> = {
       get: {
         promise: () => Promise.resolve('text'),
         successMessage: 'success',
@@ -370,7 +395,7 @@ describe('StateDecorator', () => {
   it('calls notify error function correctly', (done) => {
     const notifyError = jest.fn();
 
-    const actions: StateDecoratorActions<any, any> = {
+    const actions: StateDecoratorActions<any, any, any> = {
       get: {
         promise: (param) => new Promise((_, reject) => setTimeout(reject, 100, 'text')),
         errorMessage: 'error message',
@@ -398,7 +423,7 @@ describe('StateDecorator', () => {
   it('calls error function correctly', (done) => {
     const notifyError = jest.fn();
 
-    const actions: StateDecoratorActions<any, any> = {
+    const actions: StateDecoratorActions<any, any, any> = {
       get: {
         promise: (param) => new Promise((_, reject) => setTimeout(reject, 100, 'text')),
         getErrorMessage: jest.fn((error, args, props) => `error message ${props.id}`),
@@ -429,7 +454,7 @@ describe('StateDecorator', () => {
   it('calls success function correctly', (done) => {
     const notifySuccess = jest.fn();
 
-    const actions: StateDecoratorActions<any, any> = {
+    const actions: StateDecoratorActions<any, any, any> = {
       get: {
         promise: (param) => new Promise((resolve) => setTimeout(resolve, 100, 'text')),
         getSuccessMessage: jest.fn((result, args, props) => `success message ${props.id}`),
@@ -617,7 +642,7 @@ describe('StateDecorator', () => {
 
   describe('optimistic', () => {
     it('call optimisticReducer & reducer correctly', (done) => {
-      const actions: StateDecoratorActions<string, { get: (p: string) => Promise<string> }> = {
+      const actions: StateDecoratorActions<string, { get: (p: string) => Promise<string> }, any> = {
         get: {
           promise: (param) => new Promise((resolve) => setTimeout(resolve, 100, 'text')),
           reducer: (_, result) => result,
@@ -741,7 +766,7 @@ describe('StateDecorator', () => {
       type Actions = { asynch: () => Promise<string>; endAsynch: () => void; otherAction: () => void };
 
       let reject;
-      const actions: StateDecoratorActions<State, Actions> = {
+      const actions: StateDecoratorActions<State, Actions, any> = {
         asynch: {
           promise: () =>
             new Promise((_, rej) => {
@@ -801,13 +826,13 @@ describe('StateDecorator', () => {
         asynch1: () => Promise<string>;
         endAsynch1: () => Promise<any>;
         asynch2: () => Promise<any>;
-        endAsynch2: () => Promise<any>;
+        failAsync2: () => Promise<any>;
         otherAction: (param: string) => void;
       };
 
       let reject1;
       let reject2;
-      const actions: StateDecoratorActions<State, Actions> = {
+      const actions: StateDecoratorActions<State, Actions, any> = {
         asynch1: {
           promise: () =>
             new Promise((_, rej) => {
@@ -837,12 +862,12 @@ describe('StateDecorator', () => {
           }),
         },
 
-        endAsynch2: (s) => {
+        failAsync2: (s) => {
           reject2();
           return s;
         },
 
-        otherAction: (s, param) => ({
+        otherAction: (s, [param]) => ({
           ...s,
           str3: param,
         }),
@@ -853,7 +878,7 @@ describe('StateDecorator', () => {
         actions.otherAction('text');
         actions.asynch2();
         actions.otherAction('text2');
-        actions.endAsynch2().then(() => {
+        actions.failAsync2().then(() => {
           actions.endAsynch1();
         });
       };
@@ -908,7 +933,7 @@ describe('StateDecorator', () => {
 
       let reject1;
       let reject2;
-      const actions: StateDecoratorActions<State, Actions> = {
+      const actions: StateDecoratorActions<State, Actions, any> = {
         asynch1: {
           promise: () =>
             new Promise((_, rej) => {
@@ -943,7 +968,7 @@ describe('StateDecorator', () => {
           return s;
         },
 
-        otherAction: (s, param) => ({
+        otherAction: (s, [param]) => ({
           ...s,
           str3: param,
         }),
@@ -1006,7 +1031,7 @@ describe('StateDecorator', () => {
 
       let reject1;
       let resolve2;
-      const actions: StateDecoratorActions<State, Actions> = {
+      const actions: StateDecoratorActions<State, Actions, any> = {
         asynch1: {
           promise: () =>
             new Promise((_, rej) => {
@@ -1040,7 +1065,7 @@ describe('StateDecorator', () => {
           return s;
         },
 
-        otherAction: (s, param) => ({
+        otherAction: (s, [param]) => ({
           ...s,
           str3: param,
         }),
@@ -1099,9 +1124,9 @@ describe('StateDecorator', () => {
         asynch: (value: string, timeout: number) => Promise<string>;
       };
 
-      const actions: StateDecoratorActions<State, Actions> = {
+      const actions: StateDecoratorActions<State, Actions, any> = {
         asynch: {
-          promise: (value, timeout) => new Promise((res) => setTimeout(res, timeout, value)),
+          promise: ([value, timeout]) => new Promise((res) => setTimeout(res, timeout, value)),
           reducer: (s, res): State => ({
             str: res,
             count: s.count + 1,
@@ -1143,9 +1168,9 @@ describe('StateDecorator', () => {
         asynch: (value: string, timeout: number) => Promise<string>;
       };
 
-      const actions: StateDecoratorActions<State, Actions> = {
+      const actions: StateDecoratorActions<State, Actions, any> = {
         asynch: {
-          promise: (value, timeout) => new Promise((res) => setTimeout(res, timeout, value)),
+          promise: ([value, timeout]) => new Promise((res) => setTimeout(res, timeout, value)),
           reducer: (s, res): State => ({
             str: res,
             count: s.count + 1,
@@ -1187,9 +1212,9 @@ describe('StateDecorator', () => {
         asynch: (value: string, timeout: number) => Promise<string>;
       };
 
-      const actions: StateDecoratorActions<State, Actions> = {
+      const actions: StateDecoratorActions<State, Actions, any> = {
         asynch: {
-          promise: (value, timeout) => new Promise((res) => setTimeout(res, timeout, value)),
+          promise: ([value, timeout]) => new Promise((res) => setTimeout(res, timeout, value)),
           reducer: (s, res): State => ({
             str: res,
             count: s.count + 1,
@@ -1238,9 +1263,9 @@ describe('StateDecorator', () => {
         asynch: (value: string, timeout: number) => Promise<string>;
       };
 
-      const actions: StateDecoratorActions<State, Actions> = {
+      const actions: StateDecoratorActions<State, Actions, any> = {
         asynch: {
-          promise: (value, timeout) => new Promise((res) => setTimeout(res, timeout, value)),
+          promise: ([value, timeout]) => new Promise((res) => setTimeout(res, timeout, value)),
           reducer: (s, res): State => ({
             str: res,
             count: s.count + 1,
@@ -1276,7 +1301,7 @@ describe('StateDecorator', () => {
         asynch: (userId: string, value: string, timeout: number) => Promise<string>;
       };
 
-      const actions: StateDecoratorActions<State, Actions> = {
+      const actions: StateDecoratorActions<State, Actions, any> = {
         asynch: {
           promise: (userId, value, timeout) => new Promise((res) => setTimeout(res, timeout, value)),
           reducer: (s, res, [userId, value]): State => ({
@@ -1338,13 +1363,13 @@ describe('StateDecorator', () => {
 
     type Actions = {
       get: () => Promise<string>;
-      asyncAction: () => Promise<void>;
+      asyncAction: () => Promise<string>;
       syncAction: () => void;
     };
 
-    const actions: StateDecoratorActions<string, Actions> = {
+    const actions: StateDecoratorActions<string, Actions, {}> = {
       get: {
-        promise: jestFail(done, (state, props, actions: Actions) => {
+        promise: jestFail(done, (args, state, props, actions: Actions) => {
           expect(actions.asyncAction).toBeDefined();
           expect(actions.syncAction).toBeDefined();
           actions.syncAction();
@@ -1394,9 +1419,9 @@ describe('StateDecorator', () => {
       get: () => Promise<any>;
     };
 
-    const actions: StateDecoratorActions<State, Actions> = {
+    const actions: StateDecoratorActions<State, Actions, any> = {
       get: {
-        promise: jestFail(done, (state) => {
+        promise: jestFail(done, (args, state) => {
           expect(state.toSetBefore).toBeTruthy();
           return Promise.resolve('result');
         }),
@@ -1444,11 +1469,11 @@ describe('StateDecorator', () => {
         get: () => any;
       };
 
-      const actions: StateDecoratorActions<State, Actions> = {
+      const actions: StateDecoratorActions<State, Actions, any> = {
         get: (s) => s,
       };
 
-      const props: StateDecoratorProps<State, Actions> = {
+      const props: StateDecoratorProps<State, Actions, ItemMap> = {
         actions,
         initialState,
         getPropsRefValues: (p) => [],
@@ -1501,11 +1526,11 @@ describe('StateDecorator', () => {
         get: () => any;
       };
 
-      const actions: StateDecoratorActions<State, Actions> = {
+      const actions: StateDecoratorActions<State, Actions, any> = {
         get: (s) => s,
       };
 
-      const props: StateDecoratorProps<State, Actions> = {
+      const props: StateDecoratorProps<State, Actions, ItemMap> = {
         actions,
         initialState,
         getPropsRefValues: (p) => [p.item.id],
@@ -1561,7 +1586,7 @@ describe('StateDecorator', () => {
 
       const action2Mock = jest.fn();
 
-      const actions: StateDecoratorActions<State, Actions> = {
+      const actions: StateDecoratorActions<State, Actions, any> = {
         get: (s) => s,
         action2: (s) => {
           action2Mock();
@@ -1569,7 +1594,7 @@ describe('StateDecorator', () => {
         },
       };
 
-      const props: StateDecoratorProps<State, Actions> = {
+      const props: StateDecoratorProps<State, Actions, ItemMap> = {
         actions,
         initialState,
         getPropsRefValues: (p) => [p && p.item.id, p && p.item2.id],
@@ -1626,9 +1651,10 @@ describe('Type guards', () => {
   const actions: StateDecoratorActions<
     string,
     {
-      asyncAction: () => Promise<void>;
+      asyncAction: () => Promise<string>;
       syncAction: () => void;
-    }
+    },
+    {}
   > = {
     asyncAction: {
       promise: () => Promise.resolve(''),
@@ -1654,13 +1680,13 @@ describe('retryDecorator', () => {
     const arg1 = 'arg1';
     const arg2 = 'arg2';
 
-    const f = (arg1, arg2) => {
+    const f: PromiseProvider<any, any, any, any> = ([arg1, arg2]) => {
       expect(arg1).toBe(arg1);
       expect(arg2).toBe(arg2);
       return Promise.resolve('OK');
     };
 
-    return retryDecorator(f, 3)(arg1, arg2).then((res) => expect(res).toBe('OK'));
+    return retryDecorator(f, 3)([arg1, arg2], null, null, null);
   });
 
   it('3 retries, 1 error, 1 success', () => {
@@ -1677,7 +1703,7 @@ describe('retryDecorator', () => {
       return Promise.resolve('OK');
     };
 
-    return retryDecorator(f, 3, 0)(arg1, arg2).then((res) => expect(res).toBe('OK'));
+    return retryDecorator(f, 3, 0)([arg1, arg2], null, null, null).then((res) => expect(res).toBe('OK'));
   });
 
   it('3 retries, 3 failures', (done) => {
@@ -1690,7 +1716,7 @@ describe('retryDecorator', () => {
       return Promise.reject(new TypeError());
     };
 
-    return retryDecorator(f, 3, 0)(arg1, arg2)
+    return retryDecorator(f, 3, 0)([arg1, arg2], null, null, null)
       .then(() => done.fail())
       .catch((e) => {
         expect(e).toBeInstanceOf(TypeError);
@@ -1708,7 +1734,7 @@ describe('retryDecorator', () => {
       throw new Error();
     };
 
-    return retryDecorator(f, 3)(arg1, arg2)
+    return retryDecorator(f, 3)([arg1, arg2], null, null, null)
       .then(() => done.fail())
       .catch((e) => {
         expect(e).not.toBeInstanceOf(TypeError);
@@ -1734,11 +1760,69 @@ describe('retryDecorator', () => {
       return Promise.resolve('OK');
     };
 
-    return retryDecorator(f, 3, 0, isRetryError)(arg1, arg2)
+    return retryDecorator(f, 3, 0, isRetryError)([arg1, arg2], null, null, null)
       .then((res) => {
         expect(res).toEqual('OK');
         done();
       })
       .catch(done.fail);
+  });
+
+  describe('Testing utilities', () => {
+    type State = {
+      value: number;
+    };
+    type Actions = {
+      increment: (v: number) => void;
+      incrAsync: (v: number) => Promise<number>;
+    };
+    type Props = {};
+
+    const actions: StateDecoratorActions<State, Actions, Props> = {
+      increment: (s, [incr], props) => {
+        return {
+          value: s.value + incr,
+        };
+      },
+      incrAsync: {
+        promise: ([incr]) => Promise.resolve(incr),
+        reducer: (s, incr) => ({ value: s.value + incr }),
+      },
+    };
+
+    it('testSyncAction (correct type)', (done) => {
+      const p = testSyncAction(actions.increment, (action) => {
+        expect(action).toBeDefined();
+        done();
+      });
+
+      p && p.catch((e) => done.fail(e));
+    });
+
+    it('testSyncAction (incorrect type)', (done) => {
+      const testFunc = jest.fn();
+
+      testSyncAction(actions.incrAsync, testFunc).catch((e) => {
+        expect(testFunc).not.toHaveBeenCalled();
+        done();
+      });
+    });
+
+    it('testAsyncAction (correct type)', (done) => {
+      const p = testAsyncAction(actions.incrAsync, (action) => {
+        expect(action).toBeDefined();
+        done();
+      });
+      p && p.catch((e) => done.fail(e));
+    });
+
+    it('testAsyncAction (incorrect type)', (done) => {
+      const testFunc = jest.fn();
+
+      testAsyncAction(actions.increment, testFunc).catch((e) => {
+        expect(testFunc).not.toHaveBeenCalled();
+        done();
+      });
+    });
   });
 });

@@ -1,4 +1,4 @@
-import { isSyncAction } from '../../../src/StateDecorator';
+import { testSyncAction } from '../../../src/StateDecorator';
 import CounterContainer, { initialState } from '../../src/counter/Counter';
 
 describe('Counter', () => {
@@ -7,16 +7,14 @@ describe('Counter', () => {
   });
 
   it('increments correctly', () => {
-    const { increment } = CounterContainer.actions;
-    if (isSyncAction(increment)) {
-      expect(increment(0)).toEqual(1);
-    }
+    return testSyncAction(CounterContainer.actions.increment, (action) => {
+      expect(action(10, [10], null)).toEqual(20);
+    });
   });
 
   it('decrements correctly', () => {
-    const { decrement } = CounterContainer.actions;
-    if (isSyncAction(decrement)) {
-      expect(decrement(10)).toEqual(9);
-    }
+    return testSyncAction(CounterContainer.actions.decrement, (action) => {
+      expect(action(10, [2], null)).toEqual(8);
+    });
   });
 });
