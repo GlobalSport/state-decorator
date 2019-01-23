@@ -1149,7 +1149,7 @@ function getDisplayName(WrappedComponent: React.ComponentClass<any>) {
  * A: Actions type.
  * P: Props type of the component.
  * @param getInitialState A function that provides the initial
- * @param actions The list of actions
+ * @param actions The map of actions
  * @param options Options to configure the state decorator
  */
 export function injectState<S, A extends DecoratedActions, P>(
