@@ -505,6 +505,66 @@ Time:        1.814s
 You can use immutable libraries in your state / reducers to help you manage immutability.
 Then, use PureComponents in the StateDecorator child component tree to prevent useless renderings.
 
+# Higher Order Component (HOC)
+
+The state decorator can be used through a higher order component function named **injectState**.
+
+The **injectState** function takes as arguments:
+
+- A function that returns the initial state from props of the wrapped component,
+- The actions map,
+- An options object to set the various options of the state decorator.
+
+It returns a function that takes as parameter a React component and returns another React component with the injected state (thus the function name).
+
+See example:
+
+```typescript
+import React from 'react';
+import { StateDecoratorActions, injectState } from 'state-decorator';
+
+type State = {
+  count: number;
+};
+
+type Actions = {
+  increment: (value: number) => void;
+};
+
+interface Props {
+  value: number;
+}
+
+const actions: StateDecoratorActions<State, Actions, Props> = {
+  increment: (s, [value]) => ({
+    ...s,
+    count: s.count + value,
+  }),
+};
+
+export class WrappedComponentView extends React.PureComponent<State & Actions & Props> {
+  increment = () => this.props.increment(10);
+
+  render() {
+    const { count } = this.props;
+    return (
+      <div>
+        {count}
+        <button onClick={this.increment}>Increment</button>
+      </div>
+    );
+  }
+}
+
+export default injectState(
+  (props) => ({
+    count: props.value || 0,
+  }),
+  actions,
+  { logEnabled: true }
+)(WrappedComponentView);
+```
+
 # Global state
 
 The [React 16 context API](https://reactjs.org/docs/context.html) can be used to use the StateDecorator to manage the global state and thus allow injection in a component deeper in the component tree.
