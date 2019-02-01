@@ -4,63 +4,90 @@ The StateDecorator is a React component that manages a local or global state.
 
 # Features
 
-- Easily testable (uses pure functions)
-- Ease asynchronous actions state changes (loading state, success & error, optimistic updates...)
+- Deterministic state changes
+- Ease asynchronous actions state changes (loading states, success & error handlers, parallel actions management, optimistic updates...)
+- Easily testable (uses pure functions, utility functions provided)
+- Easily update state from props change (no error prone getDerivedStateFromProps)
 - Ease debugging (trace state changes)
 - Improve code conciseness (no boiler plate code)
+- Enforce separation of container components and presentation components.
 - Strongly typed
 
 # Getting started
 
-## Counter
+## Installation
+
+```
+npm install state-decorator
+```
+
+or
+
+```
+yarn add state-decorator
+```
+
+## Basic example
 
 The simpler example: the state is a literal value and two synchronous actions to change the state.
 
+- First define your types: State, Actions and optionally your props.
+- Then implement your initial state and actions
+
 ```typescript
 import React from 'react';
-import StateDecorator, { StateDecoratorActions } from 'state-decorator';
+import StateDecorator, { StateDecoratorActions, injectState } from 'state-decorator';
 
-// The state, here a simple number
-type State = number;
-
-type Actions = {
-  increment: () => void;
-  decrement: () => void;
+type State = {
+  counter: number;
 };
 
-export const initialState: State = 0;
+type Actions = {
+  increment: (incr: number) => void;
+  decrement: (incr: number) => void;
+};
 
-// Stateless component.
-const CounterView: React.SFC<{ counter: number } & Actions> = ({ counter, increment, decrement }) => (
-  <div>
-    {counter}
-    <button onClick={decrement}>Decrement</button>
-    <button onClick={increment}>Increment</button>
-  </div>
-);
+export const getInitialState = (): State => ({
+  counter: 0,
+});
 
-// Container that is managing the state.
-export default class CounterContainer extends React.Component {
-  static actions: StateDecoratorActions<State, Actions> = {
-    decrement: (counter) => counter - 1,
-    increment: (counter) => counter + 1,
-  };
+export const actions: StateDecoratorActions<State, Actions> = {
+  decrement: (s, [incr]) => ({ counter: s.counter - incr }),
+  increment: (s, [incr]) => ({ counter: s.counter + incr }),
+};
 
+// Stateless component, in real life use React.memo()
+class CounterView extends React.PureComponent<State & Actions> {
   render() {
+    const { counter, increment, decrement } = this.props;
     return (
-      <StateDecorator<State, Actions> actions={CounterContainer.actions} initialState={initialState}>
-        {(counter, actions) => {
-          console.log(counter);
-          return <CounterView counter={counter} {...actions} />;
-        }}
-      </StateDecorator>
+      <div>
+        {counter}
+        <button onClick={() => decrement(10)}>Substracts 10</button>
+        <button onClick={() => increment(10)}>Adds 10</button>
+      </div>
     );
   }
 }
 ```
 
-The StateDecorator is using the [render props pattern](https://reactjs.org/docs/render-props.html).
-Ie. the children of the StateDecorator tag is a function that returns a React component.
+Finally inject the state and actions using the **StateDecorator** component that is using the [render props pattern](https://reactjs.org/docs/render-props.html).
+
+```typescript
+// Container that is managing the state using StateDecorator component
+export const CounterContainer = () => (
+  <StateDecorator initialState={getInitialState()} actions={actions}>
+    {(state, actions) => <CounterView {...state} {...actions} />}
+  </StateDecorator>
+);
+```
+
+or using the [injectState in HOC function](#HOC)</a>.
+
+```typescript
+// Container that is managing the state using HOC
+export default injectState(getInitialState, actions)(CounterView);
+```
 
 # Types
 
@@ -158,6 +185,27 @@ export default class MyContainer extends React.Component {
   }
 }
 ```
+
+### Asynchronous action lifecycle
+
+![Lifecycle](https://raw.githubusercontent.com/GlobalSport/state-decorator/master/StateDecoratorDiagram.png)
+
+- check if a previous call to this action is ongoing,
+  - if yes, check if the conflict policy is parallel,
+    - if yes, let the flow continue.
+    - if no, return a new promise according to the conflict policy.
+- **preReducer**: change state from actions arguments.
+- **optimisticReducer**: change state from action arguments and record next state changes to rollback if promise fails.
+- **promise**: get a promise from action arguments:
+  - if promise is resolved:
+    - **reducer**: update state from action arguments and the result of the promise
+    - if **notifySuccess** is set, call it with **successMessage** or **getSuccessMessage()**
+    - **onDone**: trigger an action with no change on state.
+  - if promise is rejected:
+    - if the action was optimistic, revert the **optimisticReducer** change and replay all following actions.
+    - **errorReducer**: change state from promise arguments and returned error.
+    - if **notifyError** is set, call it with **errorMessage** or **getErrorMessage()**.
+- If a conflicting action is stored, process it.
 
 ### Loading state
 
@@ -505,6 +553,66 @@ Time:        1.814s
 You can use immutable libraries in your state / reducers to help you manage immutability.
 Then, use PureComponents in the StateDecorator child component tree to prevent useless renderings.
 
+# <a name="HOC"></a>Higher Order Component (HOC)
+
+The state decorator can be used through a higher order component function named **injectState**.
+
+The **injectState** function takes as arguments:
+
+- A function that returns the initial state from props of the wrapped component,
+- The actions,
+- An options object to set the various options of the state decorator.
+
+Like other HOC (like Redux connect!), injectState returns a function that takes as parameter a React component and returns a decorated React component with the injected state (thus the function name).
+
+Example:
+
+```typescript
+import React from 'react';
+import { StateDecoratorActions, injectState } from 'state-decorator';
+
+type State = {
+  count: number;
+};
+
+type Actions = {
+  increment: (value: number) => void;
+};
+
+interface Props {
+  value: number;
+}
+
+const actions: StateDecoratorActions<State, Actions, Props> = {
+  increment: (s, [value]) => ({
+    ...s,
+    count: s.count + value,
+  }),
+};
+
+export class WrappedComponentView extends React.PureComponent<State & Actions & Props> {
+  increment = () => this.props.increment(10);
+
+  render() {
+    const { count } = this.props;
+    return (
+      <div>
+        {count}
+        <button onClick={this.increment}>Increment</button>
+      </div>
+    );
+  }
+}
+
+export default injectState(
+  (props) => ({
+    count: props.value || 0,
+  }),
+  actions,
+  { logEnabled: true }
+)(WrappedComponentView);
+```
+
 # Global state
 
 The [React 16 context API](https://reactjs.org/docs/context.html) can be used to use the StateDecorator to manage the global state and thus allow injection in a component deeper in the component tree.
@@ -728,6 +836,7 @@ class Header extends React.PureComponent<Pick<State, 'newTitle'> & Pick<Actions,
     e.preventDefault();
     this.props.onCreate();
   };
+
   render() {
     const { newTitle } = this.props;
     return (

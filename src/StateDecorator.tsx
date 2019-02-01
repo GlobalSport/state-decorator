@@ -69,6 +69,12 @@ type InternalLoadingMap<A> = { [P in keyof A]: undefined | boolean | PromiseIdMa
 export type LoadingMap<A> = { [P in keyof A]: undefined | boolean };
 export type LoadingMapParallelActions<A> = { [P in keyof A]: PromiseIdMap };
 
+export type LoadingProps<A> = {
+  loading: boolean;
+  loadingMap: LoadingMap<A>;
+  loadingParallelMap: LoadingMapParallelActions<A>;
+};
+
 export interface AsynchAction<S, F extends (...args: any[]) => any, A, P> {
   /**
    * The success message to pass to the notifySuccess function passed as property to the StateDecorator.
@@ -1120,4 +1126,55 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
       ? children(this.dataState, this.actions, loading, this.computeLoadingMap(), this.computeParallelLoadingMap())
       : '';
   }
+}
+
+type ExtraProps<S, A extends DecoratedActions, P> = Pick<
+  StateDecoratorProps<S, A, P>,
+  | 'getPropsRefValues'
+  | 'onPropsChangeReducer'
+  | 'onPropsChange'
+  | 'notifySuccess'
+  | 'notifyError'
+  | 'onMount'
+  | 'logEnabled'
+>;
+
+function getDisplayName(WrappedComponent: React.ComponentType<any>) {
+  return WrappedComponent.displayName || WrappedComponent.name || 'Component';
+}
+
+/**
+ * HOC to inject the props, state, actions and loading props to a presentation component.
+ * S: State type.
+ * A: Actions type.
+ * P: Props type of the component.
+ * @param getInitialState A function that provides the initial
+ * @param actions The map of actions
+ * @param options Options to configure the state decorator
+ */
+export function injectState<S, A extends DecoratedActions, P = {}>(
+  getInitialState: (p: P) => S,
+  actions: StateDecoratorActions<S, A, P>,
+  options: ExtraProps<S, A, P> = {}
+) {
+  return (WrappedComponent: React.ComponentType<P & S & A & Partial<LoadingProps<A>>>) =>
+    class HOC extends React.PureComponent<P> {
+      static displayName = `injectState(${getDisplayName(WrappedComponent)})`;
+      render() {
+        return (
+          <StateDecorator {...options} initialState={getInitialState(this.props)} actions={actions} props={this.props}>
+            {(state, actions, loading, loadingMap, loadingParallel) => (
+              <WrappedComponent
+                {...state}
+                {...actions}
+                {...this.props}
+                loading={loading}
+                loadingMap={loadingMap}
+                loadingParallelMap={loadingParallel}
+              />
+            )}
+          </StateDecorator>
+        );
+      }
+    } as React.ComponentClass<P>;
 }
