@@ -1139,7 +1139,7 @@ type ExtraProps<S, A extends DecoratedActions, P> = Pick<
   | 'logEnabled'
 >;
 
-function getDisplayName(WrappedComponent: React.ComponentClass<any>) {
+function getDisplayName(WrappedComponent: React.ComponentType<any>) {
   return WrappedComponent.displayName || WrappedComponent.name || 'Component';
 }
 
@@ -1152,12 +1152,12 @@ function getDisplayName(WrappedComponent: React.ComponentClass<any>) {
  * @param actions The map of actions
  * @param options Options to configure the state decorator
  */
-export function injectState<S, A extends DecoratedActions, P>(
+export function injectState<S, A extends DecoratedActions, P = {}>(
   getInitialState: (p: P) => S,
   actions: StateDecoratorActions<S, A, P>,
   options: ExtraProps<S, A, P> = {}
 ) {
-  return (WrappedComponent: React.ComponentClass<P & S & A & Partial<LoadingProps<A>>>) =>
+  return (WrappedComponent: React.ComponentType<P & S & A & Partial<LoadingProps<A>>>) =>
     class HOC extends React.PureComponent<P> {
       static displayName = `injectState(${getDisplayName(WrappedComponent)})`;
       render() {
