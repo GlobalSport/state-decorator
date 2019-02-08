@@ -12,6 +12,58 @@ import React from 'react';
 import isEqual from 'fast-deep-equal';
 import fastClone from 'fast-clone';
 
+export class ChildError extends Error {
+  private _state: string;
+  private _props: string;
+  private _info: React.ErrorInfo;
+  private _source: Error;
+
+  constructor(e: Error, info: React.ErrorInfo, state: any, props: any) {
+    super(e.message);
+    this._source = e;
+
+    Object.setPrototypeOf(this, ChildError.prototype);
+
+    if (Error.captureStackTrace) {
+      Error.captureStackTrace(this, ChildError);
+    }
+
+    const cache: any[] = [];
+    const transform = (key: string, value: any) => {
+      if (typeof value === 'object' && value !== null) {
+        if (cache.indexOf(value) !== -1) {
+          try {
+            return JSON.parse(JSON.stringify(value));
+          } catch (error) {
+            return '[circular]';
+          }
+        }
+        // Store value in our collection
+        cache.push(value);
+      }
+      return value;
+    };
+
+    // could be null with circular reference
+    this._state = JSON.stringify(state, transform);
+    this._props = JSON.stringify(props, transform);
+    this._info = info;
+  }
+
+  get state() {
+    return this._state;
+  }
+  get props() {
+    return this._props;
+  }
+  get source() {
+    return this._source;
+  }
+  get info() {
+    return this._info;
+  }
+}
+
 type PromiseResult<Type> = Type extends Promise<infer X> ? X : null;
 
 // https://github.com/Microsoft/TypeScript/issues/15300
@@ -263,8 +315,8 @@ interface OptimisticActionsMap {
 
 type FutureActions = {
   args: any[];
-  resolve: (...args) => void;
-  reject: (...args) => void;
+  resolve: (...args: any[]) => void;
+  reject: (...args: any[]) => void;
   timestamp?: number;
 };
 
@@ -382,10 +434,16 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
   static onAsyncError(error: any, isHandled: boolean) {}
 
   /**
+   * Handles React child components errors.
+   * @param error A wrapped error that contains the current state
+   */
+  static onChildError(error: any) {}
+
+  /**
    * Clones an object. Used when managing optimistic reducer and conflicting actions.
    * @param obj The object to clone.
    */
-  static clone(obj) {
+  static clone(obj: any) {
     try {
       return fastClone(obj);
     } catch (e) {
@@ -408,12 +466,12 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
     return error instanceof TypeError;
   }
 
-  private mounted = undefined;
-  private loadingMap: InternalLoadingMap<A>;
+  private mounted: boolean = false;
+  private loadingMap: InternalLoadingMap<A> = {} as InternalLoadingMap<A>;
   private history: ActionHistory<S>[] = [];
   private optimisticActions: OptimisticActionsMap = {};
   private shouldRecordHistory: boolean = false;
-  private dataState: S = this.props.initialState === undefined ? undefined : this.props.initialState;
+  private dataState: S | undefined = this.props.initialState === undefined ? undefined : this.props.initialState;
   private promises: { [name: string]: Promise<any> } = {};
   private conflictActions: ConflictActionsMap = {};
   private hasParallelActions = false;
@@ -425,7 +483,7 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
    * @param args The arguments of the action.
    * @param beforeState state before the optimistic action
    */
-  private pushActionToHistory(name: string, reducer: ReducerName, args, beforeState = null) {
+  private pushActionToHistory(name: string, reducer: ReducerName, args: any[], beforeState: S | undefined = undefined) {
     if (this.shouldRecordHistory) {
       if (this.history === null) {
         this.history = [];
@@ -957,7 +1015,7 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
         }
 
         if (notifySuccess && (successMessage !== undefined || getSuccessMessage !== undefined)) {
-          let msg;
+          let msg: string;
 
           if (getSuccessMessage !== undefined) {
             msg = getSuccessMessage(result, args, props);
@@ -1052,7 +1110,7 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
   };
 
   setState(newState: any, cb = null) {
-    if (this.mounted !== false || IS_JEST_ENV) {
+    if (!this.mounted || IS_JEST_ENV) {
       super.setState(newState, cb);
     }
   }
@@ -1112,6 +1170,12 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
     refValues: this.props.getPropsRefValues && this.props.props && this.props.getPropsRefValues(this.props.props),
     actions: this.actions,
   };
+
+  componentDidCatch(e: Error, info: { componentStack: any }) {
+    if (StateDecorator.onChildError) {
+      StateDecorator.onChildError(new ChildError(e, info, this.dataState, this.props.props));
+    }
+  }
 
   render() {
     const { children } = this.props;

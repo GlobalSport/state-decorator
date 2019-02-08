@@ -1,5 +1,5 @@
 import React from 'react';
-import { shallow } from 'enzyme';
+import { shallow, mount } from 'enzyme';
 import StateDecorator, {
   isAsyncAction,
   isSyncAction,
@@ -10,6 +10,8 @@ import StateDecorator, {
   PromiseProvider,
   testSyncAction,
   testAsyncAction,
+  injectState,
+  ChildError,
 } from '../src/StateDecorator';
 
 // Jest is not handling properly the failure in asynchronous functions
@@ -1647,6 +1649,63 @@ describe('StateDecorator', () => {
   });
 });
 
+describe('Error wrapping', () => {
+  type State = {
+    value: number;
+  };
+  type Actions = {
+    increment: (v: number) => void;
+  };
+  type Props = {
+    inProp: string;
+  };
+
+  type ErrorBoundaryProps = {
+    onError: (e, i) => void;
+  };
+
+  class ErrorBoundary extends React.Component<ErrorBoundaryProps> {
+    componentDidCatch(error, info) {
+      const { onError } = this.props;
+      onError(error, info);
+    }
+
+    render() {
+      const { children } = this.props;
+      return <React.Fragment>{children}</React.Fragment>;
+    }
+  }
+
+  const MyComponentView = (props: State & Actions & Props) => <div />;
+  const MyComponentView2 = (props: any) => <div />;
+
+  const actions: StateDecoratorActions<State, Actions, Props> = {
+    increment: (s, [i]) => ({
+      value: s.value + i,
+    }),
+  };
+
+  const MyComponent = injectState<State, Actions, Props>(() => ({ value: 1 }), actions)(MyComponentView);
+
+  const onError = jest.fn((e) => {
+    expect(e.message).toEqual('Boom !');
+    expect(JSON.parse(e.state).value).toEqual(1);
+    expect(JSON.parse(e.props).inProp).toEqual('inPropValue');
+    expect(e.info.componentStack).toBeDefined();
+  });
+
+  StateDecorator.onChildError = onError;
+
+  const wrapper = mount(<MyComponent inProp="inPropValue" />);
+  const view = wrapper.find(MyComponentView);
+
+  view.simulateError(new Error('Boom !'));
+
+  StateDecorator.onChildError = () => {};
+
+  expect(onError).toHaveBeenCalled();
+});
+
 describe('Type guards', () => {
   const actions: StateDecoratorActions<
     string,
@@ -1672,6 +1731,64 @@ describe('Type guards', () => {
   it('test synchronous actions correctly', () => {
     expect(isSyncAction(actions.syncAction)).toBeTruthy();
     expect(isAsyncAction(actions.syncAction)).toBeFalsy();
+  });
+});
+
+describe('Testing utilities', () => {
+  type State = {
+    value: number;
+  };
+  type Actions = {
+    increment: (v: number) => void;
+    incrAsync: (v: number) => Promise<number>;
+  };
+  type Props = {};
+
+  const actions: StateDecoratorActions<State, Actions, Props> = {
+    increment: (s, [incr], props) => {
+      return {
+        value: s.value + incr,
+      };
+    },
+    incrAsync: {
+      promise: ([incr]) => Promise.resolve(incr),
+      reducer: (s, incr) => ({ value: s.value + incr }),
+    },
+  };
+
+  it('testSyncAction (correct type)', (done) => {
+    const p = testSyncAction(actions.increment, (action) => {
+      expect(action).toBeDefined();
+      done();
+    });
+
+    p && p.catch((e) => done.fail(e));
+  });
+
+  it('testSyncAction (incorrect type)', (done) => {
+    const testFunc = jest.fn();
+
+    testSyncAction(actions.incrAsync, testFunc).catch((e) => {
+      expect(testFunc).not.toHaveBeenCalled();
+      done();
+    });
+  });
+
+  it('testAsyncAction (correct type)', (done) => {
+    const p = testAsyncAction(actions.incrAsync, (action) => {
+      expect(action).toBeDefined();
+      done();
+    });
+    p && p.catch((e) => done.fail(e));
+  });
+
+  it('testAsyncAction (incorrect type)', (done) => {
+    const testFunc = jest.fn();
+
+    testAsyncAction(actions.increment, testFunc).catch((e) => {
+      expect(testFunc).not.toHaveBeenCalled();
+      done();
+    });
   });
 });
 
@@ -1766,63 +1883,5 @@ describe('retryDecorator', () => {
         done();
       })
       .catch(done.fail);
-  });
-
-  describe('Testing utilities', () => {
-    type State = {
-      value: number;
-    };
-    type Actions = {
-      increment: (v: number) => void;
-      incrAsync: (v: number) => Promise<number>;
-    };
-    type Props = {};
-
-    const actions: StateDecoratorActions<State, Actions, Props> = {
-      increment: (s, [incr], props) => {
-        return {
-          value: s.value + incr,
-        };
-      },
-      incrAsync: {
-        promise: ([incr]) => Promise.resolve(incr),
-        reducer: (s, incr) => ({ value: s.value + incr }),
-      },
-    };
-
-    it('testSyncAction (correct type)', (done) => {
-      const p = testSyncAction(actions.increment, (action) => {
-        expect(action).toBeDefined();
-        done();
-      });
-
-      p && p.catch((e) => done.fail(e));
-    });
-
-    it('testSyncAction (incorrect type)', (done) => {
-      const testFunc = jest.fn();
-
-      testSyncAction(actions.incrAsync, testFunc).catch((e) => {
-        expect(testFunc).not.toHaveBeenCalled();
-        done();
-      });
-    });
-
-    it('testAsyncAction (correct type)', (done) => {
-      const p = testAsyncAction(actions.incrAsync, (action) => {
-        expect(action).toBeDefined();
-        done();
-      });
-      p && p.catch((e) => done.fail(e));
-    });
-
-    it('testAsyncAction (incorrect type)', (done) => {
-      const testFunc = jest.fn();
-
-      testAsyncAction(actions.increment, testFunc).catch((e) => {
-        expect(testFunc).not.toHaveBeenCalled();
-        done();
-      });
-    });
   });
 });
