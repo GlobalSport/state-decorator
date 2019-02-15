@@ -5,6 +5,7 @@ import CounterContainer from './counter/Counter';
 import Retry from './retry/Retry';
 import PropsChangeApp from './propsChange/PropsChange';
 import WrappedComponent from './hoc/WrappedComponent';
+import ContextContainer from './context/Context';
 
 export default class App extends React.Component {
   render() {
@@ -13,6 +14,10 @@ export default class App extends React.Component {
         <section>
           <h1>Counter</h1>
           <CounterContainer />
+        </section>
+        <section>
+          <h1>Context</h1>
+          <ContextContainer />
         </section>
         <section>
           <h1>Todo</h1>

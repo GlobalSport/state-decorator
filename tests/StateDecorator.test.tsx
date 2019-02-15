@@ -392,6 +392,79 @@ describe('StateDecorator', () => {
     const wrapper = shallow(<StateDecorator {...props}>{() => <div />}</StateDecorator>);
   });
 
+  it('calls in props notify success function correctly', (done) => {
+    const notifySuccess = jest.fn();
+
+    const actions: StateDecoratorActions<any, any, any> = {
+      get: {
+        promise: () => Promise.resolve('text'),
+        successMessage: 'success',
+        onDone: () => {
+          expect(notifySuccess).toHaveBeenCalled();
+          done();
+        },
+      },
+    };
+
+    const onMount = (actions) => {
+      actions.get();
+    };
+
+    const compProps = {
+      actions,
+      onMount,
+      initialState: 'default',
+    };
+
+    const props = {
+      notifySuccess,
+    };
+
+    const wrapper = shallow(
+      <StateDecorator {...compProps} props={props}>
+        {() => <div />}
+      </StateDecorator>
+    );
+  });
+
+  it('calls notify success function correctly (no shadow)', (done) => {
+    const notifySuccess = jest.fn();
+    const notifySuccess2 = jest.fn();
+
+    const actions: StateDecoratorActions<any, any, any> = {
+      get: {
+        promise: () => Promise.resolve('text'),
+        successMessage: 'success',
+        onDone: () => {
+          expect(notifySuccess).toHaveBeenCalled();
+          expect(notifySuccess2).not.toHaveBeenCalled();
+          done();
+        },
+      },
+    };
+
+    const onMount = (actions) => {
+      actions.get();
+    };
+
+    const compProps = {
+      actions,
+      onMount,
+      notifySuccess,
+      initialState: 'default',
+    };
+
+    const props = {
+      notifySuccess: notifySuccess2,
+    };
+
+    const wrapper = shallow(
+      <StateDecorator {...compProps} props={props}>
+        {() => <div />}
+      </StateDecorator>
+    );
+  });
+
   it('calls notify error function correctly', (done) => {
     const notifyError = jest.fn();
 
@@ -418,6 +491,79 @@ describe('StateDecorator', () => {
     };
 
     const wrapper = shallow(<StateDecorator {...props}>{() => <div />}</StateDecorator>);
+  });
+
+  it('calls in props notify error function correctly', (done) => {
+    const notifyError = jest.fn();
+
+    const actions: StateDecoratorActions<any, any, any> = {
+      get: {
+        promise: (param) => new Promise((_, reject) => setTimeout(reject, 100, 'text')),
+        errorMessage: 'error message',
+        rejectPromiseOnError: true,
+      },
+    };
+
+    const onMount = jestFail(done, (actions) => {
+      actions.get('param').catch((e) => {
+        expect(notifyError).toHaveBeenCalled();
+        done();
+      });
+    });
+
+    const compProps = {
+      actions,
+      onMount,
+      initialState: 'default',
+    };
+
+    const props = {
+      notifyError,
+    };
+
+    const wrapper = shallow(
+      <StateDecorator {...compProps} props={props}>
+        {() => <div />}
+      </StateDecorator>
+    );
+  });
+
+  it('calls in props notify error function correctly (no shadow)', (done) => {
+    const notifyError = jest.fn();
+    const notifyError2 = jest.fn();
+
+    const actions: StateDecoratorActions<any, any, any> = {
+      get: {
+        promise: (param) => new Promise((_, reject) => setTimeout(reject, 100, 'text')),
+        errorMessage: 'error message',
+        rejectPromiseOnError: true,
+      },
+    };
+
+    const onMount = jestFail(done, (actions) => {
+      actions.get('param').catch((e) => {
+        expect(notifyError).toHaveBeenCalled();
+        expect(notifyError2).not.toHaveBeenCalled();
+        done();
+      });
+    });
+
+    const compProps = {
+      actions,
+      onMount,
+      initialState: 'default',
+      notifyError,
+    };
+
+    const props = {
+      notifyError: notifyError2,
+    };
+
+    const wrapper = shallow(
+      <StateDecorator {...compProps} props={props}>
+        {() => <div />}
+      </StateDecorator>
+    );
   });
 
   it('calls error function correctly', (done) => {

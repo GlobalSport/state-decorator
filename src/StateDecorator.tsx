@@ -863,7 +863,10 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
   ) => (...args: Parameters<A[string]>) => {
     const dataState = this.dataState;
 
-    const { logEnabled, notifySuccess, notifyError, props } = this.props;
+    const { logEnabled, notifySuccess: _notifySuccess, notifyError: _notifyError, props } = this.props;
+
+    const notifyError = _notifyError || (props && props['notifyError']);
+    const notifySuccess = _notifySuccess || (props && props['notifySuccess']);
 
     if (conflictPolicy !== ConflictPolicy.PARALLEL && this.loadingMap[name]) {
       return this.handleConflictingAction(name, conflictPolicy, args);
