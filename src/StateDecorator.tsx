@@ -48,6 +48,11 @@ export enum ConflictPolicy {
    * Execute all calls one after another.
    */
   PARALLEL = 'parallel',
+
+  /**
+   * Reuse promise if any. Only for GET requests!
+   */
+  REUSE = 'reuse',
 }
 
 export type PromiseProvider<S, F extends (...args: any[]) => any, A, P> = (
@@ -99,7 +104,15 @@ export interface AsynchAction<S, F extends (...args: any[]) => any, A, P> {
   /**
    * The request, returns a promise
    */
-  promise: PromiseProvider<S, F, A, P>;
+  promise?: PromiseProvider<S, F, A, P>;
+
+  /**
+   * The request, returns a promise that is a GET request.
+   * A shortcut to set:
+   *   - retryCount: 3
+   *   - conflictPolicy: ConflictPolicy.REUSE
+   */
+  promiseGet?: PromiseProvider<S, F, A, P>;
 
   /**
    * If set, called with the result of the promise to update the current state.
@@ -616,7 +629,18 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
         // asynchronous action
         return {
           name,
-          action: this.getDecoratedAsynchAction(name, action),
+          action: this.getDecoratedAsynchAction(
+            name,
+            action.promiseGet
+              ? {
+                  ...action,
+                  promise: action.promiseGet,
+                  promiseGet: undefined,
+                  retryCount: 3,
+                  conflictPolicy: ConflictPolicy.REUSE,
+                }
+              : action
+          ),
         };
       })
       .reduce(
@@ -726,6 +750,10 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
     });
 
   private handleConflictingAction(name: string, conflictPolicy: ConflictPolicy, args: any[]) {
+    if (conflictPolicy === ConflictPolicy.REUSE) {
+      return this.promises[name];
+    }
+
     return new Promise((resolve, reject) => {
       const futureAction = {
         resolve,
