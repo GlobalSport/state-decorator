@@ -10,6 +10,7 @@ import StateDecorator, {
   PromiseProvider,
   testSyncAction,
   testAsyncAction,
+  computeAsyncActionInput,
 } from '../src/StateDecorator';
 
 // Jest is not handling properly the failure in asynchronous functions
@@ -26,6 +27,18 @@ const jestFail = (done, func) => (...args) => {
 type ItemMap = { [k: string]: { id: string; value: string } };
 
 describe('StateDecorator', () => {
+  it('computeAsyncAction', () => {
+    const action = {
+      promiseGet: () => Promise.resolve(),
+    };
+
+    const newAction = computeAsyncActionInput(action);
+
+    expect(newAction.promise).toBeDefined();
+    expect(newAction.retryCount).toEqual(3);
+    expect(newAction.conflictPolicy).toEqual(ConflictPolicy.REUSE);
+  });
+
   it('handles synchronous action on mount', (done) => {
     let wrapper;
 

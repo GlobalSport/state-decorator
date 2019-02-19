@@ -151,7 +151,7 @@ static actions: StateDecoratorActions<State, Actions> = {
 
 An asynchronous action is made of, at least:
 
-- a function that returns a promise
+- a function that returns a promise (using **promise** or **promiseGet**)
 
 and
 
@@ -185,6 +185,8 @@ export default class MyContainer extends React.Component {
   }
 }
 ```
+
+**promiseGet** is a shortcut that sets the conflict policy to **ConflictPolicy.REUSE** and **retryCount** to 3.
 
 ### Asynchronous action lifecycle
 
@@ -311,9 +313,11 @@ It can takes the following values (use ConflictPolicy enum), choose the one the 
 
 - **ConflictPolicy.IGNORE**: The conflicting action calls are simply ignored.
 - **ConflictPolicy.REJECT**: Conflicting action calls are unwanted, they will be rejected with an error.
-- **ConflictPolicy.KEEP_ALL**: All conflicting action calls will be chained and executed one after the other.
-- **ConflictPolicy.KEEP_LAST** (default): Only the more recent conflicting action call will be executed after the previously ongoing call is resolved.
+- **ConflictPolicy.KEEP_ALL** (default): All conflicting action calls will be chained and executed one after the other.
+- **ConflictPolicy.KEEP_LAST**: Only the more recent conflicting action call will be executed after the previously ongoing call is resolved. Use case: editor with auto save feature.
+- **ConflictPolicy.REUSE**: If an action is already ongoing, the promise is reused. Useful for GET requests.
 - **ConflictPolicy.PARALLEL**: Actions are executed in parallel.
+  - Use case: several calls with different parameters.
   - A _getPromiseId_ function must be provided to assign an identifier to each call from call arguments.
   - The _loadingParallelMap_ of the render prop function contains for each parallel action the promise identifiers that are ongoing.
 
@@ -764,7 +768,8 @@ Type:
 
 | Property             | Description                                                                                                                                                                                                                             | Type                                                                                             | Mandatory                                                     | Default value                             |
 | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------- | ----------------------------------------- |
-| promise              | The asynchronous action promise provider.                                                                                                                                                                                               | (args: Arguments&lt;Action&gt;, state:State, props: Props, actions:Actions) => Promise<any>      | true                                                          |                                           |
+| promise              | The asynchronous action promise provider.                                                                                                                                                                                               | (args: Arguments&lt;Action&gt;, state:State, props: Props, actions:Actions) => Promise<any>      | true (or **promiseGet**)                                      |                                           |
+| promiseGet           | The asynchronous action promise provider shortcut for a GET request. Sets **conflictPolicy** to **ConflictPolicy.REUSE** and **retryCount** to **3**.                                                                                   | (args: Arguments&lt;Action&gt;, state:State, props: Props, actions:Actions) => Promise<any>      | true (or **promise**)                                         |                                           |
 | preReducer           | The state update function triggered before optimisticReducer and the promise provider                                                                                                                                                   | (state: State, args: Arguments&lt;Action&gt;, props: Props) => State \| null                     |                                                               |                                           |
 | reducer              | The state update function triggered when the promise is resolved.                                                                                                                                                                       | (state: State, promiseResult: any, args: Arguments&lt;Action&gt;, props: Props) => State \| null |                                                               |                                           |
 | errorReducer         | The state update function triggered when the promise is rejected.                                                                                                                                                                       | (state: State, error: any, args: Arguments&lt;Action&gt;, props: Props) => State \| null         |                                                               |                                           |
@@ -775,7 +780,7 @@ Type:
 | errorMessage         | Error message provided to the **notifyError** function of the StateDecorator                                                                                                                                                            |                                                                                                  |                                                               |                                           |
 | getErrorMessage      | Error message provider function to pass to the **notifyError** function of the StateDecorator                                                                                                                                           |                                                                                                  |                                                               |                                           |
 | rejectPromiseOnError | When an errorReducer or an error message is provided the outer promise is marked as resolved to prevent error in console or other error management. Set this property to true to reject the promise and process it in a catch function. | boolean                                                                                          |                                                               | false                                     |
-| conflictPolicy       | Policy to apply when a call to an asynchronous action is done but a previous call is still not resolved.                                                                                                                                | ConflictPolicy                                                                                   |                                                               | ConflictPolicy.KEEP_LAST                  |
+| conflictPolicy       | Policy to apply when a call to an asynchronous action is done but a previous call is still not resolved.                                                                                                                                | ConflictPolicy                                                                                   |                                                               | ConflictPolicy.KEEP_ALL                   |
 | getPromiseId         | A function that returns the promise identifier from the arguments.                                                                                                                                                                      | (...args:Arguments&lt;Action&gt;) => string                                                      | Mandatory if conflictPolicy is set to ConflictPolicy.PARALLEL |                                           |
 | retryCount           | Number of tentative call to promise function.                                                                                                                                                                                           | number                                                                                           |                                                               | 0                                         |
 | retryDelaySeed       | Seed of delay between each retry in milliseconds. The applied delay is retryDelaySeed x retry count.                                                                                                                                    | number                                                                                           |                                                               | 1000                                      |

@@ -80,7 +80,7 @@ export type LoadingProps<A> = {
   loadingParallelMap: LoadingMapParallelActions<A>;
 };
 
-export interface AsynchAction<S, F extends (...args: any[]) => any, A, P> {
+export interface AsynchActionBase<S, F extends (...args: any[]) => any, A, P> {
   /**
    * The success message to pass to the notifySuccess function passed as property to the StateDecorator.
    */
@@ -100,19 +100,6 @@ export interface AsynchAction<S, F extends (...args: any[]) => any, A, P> {
    * A function that provides the error message to pass to the notifyError function passed as property to the StateDecorator.
    */
   getErrorMessage?: (e: Error, args: Parameters<F>, props: P) => string;
-
-  /**
-   * The request, returns a promise
-   */
-  promise?: PromiseProvider<S, F, A, P>;
-
-  /**
-   * The request, returns a promise that is a GET request.
-   * A shortcut to set:
-   *   - retryCount: 3
-   *   - conflictPolicy: ConflictPolicy.REUSE
-   */
-  promiseGet?: PromiseProvider<S, F, A, P>;
 
   /**
    * If set, called with the result of the promise to update the current state.
@@ -179,6 +166,26 @@ export interface AsynchAction<S, F extends (...args: any[]) => any, A, P> {
    */
   isTriggerRetryError?: (e: Error) => boolean;
 }
+
+interface AsynchActionPromise<S, F extends (...args: any[]) => any, A, P> extends AsynchActionBase<S, F, A, P> {
+  /**
+   * The request, returns a promise
+   */
+  promise: PromiseProvider<S, F, A, P>;
+}
+interface AsynchActionPromiseGet<S, F extends (...args: any[]) => any, A, P> extends AsynchActionBase<S, F, A, P> {
+  /**
+   * The request, returns a promise that is a GET request.
+   * A shortcut to set:
+   *   - retryCount: 3
+   *   - conflictPolicy: ConflictPolicy.REUSE
+   */
+  promiseGet: PromiseProvider<S, F, A, P>;
+}
+
+export type AsynchAction<S, F extends (...args: any[]) => any, A, P> =
+  | AsynchActionPromise<S, F, A, P>
+  | AsynchActionPromiseGet<S, F, A, P>;
 
 export type StateDecoratorAction<S, F extends (...args: any[]) => any, A, P> =
   | AsynchAction<S, F, A, P>
@@ -367,6 +374,23 @@ export function testSyncAction<S, F extends (...args: any[]) => any, A, P>(
     return test(action);
   }
   return Promise.reject(new Error('This action is not a synchronous action'));
+}
+
+/**
+ * @private
+ */
+export function computeAsyncActionInput<S, F extends (...args: any[]) => any, A, P>(
+  action: AsynchAction<S, F, A, P>
+): AsynchActionPromise<S, F, A, P> {
+  if ('promiseGet' in action) {
+    return {
+      ...action,
+      promise: action.promiseGet,
+      retryCount: 3,
+      conflictPolicy: ConflictPolicy.REUSE,
+    };
+  }
+  return action;
 }
 
 /**
@@ -629,18 +653,7 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
         // asynchronous action
         return {
           name,
-          action: this.getDecoratedAsynchAction(
-            name,
-            action.promiseGet
-              ? {
-                  ...action,
-                  promise: action.promiseGet,
-                  promiseGet: undefined,
-                  retryCount: 3,
-                  conflictPolicy: ConflictPolicy.REUSE,
-                }
-              : action
-          ),
+          action: this.getDecoratedAsynchAction(name, computeAsyncActionInput(action)),
         };
       })
       .reduce(
@@ -887,7 +900,7 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
       retryCount,
       retryDelaySeed,
       isTriggerRetryError,
-    }: AsynchAction<S, A[string], A, P>
+    }: AsynchActionPromise<S, A[string], A, P>
   ) => (...args: Parameters<A[string]>) => {
     const dataState = this.dataState;
 
