@@ -1280,13 +1280,13 @@ describe('StateDecorator', () => {
     it('handles 2 calls to an asynchronous action (reuse)', (done) => {
       type State = { count: number };
       type Actions = {
-        asynch: (value: string, timeout: number) => Promise<string>;
+        getData: (value: string) => Promise<string>;
       };
 
       const actions: StateDecoratorActions<State, Actions, any> = {
-        asynch: {
-          promise: ([value, timeout]) => new Promise((res) => setTimeout(res, timeout, value)),
-          reducer: (s, res): State => ({
+        getData: {
+          promise: ([value]) => new Promise((res) => setTimeout(res, 200, value)),
+          reducer: (s): State => ({
             count: s.count + 1,
           }),
           conflictPolicy: ConflictPolicy.REUSE,
@@ -1294,8 +1294,8 @@ describe('StateDecorator', () => {
       };
 
       const onMount = (actions: Actions) => {
-        const p1 = actions.asynch('value 1', 200).catch((e) => done.fail(e));
-        const p2 = actions.asynch('value 2', 0).catch((e) => done.fail(e));
+        const p1 = actions.getData('id1').catch((e) => done.fail(e));
+        const p2 = actions.getData('id1').catch((e) => done.fail(e));
         expect(p1 === p2);
       };
 
@@ -1311,6 +1311,53 @@ describe('StateDecorator', () => {
         if (state.count === 1) {
           done();
         }
+        return <div />;
+      });
+
+      const wrapper = shallow(<StateDecorator {...props}>{renderFunction}</StateDecorator>);
+    });
+
+    it('handles 2 calls to an asynchronous action (reuse)', (done) => {
+      type State = { count: number; res: string };
+      type Actions = {
+        getData: (value: string) => Promise<string>;
+      };
+
+      let timeout = 100;
+
+      const actions: StateDecoratorActions<State, Actions, any> = {
+        getData: {
+          promise: ([value]) =>
+            new Promise((res) => {
+              setTimeout(res, timeout, value);
+              timeout = timeout + 200;
+            }),
+          reducer: (s, res): State => ({
+            res,
+            count: s.count + 1,
+          }),
+          conflictPolicy: ConflictPolicy.REUSE,
+        },
+      };
+
+      const onMount = (actions: Actions) => {
+        const p1 = actions.getData('id1').catch((e) => done.fail(e));
+        const p2 = actions.getData('id2').catch((e) => done.fail(e));
+        expect(p1 !== p2);
+        p2.then(() => {
+          done();
+        });
+      };
+
+      const props = {
+        actions,
+        onMount,
+        initialState: {
+          count: 0,
+        } as State,
+      };
+
+      const renderFunction = jestFail(done, (state: State, actions, loading, loadingMap) => {
         return <div />;
       });
 

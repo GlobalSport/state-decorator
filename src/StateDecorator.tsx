@@ -46,11 +46,12 @@ export enum ConflictPolicy {
 
   /**
    * Execute all calls one after another.
+   * @see getPromiseId
    */
   PARALLEL = 'parallel',
 
   /**
-   * Reuse promise if any. Only for GET requests!
+   * Reuse the ongoing promise if any and if possible (same arguments). Only for GET requests!
    */
   REUSE = 'reuse',
 }
@@ -393,6 +394,13 @@ export function computeAsyncActionInput<S, F extends (...args: any[]) => any, A,
   return action;
 }
 
+export function areSameArgs(args1: any[], args2: any[]): boolean {
+  if (args1.length !== args2.length) {
+    return false;
+  }
+  return args1.find((value, index) => args2[index] !== value) == null;
+}
+
 /**
  * A state container designed to substitute the local state of a component.
  * Types:
@@ -451,7 +459,7 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
   private optimisticActions: OptimisticActionsMap = {};
   private shouldRecordHistory: boolean = false;
   private dataState: S = this.props.initialState === undefined ? undefined : this.props.initialState;
-  private promises: { [name: string]: Promise<any> } = {};
+  private promises: { [name: string]: { promise: Promise<any>; refArgs: any[] } } = {};
   private conflictActions: ConflictActionsMap = {};
   private hasParallelActions = false;
 
@@ -763,8 +771,12 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
     });
 
   private handleConflictingAction(name: string, conflictPolicy: ConflictPolicy, args: any[]) {
-    if (conflictPolicy === ConflictPolicy.REUSE) {
-      return this.promises[name];
+    let policy: ConflictPolicy = conflictPolicy;
+    if (policy === ConflictPolicy.REUSE) {
+      if (areSameArgs(this.promises[name].refArgs, args)) {
+        return this.promises[name].promise;
+      } // else
+      policy = ConflictPolicy.KEEP_ALL;
     }
 
     return new Promise((resolve, reject) => {
@@ -775,7 +787,7 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
         timestamp: Date.now(),
       };
 
-      switch (conflictPolicy) {
+      switch (policy) {
         case ConflictPolicy.IGNORE:
           resolve();
           break;
@@ -795,11 +807,12 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
           break;
         }
         case ConflictPolicy.PARALLEL:
+        case ConflictPolicy.REUSE:
           // no-op
           break;
         default:
           // will trigger a compilation error if one of the enum values is not processed.
-          const exhaustiveCheck: never = conflictPolicy;
+          const exhaustiveCheck: never = policy;
           exhaustiveCheck;
           break;
       }
@@ -1001,7 +1014,7 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
         }
 
         if (notifySuccess && (successMessage !== undefined || getSuccessMessage !== undefined)) {
-          let msg;
+          let msg: string;
 
           if (getSuccessMessage !== undefined) {
             msg = getSuccessMessage(result, args, props);
@@ -1090,7 +1103,10 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
         return result;
       });
 
-    this.promises[name] = p;
+    this.promises[name] = {
+      promise: p,
+      refArgs: conflictPolicy === ConflictPolicy.REUSE && args.length > 0 ? [...args] : [],
+    };
 
     return p;
   };
