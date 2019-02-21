@@ -1,6 +1,7 @@
 import React from 'react';
 import StateDecorator, { StateDecoratorActions, ConflictPolicy } from '../../../src/StateDecorator';
 import ParallelActions from './ParallelActions';
+import ReuseConflictPolicy from './ReuseConflictPolicy';
 
 export type State = {
   counter: number;
@@ -16,7 +17,7 @@ export const getInitialState = (): State => ({
   text: '',
 });
 
-interface Props {
+export interface Props {
   title: string;
   description: string;
   conflictPolicy: ConflictPolicy;
@@ -55,6 +56,7 @@ export default class ConflictApp extends React.Component {
   render() {
     return (
       <div>
+        <ReuseConflictPolicy />
         <ConflictingActionsContainer
           title="Keep All"
           conflictPolicy={ConflictPolicy.KEEP_ALL}

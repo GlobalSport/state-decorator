@@ -10,6 +10,7 @@ import StateDecorator, {
   PromiseProvider,
   testSyncAction,
   testAsyncAction,
+  computeAsyncActionInput,
 } from '../src/StateDecorator';
 
 // Jest is not handling properly the failure in asynchronous functions
@@ -26,6 +27,18 @@ const jestFail = (done, func) => (...args) => {
 type ItemMap = { [k: string]: { id: string; value: string } };
 
 describe('StateDecorator', () => {
+  it('computeAsyncAction', () => {
+    const action = {
+      promiseGet: () => Promise.resolve(),
+    };
+
+    const newAction = computeAsyncActionInput(action);
+
+    expect(newAction.promise).toBeDefined();
+    expect(newAction.retryCount).toEqual(3);
+    expect(newAction.conflictPolicy).toEqual(ConflictPolicy.REUSE);
+  });
+
   it('handles synchronous action on mount', (done) => {
     let wrapper;
 
@@ -1264,6 +1277,93 @@ describe('StateDecorator', () => {
   });
 
   describe('Conflicting actions management', () => {
+    it('handles 2 calls to an asynchronous action (reuse)', (done) => {
+      type State = { count: number };
+      type Actions = {
+        getData: (value: string) => Promise<string>;
+      };
+
+      const actions: StateDecoratorActions<State, Actions, any> = {
+        getData: {
+          promise: ([value]) => new Promise((res) => setTimeout(res, 200, value)),
+          reducer: (s): State => ({
+            count: s.count + 1,
+          }),
+          conflictPolicy: ConflictPolicy.REUSE,
+        },
+      };
+
+      const onMount = (actions: Actions) => {
+        const p1 = actions.getData('id1').catch((e) => done.fail(e));
+        const p2 = actions.getData('id1').catch((e) => done.fail(e));
+        expect(p1 === p2);
+      };
+
+      const props = {
+        actions,
+        onMount,
+        initialState: {
+          count: 0,
+        } as State,
+      };
+
+      const renderFunction = jestFail(done, (state: State, actions, loading, loadingMap) => {
+        if (state.count === 1) {
+          done();
+        }
+        return <div />;
+      });
+
+      const wrapper = shallow(<StateDecorator {...props}>{renderFunction}</StateDecorator>);
+    });
+
+    it('handles 2 calls to an asynchronous action (reuse)', (done) => {
+      type State = { count: number; res: string };
+      type Actions = {
+        getData: (value: string) => Promise<string>;
+      };
+
+      let timeout = 100;
+
+      const actions: StateDecoratorActions<State, Actions, any> = {
+        getData: {
+          promise: ([value]) =>
+            new Promise((res) => {
+              setTimeout(res, timeout, value);
+              timeout = timeout + 200;
+            }),
+          reducer: (s, res): State => ({
+            res,
+            count: s.count + 1,
+          }),
+          conflictPolicy: ConflictPolicy.REUSE,
+        },
+      };
+
+      const onMount = (actions: Actions) => {
+        const p1 = actions.getData('id1').catch((e) => done.fail(e));
+        const p2 = actions.getData('id2').catch((e) => done.fail(e));
+        expect(p1 !== p2);
+        p2.then(() => {
+          done();
+        });
+      };
+
+      const props = {
+        actions,
+        onMount,
+        initialState: {
+          count: 0,
+        } as State,
+      };
+
+      const renderFunction = jestFail(done, (state: State, actions, loading, loadingMap) => {
+        return <div />;
+      });
+
+      const wrapper = shallow(<StateDecorator {...props}>{renderFunction}</StateDecorator>);
+    });
+
     it('handles 3 calls to an asynchronous action (keep last)', (done) => {
       type State = { str: string; count: number };
       type Actions = {

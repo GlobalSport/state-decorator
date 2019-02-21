@@ -46,8 +46,14 @@ export enum ConflictPolicy {
 
   /**
    * Execute all calls one after another.
+   * @see getPromiseId
    */
   PARALLEL = 'parallel',
+
+  /**
+   * Reuse the ongoing promise if any and if possible (same arguments). Only for GET requests!
+   */
+  REUSE = 'reuse',
 }
 
 export type PromiseProvider<S, F extends (...args: any[]) => any, A, P> = (
@@ -75,7 +81,7 @@ export type LoadingProps<A> = {
   loadingParallelMap: LoadingMapParallelActions<A>;
 };
 
-export interface AsynchAction<S, F extends (...args: any[]) => any, A, P> {
+export interface AsynchActionBase<S, F extends (...args: any[]) => any, A, P> {
   /**
    * The success message to pass to the notifySuccess function passed as property to the StateDecorator.
    */
@@ -95,11 +101,6 @@ export interface AsynchAction<S, F extends (...args: any[]) => any, A, P> {
    * A function that provides the error message to pass to the notifyError function passed as property to the StateDecorator.
    */
   getErrorMessage?: (e: Error, args: Parameters<F>, props: P) => string;
-
-  /**
-   * The request, returns a promise
-   */
-  promise: PromiseProvider<S, F, A, P>;
 
   /**
    * If set, called with the result of the promise to update the current state.
@@ -166,6 +167,26 @@ export interface AsynchAction<S, F extends (...args: any[]) => any, A, P> {
    */
   isTriggerRetryError?: (e: Error) => boolean;
 }
+
+interface AsynchActionPromise<S, F extends (...args: any[]) => any, A, P> extends AsynchActionBase<S, F, A, P> {
+  /**
+   * The request, returns a promise
+   */
+  promise: PromiseProvider<S, F, A, P>;
+}
+interface AsynchActionPromiseGet<S, F extends (...args: any[]) => any, A, P> extends AsynchActionBase<S, F, A, P> {
+  /**
+   * The request, returns a promise that is a GET request.
+   * A shortcut to set:
+   *   - retryCount: 3
+   *   - conflictPolicy: ConflictPolicy.REUSE
+   */
+  promiseGet: PromiseProvider<S, F, A, P>;
+}
+
+export type AsynchAction<S, F extends (...args: any[]) => any, A, P> =
+  | AsynchActionPromise<S, F, A, P>
+  | AsynchActionPromiseGet<S, F, A, P>;
 
 export type StateDecoratorAction<S, F extends (...args: any[]) => any, A, P> =
   | AsynchAction<S, F, A, P>
@@ -357,6 +378,30 @@ export function testSyncAction<S, F extends (...args: any[]) => any, A, P>(
 }
 
 /**
+ * @private
+ */
+export function computeAsyncActionInput<S, F extends (...args: any[]) => any, A, P>(
+  action: AsynchAction<S, F, A, P>
+): AsynchActionPromise<S, F, A, P> {
+  if ('promiseGet' in action) {
+    return {
+      ...action,
+      promise: action.promiseGet,
+      retryCount: 3,
+      conflictPolicy: ConflictPolicy.REUSE,
+    };
+  }
+  return action;
+}
+
+export function areSameArgs(args1: any[], args2: any[]): boolean {
+  if (args1.length !== args2.length) {
+    return false;
+  }
+  return args1.find((value, index) => args2[index] !== value) == null;
+}
+
+/**
  * A state container designed to substitute the local state of a component.
  * Types:
  *   - S: The interface of the State to manange.
@@ -414,7 +459,7 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
   private optimisticActions: OptimisticActionsMap = {};
   private shouldRecordHistory: boolean = false;
   private dataState: S = this.props.initialState === undefined ? undefined : this.props.initialState;
-  private promises: { [name: string]: Promise<any> } = {};
+  private promises: { [name: string]: { promise: Promise<any>; refArgs: any[] } } = {};
   private conflictActions: ConflictActionsMap = {};
   private hasParallelActions = false;
 
@@ -616,7 +661,7 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
         // asynchronous action
         return {
           name,
-          action: this.getDecoratedAsynchAction(name, action),
+          action: this.getDecoratedAsynchAction(name, computeAsyncActionInput(action)),
         };
       })
       .reduce(
@@ -726,6 +771,14 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
     });
 
   private handleConflictingAction(name: string, conflictPolicy: ConflictPolicy, args: any[]) {
+    let policy: ConflictPolicy = conflictPolicy;
+    if (policy === ConflictPolicy.REUSE) {
+      if (areSameArgs(this.promises[name].refArgs, args)) {
+        return this.promises[name].promise;
+      } // else
+      policy = ConflictPolicy.KEEP_ALL;
+    }
+
     return new Promise((resolve, reject) => {
       const futureAction = {
         resolve,
@@ -734,7 +787,7 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
         timestamp: Date.now(),
       };
 
-      switch (conflictPolicy) {
+      switch (policy) {
         case ConflictPolicy.IGNORE:
           resolve();
           break;
@@ -754,11 +807,12 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
           break;
         }
         case ConflictPolicy.PARALLEL:
+        case ConflictPolicy.REUSE:
           // no-op
           break;
         default:
           // will trigger a compilation error if one of the enum values is not processed.
-          const exhaustiveCheck: never = conflictPolicy;
+          const exhaustiveCheck: never = policy;
           exhaustiveCheck;
           break;
       }
@@ -859,7 +913,7 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
       retryCount,
       retryDelaySeed,
       isTriggerRetryError,
-    }: AsynchAction<S, A[string], A, P>
+    }: AsynchActionPromise<S, A[string], A, P>
   ) => (...args: Parameters<A[string]>) => {
     const dataState = this.dataState;
 
@@ -960,7 +1014,7 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
         }
 
         if (notifySuccess && (successMessage !== undefined || getSuccessMessage !== undefined)) {
-          let msg;
+          let msg: string;
 
           if (getSuccessMessage !== undefined) {
             msg = getSuccessMessage(result, args, props);
@@ -1049,7 +1103,10 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
         return result;
       });
 
-    this.promises[name] = p;
+    this.promises[name] = {
+      promise: p,
+      refArgs: conflictPolicy === ConflictPolicy.REUSE && args.length > 0 ? [...args] : [],
+    };
 
     return p;
   };
