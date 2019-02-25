@@ -123,7 +123,7 @@ export interface AsynchActionBase<S, F extends (...args: any[]) => any, A, P> {
    * @param newData The data after the reducer is applied
    * @param args The argument during the call of the request function
    */
-  onDone?: (state: S, result: PromiseResult<ReturnType<F>>, args: Parameters<F>, props: P) => void;
+  onDone?: (state: S, result: PromiseResult<ReturnType<F>>, args: Parameters<F>, props: P, actions: A) => void;
 
   /**
    * Retrieve the state to set as current data before the promise is resolved.
@@ -1032,7 +1032,7 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
         this.cleanHistoryAfterOptimistAction(name);
 
         if (onDone) {
-          onDone(newState.data || dataState, result, args, props);
+          onDone(newState.data || dataState, result, args, props, this.actions);
         }
 
         delete this.promises[name];
