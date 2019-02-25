@@ -772,11 +772,12 @@ describe('StateDecorator', () => {
       get: {
         promise: (param) => Promise.resolve('text'),
         reducer: () => 'reducer',
-        onDone: jestFail(done, (newData, result, args, props) => {
+        onDone: jestFail(done, (newData, result, args, props, actions) => {
           expect(result).toEqual('text');
           expect(newData).toEqual('reducer');
           expect(args[0]).toEqual('param');
           expect(props.id).toEqual('10');
+          expect(actions.get).toBeDefined();
           done();
         }),
       },
