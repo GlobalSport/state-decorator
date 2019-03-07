@@ -988,7 +988,7 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
       this.forceUpdate();
     }
 
-    const p = retryDecorator(promise, retryCount ? 1 + retryCount : 1, retryDelaySeed, isTriggerRetryError)(
+    let p = retryDecorator(promise, retryCount ? 1 + retryCount : 1, retryDelaySeed, isTriggerRetryError)(
       args,
       this.dataState,
       props,
@@ -999,126 +999,128 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
       return null; // nothing to do
     }
 
-    p.then((result) => {
-      // Need to get the data here because when chaining action the above variable is NOT up to date.
-      const dataState = this.dataState;
+    p = p
+      .then((result) => {
+        // Need to get the data here because when chaining action the above variable is NOT up to date.
+        const dataState = this.dataState;
 
-      const promiseId = isParallelActions && getPromiseId(...args);
-      this.markActionAsLoaded(name, conflictPolicy, promiseId);
+        const promiseId = isParallelActions && getPromiseId(...args);
+        this.markActionAsLoaded(name, conflictPolicy, promiseId);
 
-      const newState: Partial<StateDecoratorState<S, A>> = {
-        loading: this.isSomeRequestLoading(),
-      };
+        const newState: Partial<StateDecoratorState<S, A>> = {
+          loading: this.isSomeRequestLoading(),
+        };
 
-      if (reducer) {
-        const newDataState = reducer(dataState, result, args, props);
+        if (reducer) {
+          const newDataState = reducer(dataState, result, args, props);
 
-        if (newDataState !== null) {
-          this.pushActionToHistory(name, 'reducer', [result, args, props]);
+          if (newDataState !== null) {
+            this.pushActionToHistory(name, 'reducer', [result, args, props]);
 
-          newState.data = newDataState;
-          this.dataState = newState.data;
+            newState.data = newDataState;
+            this.dataState = newState.data;
 
-          logStateChange(name, logEnabled, dataState, newState.data, args, 'reducer');
-        }
-      } else if (process.env.NODE_ENV === 'development' && !optimisticReducer && logEnabled) {
-        console.group(`[StateDecorator] Action ${name}`);
-        if (Object.keys(args).length > 0) {
-          console.group('Arguments');
-          Object.keys(args).forEach((prop) => console.log(prop, ':', args[prop]));
+            logStateChange(name, logEnabled, dataState, newState.data, args, 'reducer');
+          }
+        } else if (process.env.NODE_ENV === 'development' && !optimisticReducer && logEnabled) {
+          console.group(`[StateDecorator] Action ${name}`);
+          if (Object.keys(args).length > 0) {
+            console.group('Arguments');
+            Object.keys(args).forEach((prop) => console.log(prop, ':', args[prop]));
+            console.groupEnd();
+          }
           console.groupEnd();
         }
-        console.groupEnd();
-      }
 
-      if (notifySuccess && (successMessage !== undefined || getSuccessMessage !== undefined)) {
-        let msg: string;
+        if (notifySuccess && (successMessage !== undefined || getSuccessMessage !== undefined)) {
+          let msg: string;
 
-        if (getSuccessMessage !== undefined) {
-          msg = getSuccessMessage(result, args, props);
+          if (getSuccessMessage !== undefined) {
+            msg = getSuccessMessage(result, args, props);
+          }
+
+          if (!msg) {
+            msg = successMessage;
+          }
+
+          if (msg) {
+            notifySuccess(msg);
+          }
         }
 
-        if (!msg) {
-          msg = successMessage;
+        this.cleanHistoryAfterOptimistAction(name);
+
+        if (onDone) {
+          onDone(newState.data || dataState, result, args, props, this.actions);
         }
 
-        if (msg) {
-          notifySuccess(msg);
-        }
-      }
+        delete this.promises[name];
+        this.setState(newState);
 
-      this.cleanHistoryAfterOptimistAction(name);
+        this.processNextConflictAction(name);
 
-      if (onDone) {
-        onDone(newState.data || dataState, result, args, props, this.actions);
-      }
+        return Promise.resolve(result);
+      })
+      .catch((error) => {
+        const dataState = this.dataState;
 
-      delete this.promises[name];
-      this.setState(newState);
+        const promiseId = isParallelActions && getPromiseId(...args);
+        this.markActionAsLoaded(name, conflictPolicy, promiseId);
 
-      this.processNextConflictAction(name);
+        const newState: Partial<StateDecoratorState<S, A>> = {
+          data: dataState,
+          loading: this.isSomeRequestLoading(),
+        };
 
-      return Promise.resolve(result);
-    }).catch((error) => {
-      const dataState = this.dataState;
-
-      const promiseId = isParallelActions && getPromiseId(...args);
-      this.markActionAsLoaded(name, conflictPolicy, promiseId);
-
-      const newState: Partial<StateDecoratorState<S, A>> = {
-        data: dataState,
-        loading: this.isSomeRequestLoading(),
-      };
-
-      if (this.optimisticActions[name]) {
-        newState.data = this.undoOptimisticAction(name);
-        this.dataState = newState.data;
-      }
-
-      let errorHandled = false;
-
-      if (errorReducer) {
-        errorHandled = true;
-        const newDataState = errorReducer(dataState, error, args, props);
-        if (newDataState !== null) {
-          this.pushActionToHistory(name, 'errorReducer', [error, args, props]);
-          newState.data = newDataState;
-
+        if (this.optimisticActions[name]) {
+          newState.data = this.undoOptimisticAction(name);
           this.dataState = newState.data;
         }
-      }
 
-      if (notifyError && (errorMessage !== undefined || getErrorMessage !== undefined)) {
-        let msg;
-        errorHandled = true;
+        let errorHandled = false;
 
-        if (getErrorMessage !== undefined) {
-          msg = getErrorMessage(error, args, props);
+        if (errorReducer) {
+          errorHandled = true;
+          const newDataState = errorReducer(dataState, error, args, props);
+          if (newDataState !== null) {
+            this.pushActionToHistory(name, 'errorReducer', [error, args, props]);
+            newState.data = newDataState;
+
+            this.dataState = newState.data;
+          }
         }
 
-        if (!msg) {
-          msg = errorMessage;
+        if (notifyError && (errorMessage !== undefined || getErrorMessage !== undefined)) {
+          let msg;
+          errorHandled = true;
+
+          if (getErrorMessage !== undefined) {
+            msg = getErrorMessage(error, args, props);
+          }
+
+          if (!msg) {
+            msg = errorMessage;
+          }
+
+          if (msg) {
+            notifyError(msg);
+          }
         }
 
-        if (msg) {
-          notifyError(msg);
-        }
-      }
+        StateDecorator.onAsyncError(error, errorHandled);
 
-      StateDecorator.onAsyncError(error, errorHandled);
+        logStateChange(name, logEnabled, dataState, newState.data, args, 'error reducer', true);
 
-      logStateChange(name, logEnabled, dataState, newState.data, args, 'error reducer', true);
+        const result = !errorHandled || rejectPromiseOnError ? Promise.reject(error) : undefined;
 
-      const result = !errorHandled || rejectPromiseOnError ? Promise.reject(error) : undefined;
+        delete this.promises[name];
 
-      delete this.promises[name];
+        this.setState(newState);
 
-      this.setState(newState);
+        this.processNextConflictAction(name);
 
-      this.processNextConflictAction(name);
-
-      return result;
-    });
+        return result;
+      });
 
     this.promises[name] = {
       promise: p,
