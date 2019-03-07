@@ -61,7 +61,7 @@ export type PromiseProvider<S, F extends (...args: any[]) => any, A, P> = (
   state: S,
   props: P,
   actions: A
-) => ReturnType<F>;
+) => ReturnType<F> | null;
 
 export type SynchAction<S, F extends (...args: any[]) => any, P> = (
   state: S,
@@ -308,19 +308,23 @@ export function retryDecorator<S, F extends (...args: any[]) => Promise<any>, A,
   }
   return (args: any, state: S, props: P, actions: A): ReturnType<F> => {
     function call(callCount: number, resolve: (res: any) => any, reject: (e: Error) => any) {
-      return promiseProvider(args, state, props, actions)
-        .then((res) => resolve(res))
-        .catch((e) => {
-          if (isRetryError(e)) {
-            if (callCount === maxCalls) {
-              reject(e);
-            } else {
-              setTimeout(call, delay * callCount, callCount + 1, resolve, reject);
-            }
-          } else {
+      const p = promiseProvider(args, state, props, actions);
+
+      if (p === null) {
+        return null;
+      }
+
+      return p.then((res) => resolve(res)).catch((e) => {
+        if (isRetryError(e)) {
+          if (callCount === maxCalls) {
             reject(e);
+          } else {
+            setTimeout(call, delay * callCount, callCount + 1, resolve, reject);
           }
-        });
+        } else {
+          reject(e);
+        }
+      });
     }
 
     return new Promise((resolve, reject) => {
@@ -399,6 +403,93 @@ export function areSameArgs(args1: any[], args2: any[]): boolean {
     return false;
   }
   return args1.find((value, index) => args2[index] !== value) == null;
+}
+
+function buildDiff<S>(oldState: S, newState: S) {
+  const res = {};
+
+  Object.keys(oldState).forEach((k) => {
+    if (newState.hasOwnProperty(k)) {
+      const oldValue = oldState[k];
+      const newValue = newState[k];
+
+      if (newValue !== oldValue) {
+        const type = newState[k] == null ? typeof oldState[k] : typeof newState[k];
+        if (type === 'number' || type === 'string' || type === 'boolean') {
+          res[k] = `${oldState[k]} => ${newState[k] === '' ? '""' : newState[k]}`;
+        } else if ((oldValue && oldValue.length) || (newValue && newValue.length)) {
+          if (oldValue == null) {
+            res[k] = `was null, now contains ${newValue.length} elements`;
+          } else if (newValue == null) {
+            res[k] = `contained ${oldValue.length} elements, now is null`;
+          } else if (oldValue.length === 0) {
+            res[k] = `was empty, now contains ${newValue.length} elements`;
+          } else if (newValue.length === 0) {
+            res[k] = `contained ${oldValue.length} elements, now is empty`;
+          } else {
+            let addedValues = newValue.filter((a) => !oldValue.find((b) => isEqual(a, b)));
+            let removedValues = oldValue.filter((a) => !newValue.find((b) => isEqual(a, b)));
+
+            if (addedValues.length > 10) {
+              addedValues = `${addedValues.length} elements added`;
+            }
+            if (removedValues.length > 10) {
+              removedValues = `${removedValues.length} elements removed`;
+            }
+            res[k] = {
+              added: addedValues,
+              removed: removedValues,
+            };
+          }
+        } else {
+          res[k] = newState[k];
+        }
+      }
+    } else {
+      res[k] = 'was deleted';
+    }
+  });
+
+  Object.keys(newState).forEach((k) => {
+    if (!oldState.hasOwnProperty(k)) {
+      res[k] = `${newState[k]}`;
+    }
+  });
+
+  return res;
+}
+
+function logStateChange<S>(
+  name: string,
+  logEnabled: boolean,
+  oldState: S,
+  newState: S,
+  args: any[],
+  source: string,
+  failed = false
+) {
+  if (process.env.NODE_ENV === 'development' && logEnabled) {
+    console.group(`[StateDecorator] Action ${name} ${source || ''} ${failed ? 'FAILED' : ''}`);
+    if (Object.keys(args).length > 0) {
+      console.group('Arguments');
+      Object.keys(args).forEach((prop) => console.log(prop, ':', args[prop]));
+      console.groupEnd();
+    }
+    console.groupCollapsed('Before');
+    Object.keys(oldState).forEach((prop) => console.log(prop, ':', oldState[prop]));
+    console.groupEnd();
+
+    console.groupCollapsed('After');
+    Object.keys(newState).forEach((prop) => console.log(prop, ':', newState[prop]));
+    console.groupEnd();
+
+    console.group('Diff');
+    const diff = buildDiff(oldState, newState);
+    Object.keys(diff).forEach((prop) => console.log(prop, ':', diff[prop]));
+    console.groupEnd();
+
+    console.groupEnd();
+  }
 }
 
 /**
@@ -603,6 +694,7 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
             refValues: values,
             data: newData,
           };
+          logStateChange('onPropsChangeReducer', nextProps.logEnabled, data, newData, [], '');
         } else {
           newState = {
             refValues: values,
@@ -611,6 +703,9 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
 
         if (nextProps.onPropsChange) {
           setTimeout(() => {
+            if (process.env.NODE_ENV === 'development' && nextProps.logEnabled) {
+              console.log('[StateDecorator] Action onPropsChange');
+            }
             nextProps.onPropsChange(newData || data, nextProps.props, prevState.actions, changedIndices);
           });
         }
@@ -671,88 +766,6 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
         },
         {} as A
       );
-  };
-
-  private static buildDiff(oldState, newState) {
-    const res = {};
-
-    Object.keys(oldState).forEach((k) => {
-      if (newState.hasOwnProperty(k)) {
-        const oldValue = oldState[k];
-        const newValue = newState[k];
-
-        if (newValue !== oldValue) {
-          const type = newState[k] == null ? typeof oldState[k] : typeof newState[k];
-          if (type === 'number' || type === 'string' || type === 'boolean') {
-            res[k] = `${oldState[k]} => ${newState[k] === '' ? '""' : newState[k]}`;
-          } else if ((oldValue && oldValue.length) || (newValue && newValue.length)) {
-            if (oldValue == null) {
-              res[k] = `was null, now contains ${newValue.length} elements`;
-            } else if (newValue == null) {
-              res[k] = `contained ${oldValue.length} elements, now is null`;
-            } else if (oldValue.length === 0) {
-              res[k] = `was empty, now contains ${newValue.length} elements`;
-            } else if (newValue.length === 0) {
-              res[k] = `contained ${oldValue.length} elements, now is empty`;
-            } else {
-              let addedValues = newValue.filter((a) => !oldValue.find((b) => isEqual(a, b)));
-              let removedValues = oldValue.filter((a) => !newValue.find((b) => isEqual(a, b)));
-
-              if (addedValues.length > 10) {
-                addedValues = `${addedValues.length} elements added`;
-              }
-              if (removedValues.length > 10) {
-                removedValues = `${removedValues.length} elements removed`;
-              }
-              res[k] = {
-                added: addedValues,
-                removed: removedValues,
-              };
-            }
-          } else {
-            res[k] = newState[k];
-          }
-        }
-      } else {
-        res[k] = 'was deleted';
-      }
-    });
-
-    Object.keys(newState).forEach((k) => {
-      if (!oldState.hasOwnProperty(k)) {
-        res[k] = `${newState[k]}`;
-      }
-    });
-
-    return res;
-  }
-
-  private logStateChange = (name: string, newState: S, args: any[], source: string, failed = false) => {
-    const { data } = this.state;
-    const { logEnabled } = this.props;
-
-    if (process.env.NODE_ENV === 'development' && logEnabled) {
-      console.group(`[StateDecorator] Action ${name} ${source || ''} ${failed ? 'FAILED' : ''}`);
-      if (Object.keys(args).length > 0) {
-        console.group('Arguments');
-        Object.keys(args).forEach((prop) => console.log(prop, ':', args[prop]));
-        console.groupEnd();
-      }
-      console.groupCollapsed('Before');
-      Object.keys(data).forEach((prop) => console.log(prop, ':', data[prop]));
-      console.groupEnd();
-
-      console.groupCollapsed('After');
-      Object.keys(newState).forEach((prop) => console.log(prop, ':', newState[prop]));
-      console.groupEnd();
-
-      console.group('Diff');
-      const diff = StateDecorator.buildDiff(data, newState);
-      Object.keys(diff).forEach((prop) => console.log(prop, ':', diff[prop]));
-      console.groupEnd();
-
-      console.groupEnd();
-    }
   };
 
   private isSomeRequestLoading = () =>
@@ -828,7 +841,7 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
     if (newDataState !== null) {
       this.pushActionToHistory(name, null, [args, props]);
 
-      this.logStateChange(name, newDataState, args, 'synch reducer');
+      logStateChange(name, logEnabled, this.state.data, newDataState, args, 'synch reducer');
 
       this.dataState = newDataState;
       this.setState({
@@ -941,7 +954,7 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
       if (newDataState !== null) {
         loadingState.data = newDataState;
         this.dataState = newDataState;
-        this.logStateChange(name, newDataState, args, 'pre reducer');
+        logStateChange(name, logEnabled, dataState, newDataState, args, 'pre reducer');
       }
     }
 
@@ -963,7 +976,7 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
         // However, the loading state is available in the loading map.
         loadingState.loading = isSomeRequestLoadingBefore;
 
-        this.logStateChange(name, newDataState, args, 'optimistic reducer');
+        logStateChange(name, logEnabled, loadingState.data || dataState, newDataState, args, 'optimistic reducer');
       }
     } else {
       loadingState.loading = true;
@@ -975,12 +988,18 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
       this.forceUpdate();
     }
 
-    const p = retryDecorator(promise, retryCount ? 1 + retryCount : 1, retryDelaySeed, isTriggerRetryError)(
+    let p = retryDecorator(promise, retryCount ? 1 + retryCount : 1, retryDelaySeed, isTriggerRetryError)(
       args,
       this.dataState,
       props,
       this.actions
-    )
+    );
+
+    if (p === null) {
+      return null; // nothing to do
+    }
+
+    p = p
       .then((result) => {
         // Need to get the data here because when chaining action the above variable is NOT up to date.
         const dataState = this.dataState;
@@ -1001,7 +1020,7 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
             newState.data = newDataState;
             this.dataState = newState.data;
 
-            this.logStateChange(name, newState.data, args, 'reducer');
+            logStateChange(name, logEnabled, dataState, newState.data, args, 'reducer');
           }
         } else if (process.env.NODE_ENV === 'development' && !optimisticReducer && logEnabled) {
           console.group(`[StateDecorator] Action ${name}`);
@@ -1090,7 +1109,7 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
 
         StateDecorator.onAsyncError(error, errorHandled);
 
-        this.logStateChange(name, newState.data, args, 'error reducer', true);
+        logStateChange(name, logEnabled, dataState, newState.data, args, 'error reducer', true);
 
         const result = !errorHandled || rejectPromiseOnError ? Promise.reject(error) : undefined;
 
