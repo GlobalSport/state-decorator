@@ -35,6 +35,7 @@ export class PropsChange extends React.PureComponent<PropsChangeProps> {
         getPropsRefValues={(p) => [p.value]}
         onPropsChangeReducer={(s, p) => ({ ...s, value: p.value })}
         onPropsChange={(s, p, actions) => actions.get('value 3')}
+        logEnabled
       >
         {({ value }) => <div>value: {value}</div>}
       </StateDecorator>

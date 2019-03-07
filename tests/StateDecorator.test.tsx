@@ -161,6 +161,38 @@ describe('StateDecorator', () => {
     const wrapper = shallow(<StateDecorator {...props}>{() => <div />}</StateDecorator>);
   });
 
+  it('does nothing if getPromise returns null', (done) => {
+    const reducer = jest.fn();
+
+    const actions = {
+      get: {
+        reducer,
+        promise: (arg, state, props) => null,
+      },
+    };
+
+    const onMount = jestFail(done, (actions) => {
+      expect(actions.get).toBeInstanceOf(Function);
+
+      const res = actions.get();
+      expect(reducer).not.toHaveBeenCalled();
+      expect(res).toBeNull();
+
+      done();
+    });
+
+    const props = {
+      actions,
+      onMount,
+      props: {
+        id: '10',
+      },
+      initialState: 'user',
+    };
+
+    const wrapper = shallow(<StateDecorator {...props}>{() => <div />}</StateDecorator>);
+  });
+
   it('handles complex service', (done) => {
     const actions = {
       get: {
