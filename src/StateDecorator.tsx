@@ -1011,6 +1011,8 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
 
     if (p === null) {
       logSingle(name, args, logEnabled, 'ABORTED');
+      this.markActionAsLoaded(name, conflictPolicy, promiseId);
+
       return null; // nothing to do
     }
 
