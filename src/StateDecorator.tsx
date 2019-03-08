@@ -492,6 +492,18 @@ function logStateChange<S>(
   }
 }
 
+function logSingle(name: string, args: any[], logEnabled: boolean, state: string = '') {
+  if (process.env.NODE_ENV === 'development' && logEnabled) {
+    console.group(`[StateDecorator] Action ${name} ${state}`);
+    if (Object.keys(args).length > 0) {
+      console.group('Arguments');
+      Object.keys(args).forEach((prop) => console.log(prop, ':', args[prop]));
+      console.groupEnd();
+    }
+    console.groupEnd();
+  }
+}
+
 /**
  * A state container designed to substitute the local state of a component.
  * Types:
@@ -802,9 +814,11 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
 
       switch (policy) {
         case ConflictPolicy.IGNORE:
+          logSingle(name, args, this.props.logEnabled, 'Drop request (Conflict policy is IGNORE)');
           resolve();
           break;
         case ConflictPolicy.REJECT:
+          logSingle(name, args, this.props.logEnabled, 'Reject request (Conflict policy is REJECT)');
           reject(new Error(`An asynch action ${name} is already ongoing.`));
           break;
         case ConflictPolicy.KEEP_LAST: {
@@ -976,7 +990,7 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
         // However, the loading state is available in the loading map.
         loadingState.loading = isSomeRequestLoadingBefore;
 
-        logStateChange(name, logEnabled, loadingState.data || dataState, newDataState, args, 'optimistic reducer');
+        logStateChange(name, logEnabled, loadingState.data || dataState, newDataState, args, 'Optimistic reducer');
       }
     } else {
       loadingState.loading = true;
@@ -996,6 +1010,7 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
     );
 
     if (p === null) {
+      logSingle(name, args, logEnabled, 'ABORTED');
       return null; // nothing to do
     }
 
@@ -1022,14 +1037,8 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
 
             logStateChange(name, logEnabled, dataState, newState.data, args, 'reducer');
           }
-        } else if (process.env.NODE_ENV === 'development' && !optimisticReducer && logEnabled) {
-          console.group(`[StateDecorator] Action ${name}`);
-          if (Object.keys(args).length > 0) {
-            console.group('Arguments');
-            Object.keys(args).forEach((prop) => console.log(prop, ':', args[prop]));
-            console.groupEnd();
-          }
-          console.groupEnd();
+        } else if (!optimisticReducer) {
+          logSingle(name, args, logEnabled, 'NO REDUCER');
         }
 
         if (notifySuccess && (successMessage !== undefined || getSuccessMessage !== undefined)) {
@@ -1109,7 +1118,7 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
 
         StateDecorator.onAsyncError(error, errorHandled);
 
-        logStateChange(name, logEnabled, dataState, newState.data, args, 'error reducer', true);
+        logStateChange(name, logEnabled, dataState, newState.data, args, 'Error reducer', true);
 
         const result = !errorHandled || rejectPromiseOnError ? Promise.reject(error) : undefined;
 
