@@ -883,9 +883,10 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
       const futureAction = this.conflictActions[name].shift();
 
       if (futureAction) {
-        (this.actions[name](...futureAction.args) as Promise<any>)
-          .then(futureAction.resolve)
-          .catch((e) => futureAction.reject(e));
+        const p = this.actions[name](...futureAction.args) as Promise<any>;
+        if (p !== null) {
+          p.then(futureAction.resolve).catch((e) => futureAction.reject(e));
+        } // else aborted
       }
     }
   }
