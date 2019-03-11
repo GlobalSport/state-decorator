@@ -1310,6 +1310,51 @@ describe('StateDecorator', () => {
   });
 
   describe('Conflicting actions management', () => {
+    it('handles 2 calls to an asynchronous action (keep_all + null in 2nd call)', (done) => {
+      type State = { count: number };
+      type Actions = {
+        getData: (value: string) => Promise<string>;
+      };
+
+      let count = 1;
+
+      const actions: StateDecoratorActions<State, Actions, any> = {
+        getData: {
+          promise: ([value]) => {
+            if (count === 1) {
+              count = 2;
+              return new Promise((res) => {
+                setTimeout(res, 200, value);
+              });
+            }
+            return null;
+          },
+          reducer: (s): State => ({
+            count: s.count + 1,
+          }),
+          conflictPolicy: ConflictPolicy.KEEP_ALL,
+        },
+      };
+
+      const onMount = jestFail(done, (actions: Actions) => {
+        const p1 = actions.getData('id1').catch((e) => done.fail(e));
+        const p2 = actions.getData('id1').catch((e) => done.fail(e));
+        done();
+      });
+
+      const props = {
+        actions,
+        onMount,
+        initialState: {
+          count: 0,
+        } as State,
+      };
+
+      const renderFunction = jestFail(done, () => <div />);
+
+      const wrapper = shallow(<StateDecorator {...props}>{renderFunction}</StateDecorator>);
+    });
+
     it('handles 2 calls to an asynchronous action (reuse)', (done) => {
       type State = { count: number };
       type Actions = {
