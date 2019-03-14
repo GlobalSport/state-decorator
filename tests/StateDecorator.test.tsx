@@ -1321,12 +1321,13 @@ describe('StateDecorator', () => {
       const actions: StateDecoratorActions<State, Actions, any> = {
         getData: {
           promise: ([value]) => {
-            if (count === 1) {
+            if (count === 1 || count === 3) {
               count = 2;
               return new Promise((res) => {
                 setTimeout(res, 200, value);
               });
             }
+            count++;
             return null;
           },
           reducer: (s): State => ({
@@ -1337,9 +1338,14 @@ describe('StateDecorator', () => {
       };
 
       const onMount = jestFail(done, (actions: Actions) => {
-        const p1 = actions.getData('id1').catch((e) => done.fail(e));
-        const p2 = actions.getData('id1').catch((e) => done.fail(e));
-        done();
+        actions.getData('id1').catch((e) => done.fail(e));
+        actions.getData('id1').catch((e) => done.fail(e));
+        actions
+          .getData('id1')
+          .then(() => {
+            done();
+          })
+          .catch((e) => done.fail(e));
       });
 
       const props = {
