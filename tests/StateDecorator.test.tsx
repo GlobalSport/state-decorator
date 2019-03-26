@@ -2105,6 +2105,7 @@ describe('retryDecorator', () => {
     type Actions = {
       increment: (v: number) => void;
       incrAsync: (v: number) => Promise<number>;
+      incrAsyncGet: (v: number) => Promise<number>;
     };
     type Props = {};
 
@@ -2116,6 +2117,10 @@ describe('retryDecorator', () => {
       },
       incrAsync: {
         promise: ([incr]) => Promise.resolve(incr),
+        reducer: (s, incr) => ({ value: s.value + incr }),
+      },
+      incrAsyncGet: {
+        promiseGet: ([incr]) => Promise.resolve(incr),
         reducer: (s, incr) => ({ value: s.value + incr }),
       },
     };
@@ -2141,6 +2146,15 @@ describe('retryDecorator', () => {
     it('testAsyncAction (correct type)', (done) => {
       const p = testAsyncAction(actions.incrAsync, (action) => {
         expect(action).toBeDefined();
+        done();
+      });
+      p && p.catch((e) => done.fail(e));
+    });
+
+    it('testAsyncAction (promiseGet converted in promise)', (done) => {
+      const p = testAsyncAction(actions.incrAsyncGet, (action) => {
+        expect(action).toBeDefined();
+        expect(action.promise).toBeDefined();
         done();
       });
       p && p.catch((e) => done.fail(e));

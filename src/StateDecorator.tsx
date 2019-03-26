@@ -358,10 +358,10 @@ export function isSyncAction<S, F extends (...args: any[]) => any, A, P>(
  */
 export function testAsyncAction<S, F extends (...args: any[]) => any, A, P>(
   action: StateDecoratorAction<S, F, A, P>,
-  test: (action: AsynchAction<S, F, A, P>) => any | Promise<any>
+  test: (action: AsynchActionPromise<S, F, A, P>) => any | Promise<any>
 ) {
   if (isAsyncAction(action)) {
-    return test(action);
+    return test(computeAsyncActionInput(action));
   }
   return Promise.reject(new Error('This action is not an asynchronous action'));
 }
