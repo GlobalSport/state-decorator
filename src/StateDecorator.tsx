@@ -952,7 +952,7 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
     const notifyError = _notifyError || (props && props['notifyError']);
     const notifySuccess = _notifySuccess || (props && props['notifySuccess']);
 
-    if (conflictPolicy !== ConflictPolicy.PARALLEL && this.loadingMap[name]) {
+    if (conflictPolicy !== ConflictPolicy.PARALLEL && this.promises[name]) {
       return this.handleConflictingAction(name, conflictPolicy, args);
     }
 
