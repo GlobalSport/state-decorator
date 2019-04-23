@@ -6,11 +6,16 @@ import Retry from './retry/Retry';
 import PropsChangeApp from './propsChange/PropsChange';
 import WrappedComponent from './hoc/WrappedComponent';
 import ContextContainer from './context/Context';
+import UndoRedo from './undo/UndoRedo';
 
 export default class App extends React.Component {
   render() {
     return (
       <div>
+        <section>
+          <h1>Undo / Redo</h1>
+          <UndoRedo />
+        </section>
         <section>
           <h1>Counter</h1>
           <CounterContainer />

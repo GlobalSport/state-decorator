@@ -63,10 +63,17 @@ export type PromiseProvider<S, F extends (...args: any[]) => any, A, P> = (
   actions: A
 ) => ReturnType<F> | null;
 
+type UndoActions = {
+  pushToUndoStack: (stackName: string, item: any, path: string[], mergeSamePath?: boolean) => void;
+  undo: (stackName: string) => /** path */ string[];
+  redo: (stackName: string) => /** path */ string[];
+};
+
 export type SynchAction<S, F extends (...args: any[]) => any, P> = (
   state: S,
   args: Parameters<F>,
-  props: P
+  props: P,
+  undoActions: UndoActions
 ) => S | null;
 
 type PromiseIdMap = { [promiseId: string]: boolean };
@@ -79,6 +86,13 @@ export type LoadingProps<A> = {
   loading: boolean;
   loadingMap: LoadingMap<A>;
   loadingParallelMap: LoadingMapParallelActions<A>;
+};
+
+type UndoRedoStackMap = {
+  [name: string]: {
+    path: string[];
+    item: any;
+  }[];
 };
 
 export interface AsynchActionBase<S, F extends (...args: any[]) => any, A, P> {
@@ -222,21 +236,38 @@ export interface StateDecoratorProps<S, A extends DecoratedActions, P = {}> {
   logEnabled?: boolean;
 
   /**
+   * Size of the undo stack.
+   * @default 5
+   */
+  undoStackSize?: number;
+
+  /**
+   * Size of the undo stack.
+   * Same value as undoStackSize by default.
+   */
+  redoStackSize?: number;
+
+  /**
    * Get a list of values that will be use as reference values.
    * If they are different (shallow compare), onPropsChangeReducer then onPropsChange will be called.
    */
   getPropsRefValues?: (props: any) => any[];
 
   /**
-   * Triggered when values of reference from props have changed. Allow to update state after a prop change.
+   * Triggered when values of reference from props have changed. Allows to update the state after a prop change.
    * <b>null</b> means no change.
    */
   onPropsChangeReducer?: (s: S, newProps: any, updatedIndices: number[]) => S;
 
   /**
-   * Triggered when values of reference from props have changed. Allow to call actions after a prop change.
+   * Triggered when values of reference from props have changed. Allows to call actions after a prop change.
    */
   onPropsChange?: (s: S, newProps: any, actions: A, updatedIndices: number[]) => void;
+
+  /**
+   * Triggered when an undo or redo action was executed. Allows to update the state after a undo or redo.
+   */
+  onUndoRedoReducer?: (s: S, stackName: string, item: any, path: string[]) => S;
 
   /**
    * The callback function called if an asynchronous function succeeded and a success messsage is defined.
@@ -284,8 +315,8 @@ interface OptimisticActionsMap {
 
 type FutureActions = {
   args: any[];
-  resolve: (...args) => void;
-  reject: (...args) => void;
+  resolve: (...args: any[]) => void;
+  reject: (...args: any[]) => void;
   timestamp?: number;
 };
 
@@ -407,55 +438,55 @@ export function areSameArgs(args1: any[], args2: any[]): boolean {
 
 function buildDiff<S>(oldState: S, newState: S) {
   const res = {};
+  if (process.env.NODE_ENV === 'development') {
+    Object.keys(oldState).forEach((k) => {
+      if (newState.hasOwnProperty(k)) {
+        const oldValue = oldState[k];
+        const newValue = newState[k];
 
-  Object.keys(oldState).forEach((k) => {
-    if (newState.hasOwnProperty(k)) {
-      const oldValue = oldState[k];
-      const newValue = newState[k];
+        if (newValue !== oldValue) {
+          const type = newState[k] == null ? typeof oldState[k] : typeof newState[k];
+          if (type === 'number' || type === 'string' || type === 'boolean') {
+            res[k] = `${oldState[k]} => ${newState[k] === '' ? '""' : newState[k]}`;
+          } else if ((oldValue && oldValue.length) || (newValue && newValue.length)) {
+            if (oldValue == null) {
+              res[k] = `was null, now contains ${newValue.length} elements`;
+            } else if (newValue == null) {
+              res[k] = `contained ${oldValue.length} elements, now is null`;
+            } else if (oldValue.length === 0) {
+              res[k] = `was empty, now contains ${newValue.length} elements`;
+            } else if (newValue.length === 0) {
+              res[k] = `contained ${oldValue.length} elements, now is empty`;
+            } else {
+              let addedValues = newValue.filter((a) => !oldValue.find((b) => isEqual(a, b)));
+              let removedValues = oldValue.filter((a) => !newValue.find((b) => isEqual(a, b)));
 
-      if (newValue !== oldValue) {
-        const type = newState[k] == null ? typeof oldState[k] : typeof newState[k];
-        if (type === 'number' || type === 'string' || type === 'boolean') {
-          res[k] = `${oldState[k]} => ${newState[k] === '' ? '""' : newState[k]}`;
-        } else if ((oldValue && oldValue.length) || (newValue && newValue.length)) {
-          if (oldValue == null) {
-            res[k] = `was null, now contains ${newValue.length} elements`;
-          } else if (newValue == null) {
-            res[k] = `contained ${oldValue.length} elements, now is null`;
-          } else if (oldValue.length === 0) {
-            res[k] = `was empty, now contains ${newValue.length} elements`;
-          } else if (newValue.length === 0) {
-            res[k] = `contained ${oldValue.length} elements, now is empty`;
+              if (addedValues.length > 10) {
+                addedValues = `${addedValues.length} elements added`;
+              }
+              if (removedValues.length > 10) {
+                removedValues = `${removedValues.length} elements removed`;
+              }
+              res[k] = {
+                added: addedValues,
+                removed: removedValues,
+              };
+            }
           } else {
-            let addedValues = newValue.filter((a) => !oldValue.find((b) => isEqual(a, b)));
-            let removedValues = oldValue.filter((a) => !newValue.find((b) => isEqual(a, b)));
-
-            if (addedValues.length > 10) {
-              addedValues = `${addedValues.length} elements added`;
-            }
-            if (removedValues.length > 10) {
-              removedValues = `${removedValues.length} elements removed`;
-            }
-            res[k] = {
-              added: addedValues,
-              removed: removedValues,
-            };
+            res[k] = newState[k];
           }
-        } else {
-          res[k] = newState[k];
         }
+      } else {
+        res[k] = 'was deleted';
       }
-    } else {
-      res[k] = 'was deleted';
-    }
-  });
+    });
 
-  Object.keys(newState).forEach((k) => {
-    if (!oldState.hasOwnProperty(k)) {
-      res[k] = `${newState[k]}`;
-    }
-  });
-
+    Object.keys(newState).forEach((k) => {
+      if (!oldState.hasOwnProperty(k)) {
+        res[k] = `${newState[k]}`;
+      }
+    });
+  }
   return res;
 }
 
@@ -520,6 +551,8 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
 > {
   static defaultProps = {
     logEnabled: false,
+    undoStackSize: 5,
+    redoStackSize: 5,
   };
 
   /**
@@ -565,6 +598,8 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
   private promises: { [name: string]: { promise: Promise<any>; refArgs: any[] } } = {};
   private conflictActions: ConflictActionsMap = {};
   private hasParallelActions = false;
+  private undoMap: UndoRedoStackMap = {};
+  private redoMap: UndoRedoStackMap = {};
 
   /**
    * Adds an action to the action history (only when at least one optimistic action is ongoing).
@@ -657,6 +692,103 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
       }
     }
   }
+
+  /**
+   * Push a new item on top of the undo stack.
+   * @param stackName The name of the undo/redo stack.
+   * @param item The item to store in undo stack
+   * @param path The path of the item. Will be retrieved when undo/redo. Allows to update the state
+   * @param mergeSamePath Whether merge changes with same path (controlled input for example)
+   */
+  private pushToUndoStack = (stackName: string, item: any, path: string[], mergeSamePath: boolean = true) => {
+    let stack = this.undoMap[stackName];
+    if (stack == null) {
+      stack = [];
+      this.undoMap[stackName] = stack;
+    }
+    const stackItem = {
+      path,
+      item,
+    };
+
+    if (mergeSamePath && stack.length > 0 && stack[stack.length - 1].path.join('>') === path.join('>')) {
+      stack[stack.length - 1] = stackItem;
+    } else {
+      stack.push(stackItem);
+      if (stack.length > this.props.undoStackSize) {
+        stack.unshift();
+      }
+    }
+
+    // a new action is pushed, so redo action is now useless
+    delete this.redoMap[stackName];
+  };
+
+  /**
+   * Undo the last action on the undo stack with the specified name.
+   * @param stackName The stack name
+   */
+  private undo = (stackName: string): string[] => {
+    if (this.props.onUndoRedoReducer == null) {
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('Undo is useless if onUndoRedoReducer property is not set');
+      }
+      return null;
+    }
+    const stack = this.undoMap[stackName];
+    if (stack == null || stack.length === 0) {
+      return null;
+    }
+    const stackItem = stack.pop();
+
+    if (this.props.redoStackSize > 0) {
+      let redoStack = this.redoMap[stackName];
+      if (redoStack == null) {
+        redoStack = [];
+        this.redoMap[stackName] = redoStack;
+      }
+      redoStack.push(stackItem);
+      if (redoStack.length > this.props.redoStackSize) {
+        redoStack.unshift();
+      }
+    }
+
+    const newDataState = this.props.onUndoRedoReducer(this.dataState, stackName, stackItem.item, stackItem.path);
+    if (newDataState !== null) {
+      this.setState({ data: newDataState });
+      logStateChange(`Undo ${stackName}`, this.props.logEnabled, this.dataState, newDataState, [], 'Undo reducer');
+    }
+
+    return stackItem.path;
+  };
+
+  /**
+   * Redo the last action on the redo stack with the specified name.
+   * @param stackName The stack name
+   */
+  private redo = (stackName: string): string[] => {
+    const stack = this.redoMap[stackName];
+    if (stack == null || stack.length === 0) {
+      return null;
+    }
+    const stackItem = stack.pop();
+
+    let undoStack = this.undoMap[stackName];
+    if (undoStack == null) {
+      undoStack = [];
+      this.undoMap[stackName] = undoStack;
+    }
+    undoStack.push(stackItem);
+    if (undoStack.length > this.props.redoStackSize) {
+      undoStack.unshift();
+    }
+
+    const newDataState = this.props.onUndoRedoReducer(this.dataState, stackName, stackItem.item, stackItem.path);
+    if (newDataState !== null) {
+      this.setState({ data: newDataState });
+    }
+    return stackItem.path;
+  };
 
   componentDidMount() {
     const { onMount, props } = this.props;
@@ -850,7 +982,11 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
     const data = this.dataState;
     const { props, logEnabled } = this.props;
 
-    const newDataState = action(data, args, props);
+    const newDataState = action(data, args, props, {
+      undo: this.undo,
+      redo: this.redo,
+      pushToUndoStack: this.pushToUndoStack,
+    });
 
     if (newDataState !== null) {
       this.pushActionToHistory(name, null, [args, props]);
