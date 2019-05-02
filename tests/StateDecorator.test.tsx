@@ -85,6 +85,53 @@ describe('StateDecorator', () => {
     wrapper = shallow(<StateDecorator {...props}>{render}</StateDecorator>);
   });
 
+  it('handles onUnmount to save state', (done) => {
+    let wrapper;
+
+    type State = {
+      value: number;
+    };
+    type Actions = {
+      action: (value: number) => void;
+    };
+
+    const actions: StateDecoratorActions<State, Actions> = {
+      action: (state, [value]) => ({ value }),
+    };
+
+    let savedValue: number;
+
+    const onMount = (actions: Actions) => {
+      actions.action(55);
+    };
+
+    const onUnmount = (s: State) => {
+      savedValue = s.value;
+    };
+
+    const render = jestFail(done, (state, actions, loading) => {
+      return <div />;
+    });
+
+    const props = {
+      actions,
+      onMount,
+      onUnmount,
+    };
+
+    wrapper = shallow(
+      <StateDecorator {...props} initialState={{ value: 10 }}>
+        {render}
+      </StateDecorator>
+    );
+
+    wrapper.unmount();
+
+    expect(savedValue).toEqual(55);
+
+    done();
+  });
+
   it('handles 2 synchronous actions', (done) => {
     let wrapper;
 
