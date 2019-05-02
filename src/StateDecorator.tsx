@@ -249,9 +249,14 @@ export interface StateDecoratorProps<S, A extends DecoratedActions, P = {}> {
   notifyError?: (message: string) => void;
 
   /**
-   * Function to call when the StateDecorator is mounted. Usually used to call an initial action.
+   * Function to call when the StateDecorator is mounted. Usually used to call a function to populate an initial action.
    */
   onMount?: (actions: A, props: P) => void;
+
+  /**
+   * Function to call when the StateDecorator is unmounted. Usually used to persist a state.
+   */
+  onUnmount?: (s: S) => void;
 
   /**
    * Child function,
@@ -735,7 +740,13 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
   }
 
   componentWillUnmount() {
+    const { onUnmount } = this.props;
+
     this.mounted = false;
+
+    if (onUnmount) {
+      onUnmount(this.dataState);
+    }
   }
 
   decorateActions = (actions: StateDecoratorActions<S, A, P>): A => {
