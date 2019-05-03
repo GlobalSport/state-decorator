@@ -6,11 +6,16 @@ import Retry from './retry/Retry';
 import PropsChangeApp from './propsChange/PropsChange';
 import WrappedComponent from './hoc/WrappedComponent';
 import ContextContainer from './context/Context';
+import Debounce from './debounce/Debounce';
 
 export default class App extends React.Component {
   render() {
     return (
       <div>
+        <section>
+          <h1>Debounce</h1>
+          <Debounce />
+        </section>
         <section>
           <h1>Counter</h1>
           <CounterContainer />
