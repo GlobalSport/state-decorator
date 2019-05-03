@@ -95,8 +95,11 @@ describe('StateDecorator', () => {
     type Actions = {
       action: (value: number) => void;
     };
+    type Props = {
+      onSaveState: (s: State) => void;
+    };
 
-    const actions: StateDecoratorActions<State, Actions> = {
+    const actions: StateDecoratorActions<State, Actions, Props> = {
       action: (state, [value]) => ({ value }),
     };
 
@@ -106,8 +109,10 @@ describe('StateDecorator', () => {
       actions.action(55);
     };
 
-    const onUnmount = (s: State) => {
+    const onUnmount = (s: State, p: Props) => {
       savedValue = s.value;
+      expect(p.onSaveState).toBeDefined();
+      p.onSaveState(s);
     };
 
     const render = jestFail(done, (state, actions, loading) => {
@@ -118,6 +123,9 @@ describe('StateDecorator', () => {
       actions,
       onMount,
       onUnmount,
+      props: {
+        onSaveState: jest.fn(),
+      },
     };
 
     wrapper = shallow(
@@ -129,6 +137,7 @@ describe('StateDecorator', () => {
     wrapper.unmount();
 
     expect(savedValue).toEqual(55);
+    expect(props.props.onSaveState).toHaveBeenCalled();
 
     done();
   });

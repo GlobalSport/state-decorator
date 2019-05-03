@@ -279,7 +279,7 @@ export interface StateDecoratorProps<S, A extends DecoratedActions, P = {}> {
   /**
    * Function to call when the StateDecorator is unmounted. Usually used to persist a state.
    */
-  onUnmount?: (s: S) => void;
+  onUnmount?: (s: S, props: P) => void;
 
   /**
    * Child function,
@@ -800,7 +800,7 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
     this.mounted = false;
 
     if (onUnmount) {
-      onUnmount(this.dataState);
+      onUnmount(this.dataState, this.props.props);
     }
   }
 
