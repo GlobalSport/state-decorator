@@ -350,7 +350,7 @@ When the StateDecorator is unmounted, the **onUnmount** property is called with 
 
 ```typescript
 export default class Container extends React.Component {
-  static onUnmount(s: State) {
+  static onUnmount(s: State, p: Props) {
     localStorage.setItem('state', JSON.stringify(s));
   }
 
@@ -790,7 +790,7 @@ _Actions_ is the generic actions class passed to the StateDecorator.
 | notifyError          | Callback function triggered when an asynchronous actions fails and an error message is provided.                                                            | (message: string) => void                                                                               |           |               |
 | notifySuccess        | Callback function triggered when an asynchronous actions succeeds and an success message is provided.                                                       | (message: string) => void                                                                               |           |               |
 | onMount              | Function to invoke when the StateDecorator is mounted. Used to execute initial actions.                                                                     | (actions: DecoratedActions) => void                                                                     |           |               |
-| onUnmount            | Function to invoke when the StateDecorator is unmounted. Used to persist the state                                                                          | (state: State) => void                                                                                  |           |               |
+| onUnmount            | Function to invoke when the StateDecorator is unmounted. Used to persist the state                                                                          | (state: State, props: Props) => void                                                                    |           |               |
 | children             | The child of the StateDecorator is a function that renders a component tree.                                                                                | (state: State, actions: Actions, loading: boolean, loadingMap: {[name: string]:boolean}) => JSX.Element | true      |               |
 | getPropsRefValues    | Get a list of values that will be use as reference values. If they are different (shallow compare), onPropsChangeReducer then onPropsChange will be called. | (props: any) => any[];                                                                                  |           |               |
 | onPropsChangeReducer | Triggered when values of reference from props have changed. Allow to update state after a prop change.                                                      | (s: State, newProps: any, updatedIndices: number[]) => State;                                           |           |               |  |
