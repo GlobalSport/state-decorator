@@ -11,6 +11,7 @@ import StateDecorator, {
   testSyncAction,
   testAsyncAction,
   computeAsyncActionInput,
+  testSyncComplexAction,
 } from '../src/StateDecorator';
 
 // Jest is not handling properly the failure in asynchronous functions
@@ -2152,6 +2153,7 @@ describe('retryDecorator', () => {
     type Actions = {
       increment: (v: number) => void;
       incrAsync: (v: number) => Promise<number>;
+      incrComplexSync: (v: number) => Promise<number>;
       incrAsyncGet: (v: number) => Promise<number>;
     };
     type Props = {};
@@ -2161,6 +2163,11 @@ describe('retryDecorator', () => {
         return {
           value: s.value + incr,
         };
+      },
+      incrComplexSync: {
+        action: (s, [incr], props) => ({
+          value: s.value + incr,
+        }),
       },
       incrAsync: {
         promise: ([incr]) => Promise.resolve(incr),
@@ -2190,6 +2197,15 @@ describe('retryDecorator', () => {
       });
     });
 
+    it('testSyncAction (incorrect type 2)', (done) => {
+      const testFunc = jest.fn();
+
+      testSyncAction(actions.incrComplexSync, testFunc).catch((e) => {
+        expect(testFunc).not.toHaveBeenCalled();
+        done();
+      });
+    });
+
     it('testAsyncAction (correct type)', (done) => {
       const p = testAsyncAction(actions.incrAsync, (action) => {
         expect(action).toBeDefined();
@@ -2211,6 +2227,42 @@ describe('retryDecorator', () => {
       const testFunc = jest.fn();
 
       testAsyncAction(actions.increment, testFunc).catch((e) => {
+        expect(testFunc).not.toHaveBeenCalled();
+        done();
+      });
+    });
+
+    it('testAsyncAction (incorrect type2)', (done) => {
+      const testFunc = jest.fn();
+
+      testAsyncAction(actions.incrComplexSync, testFunc).catch((e) => {
+        expect(testFunc).not.toHaveBeenCalled();
+        done();
+      });
+    });
+
+    it('testSyncComplexAction (promiseGet converted in promise)', (done) => {
+      const p = testSyncComplexAction(actions.incrComplexSync, (action) => {
+        expect(action).toBeDefined();
+        expect(action.action).toBeDefined();
+        done();
+      });
+      p && p.catch((e) => done.fail(e));
+    });
+
+    it('testSyncComplexAction (incorrect type)', (done) => {
+      const testFunc = jest.fn();
+
+      testSyncComplexAction(actions.increment, testFunc).catch((e) => {
+        expect(testFunc).not.toHaveBeenCalled();
+        done();
+      });
+    });
+
+    it('testSyncComplexAction (incorrect type2)', (done) => {
+      const testFunc = jest.fn();
+
+      testSyncComplexAction(actions.incrAsync, testFunc).catch((e) => {
         expect(testFunc).not.toHaveBeenCalled();
         done();
       });

@@ -63,11 +63,22 @@ export type PromiseProvider<S, F extends (...args: any[]) => any, A, P> = (
   actions: A
 ) => ReturnType<F> | null;
 
+/**
+ * Simple form of a synchronous action.
+ */
 export type SynchAction<S, F extends (...args: any[]) => any, P> = (
   state: S,
   args: Parameters<F>,
   props: P
 ) => S | null;
+
+/**
+ * Complex form of a synchronous action.
+ */
+export type SynchComplexAction<S, F extends (...args: any[]) => any, A, P> = {
+  action: (state: S, args: Parameters<F>, props: P) => S | null;
+  onDone?: (state: S, args: Parameters<F>, props: P, actions: A) => void;
+};
 
 type PromiseIdMap = { [promiseId: string]: boolean };
 
@@ -190,7 +201,8 @@ export type AsynchAction<S, F extends (...args: any[]) => any, A, P> =
 
 export type StateDecoratorAction<S, F extends (...args: any[]) => any, A, P> =
   | AsynchAction<S, F, A, P>
-  | SynchAction<S, F, P>;
+  | SynchAction<S, F, P>
+  | SynchComplexAction<S, F, A, P>;
 
 /**
  * S: The type of the state
@@ -344,7 +356,7 @@ export function retryDecorator<S, F extends (...args: any[]) => Promise<any>, A,
 export function isAsyncAction<S, F extends (...args: any[]) => any, A, P>(
   action: StateDecoratorAction<S, F, A, P>
 ): action is AsynchAction<S, F, A, P> {
-  return !(action instanceof Function);
+  return !(action instanceof Function) && (action.hasOwnProperty('promise') || action.hasOwnProperty('promiseGet'));
 }
 
 /**
@@ -353,7 +365,16 @@ export function isAsyncAction<S, F extends (...args: any[]) => any, A, P>(
 export function isSyncAction<S, F extends (...args: any[]) => any, A, P>(
   action: StateDecoratorAction<S, F, A, P>
 ): action is SynchAction<S, F, P> {
-  return !isAsyncAction(action);
+  return action instanceof Function;
+}
+
+/**
+ * Type guard function to test if an action is a synchronous action.
+ */
+export function isSyncComplexAction<S, F extends (...args: any[]) => any, A, P>(
+  action: StateDecoratorAction<S, F, A, P>
+): action is SynchComplexAction<S, F, A, P> {
+  return !(action instanceof Function) && !action.hasOwnProperty('promise') && !action.hasOwnProperty('promiseGet');
 }
 
 /**
@@ -384,6 +405,21 @@ export function testSyncAction<S, F extends (...args: any[]) => any, A, P>(
     return test(action);
   }
   return Promise.reject(new Error('This action is not a synchronous action'));
+}
+
+/**
+ * Utility to test an synchronous complex action.
+ * @param action The action to test
+ * @param test The test function that takes the discrimined action type and cam return a promise
+ */
+export function testSyncComplexAction<S, F extends (...args: any[]) => any, A, P>(
+  action: StateDecoratorAction<S, F, A, P>,
+  test: (action: SynchComplexAction<S, F, A, P>) => any | Promise<any>
+) {
+  if (isSyncComplexAction(action)) {
+    return test(action);
+  }
+  return Promise.reject(new Error('This action is not a synchronous complex action'));
 }
 
 /**
@@ -776,6 +812,14 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
           };
         }
 
+        // synchronous actuib
+        if (isSyncComplexAction(action)) {
+          return {
+            name,
+            action: this.getDecoratedSynchComplexAction(name, action),
+          };
+        }
+
         // asynchronous action
         return {
           name,
@@ -872,6 +916,45 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
       this.setState({
         data: this.dataState,
       });
+
+      // backward compatible
+      return Promise.resolve();
+    }
+
+    if (process.env.NODE_ENV === 'development' && logEnabled) {
+      console.group(`[StateDecorator] Action ${name}`);
+      console.group('Arguments');
+      Object.keys(args).forEach((prop) => console.log(prop, ':', args[prop]));
+      console.groupEnd();
+      console.groupEnd();
+    }
+    return Promise.resolve();
+  };
+
+  private getDecoratedSynchComplexAction = (name: string, action: SynchComplexAction<S, any, A, P>) => (
+    ...args: any[]
+  ) => {
+    const data = this.dataState;
+    const { props, logEnabled } = this.props;
+
+    const newDataState = action.action(data, args, props);
+
+    if (newDataState !== null) {
+      this.pushActionToHistory(name, null, [args, props]);
+
+      logStateChange(name, logEnabled, this.state.data, newDataState, args, 'synch reducer');
+
+      this.dataState = newDataState;
+      this.setState(
+        {
+          data: this.dataState,
+        },
+        () => {
+          if (action.onDone) {
+            action.onDone(newDataState, args, props, this.actions);
+          }
+        }
+      );
 
       // backward compatible
       return Promise.resolve();
