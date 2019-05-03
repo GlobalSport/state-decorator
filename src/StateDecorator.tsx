@@ -73,11 +73,22 @@ export type SynchAction<S, F extends (...args: any[]) => any, P> = (
 ) => S | null;
 
 /**
- * Complex form of a synchronous action.
+ * Advanced synchronous action.
+ * Allows to set advanced properties to a synchronous action.
  */
-export type SynchComplexAction<S, F extends (...args: any[]) => any, A, P> = {
+export type AdvancedSynchAction<S, F extends (...args: any[]) => any, A, P> = {
+  /**
+   * The action to execute.
+   */
   action: (state: S, args: Parameters<F>, props: P) => S | null;
-  onDone?: (state: S, args: Parameters<F>, props: P, actions: A) => void;
+  /**
+   * Debounces the action if this parameter is defined.
+   */
+  debounceTimeout?: number;
+  /**
+   * Action to call when the action is done. Used to trigger other actions (even asynchronous),
+   */
+  onActionDone?: (state: S, args: Parameters<F>, props: P, actions: A) => void;
 };
 
 type PromiseIdMap = { [promiseId: string]: boolean };
@@ -202,7 +213,7 @@ export type AsynchAction<S, F extends (...args: any[]) => any, A, P> =
 export type StateDecoratorAction<S, F extends (...args: any[]) => any, A, P> =
   | AsynchAction<S, F, A, P>
   | SynchAction<S, F, P>
-  | SynchComplexAction<S, F, A, P>;
+  | AdvancedSynchAction<S, F, A, P>;
 
 /**
  * S: The type of the state
@@ -371,9 +382,9 @@ export function isSyncAction<S, F extends (...args: any[]) => any, A, P>(
 /**
  * Type guard function to test if an action is a synchronous action.
  */
-export function isSyncComplexAction<S, F extends (...args: any[]) => any, A, P>(
+export function isAdvancedSyncAction<S, F extends (...args: any[]) => any, A, P>(
   action: StateDecoratorAction<S, F, A, P>
-): action is SynchComplexAction<S, F, A, P> {
+): action is AdvancedSynchAction<S, F, A, P> {
   return !(action instanceof Function) && !action.hasOwnProperty('promise') && !action.hasOwnProperty('promiseGet');
 }
 
@@ -408,18 +419,18 @@ export function testSyncAction<S, F extends (...args: any[]) => any, A, P>(
 }
 
 /**
- * Utility to test an synchronous complex action.
+ * Utility to test an advanced synchronous action.
  * @param action The action to test
  * @param test The test function that takes the discrimined action type and cam return a promise
  */
-export function testSyncComplexAction<S, F extends (...args: any[]) => any, A, P>(
+export function testAdvancedSyncAction<S, F extends (...args: any[]) => any, A, P>(
   action: StateDecoratorAction<S, F, A, P>,
-  test: (action: SynchComplexAction<S, F, A, P>) => any | Promise<any>
+  test: (action: AdvancedSynchAction<S, F, A, P>) => any | Promise<any>
 ) {
-  if (isSyncComplexAction(action)) {
+  if (isAdvancedSyncAction(action)) {
     return test(action);
   }
-  return Promise.reject(new Error('This action is not a synchronous complex action'));
+  return Promise.reject(new Error('This action is not a synchronous advanced action'));
 }
 
 /**
@@ -597,6 +608,11 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
     return error instanceof TypeError;
   }
 
+  /**
+   *
+   * Class attributes
+   *
+   */
   private mounted = undefined;
   private loadingMap: InternalLoadingMap<A>;
   private history: ActionHistory<S>[] = [];
@@ -606,6 +622,9 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
   private promises: { [name: string]: { promise: Promise<any>; refArgs: any[] } } = {};
   private conflictActions: ConflictActionsMap = {};
   private hasParallelActions = false;
+  private debounceActionMap: {
+    [name: string]: any;
+  } = {};
 
   /**
    * Adds an action to the action history (only when at least one optimistic action is ongoing).
@@ -804,7 +823,6 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
       .map((name) => {
         const action = actions[name];
 
-        // synchronous actuib
         if (isSyncAction(action)) {
           return {
             name,
@@ -812,11 +830,10 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
           };
         }
 
-        // synchronous actuib
-        if (isSyncComplexAction(action)) {
+        if (isAdvancedSyncAction(action)) {
           return {
             name,
-            action: this.getDecoratedSynchComplexAction(name, action),
+            action: this.getDecoratedAdvancedSynchAction(name, action),
           };
         }
 
@@ -931,11 +948,9 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
     return Promise.resolve();
   };
 
-  private getDecoratedSynchComplexAction = (name: string, action: SynchComplexAction<S, any, A, P>) => (
-    ...args: any[]
-  ) => {
-    const data = this.dataState;
+  private processSynchAction = (name: string, action: AdvancedSynchAction<S, any, A, P>, args: any[]) => {
     const { props, logEnabled } = this.props;
+    const data = this.dataState;
 
     const newDataState = action.action(data, args, props);
 
@@ -950,24 +965,46 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
           data: this.dataState,
         },
         () => {
-          if (action.onDone) {
-            action.onDone(newDataState, args, props, this.actions);
+          if (action.onActionDone) {
+            action.onActionDone(newDataState, args, props, this.actions);
           }
         }
       );
 
-      // backward compatible
-      return Promise.resolve();
+      if (process.env.NODE_ENV === 'development' && logEnabled) {
+        console.group(`[StateDecorator] Action ${name}`);
+        console.group('Arguments');
+        Object.keys(args).forEach((prop) => console.log(prop, ':', args[prop]));
+        console.groupEnd();
+        console.groupEnd();
+      }
+    }
+    // backward compatible
+    return Promise.resolve();
+  };
+
+  private getDecoratedAdvancedSynchAction = (name: string, action: AdvancedSynchAction<S, any, A, P>) => (
+    ...args: any[]
+  ) => {
+    let res: Promise<any>;
+
+    if (action.debounceTimeout != null) {
+      if (this.debounceActionMap[name] != null) {
+        clearTimeout(this.debounceActionMap[name]);
+      }
+
+      res = new Promise((res) => {
+        this.debounceActionMap[name] = setTimeout(() => {
+          this.debounceActionMap[name] = null;
+          this.processSynchAction(name, action, args);
+          res();
+        }, action.debounceTimeout);
+      });
+    } else {
+      res = this.processSynchAction(name, action, args);
     }
 
-    if (process.env.NODE_ENV === 'development' && logEnabled) {
-      console.group(`[StateDecorator] Action ${name}`);
-      console.group('Arguments');
-      Object.keys(args).forEach((prop) => console.log(prop, ':', args[prop]));
-      console.groupEnd();
-      console.groupEnd();
-    }
-    return Promise.resolve();
+    return res;
   };
 
   private processNextConflictAction(name: string) {

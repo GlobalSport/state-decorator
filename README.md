@@ -149,11 +149,11 @@ static actions: StateDecoratorActions<State, Actions> = {
 };
 ```
 
-### Complex form
+### Advanced form
 
-A complex synchronous action is a made of, at least, an **action**. It's function that takes the current state and an optional list of parameters and returns a new state or _null_ if there's no change like the simple form.
+An advanced synchronous action is a made of, at least, an **action**. It's function that takes the current state and an optional list of parameters and returns a new state or _null_ if there's no change like the simple form.
 
-The complex form allows to add some additional properties for this action.
+The advanced form allows to add some additional properties for this action.
 
 ```typescript
 static actions: StateDecoratorActions<State, Actions> = {
@@ -806,12 +806,13 @@ Type:
 (state: State, args: Arguments<Action>, props: Props) => State | null;
 ```
 
-## Complex form
+## Advanced form
 
-| Property | Description                                | Type                                                                                  | Mandatory | Default value            |
-| -------- | ------------------------------------------ | ------------------------------------------------------------------------------------- | --------- | ------------------------ |
-| action   | The action                                 | (state:State, args: Arguments&lt;Action&gt, props: Props) => State                    | null      | true (or **promiseGet**) |  |
-| onDone   | Callback executed when the action is done. | (state: State, args: Arguments&lt;Action&gt;, props: Props, actions: Actions) => void |           |                          |
+| Property        | Description                                | Type                                                                                  | Mandatory | Default value            |
+| --------------- | ------------------------------------------ | ------------------------------------------------------------------------------------- | --------- | ------------------------ |
+| action          | The action                                 | (state:State, args: Arguments&lt;Action&gt, props: Props) => State                    | null      | true (or **promiseGet**) |  |
+| debounceTimeout | Debounce action if set                     | number                                                                                |           |                          |
+| onActionDone    | Callback executed when the action is done. | (state: State, args: Arguments&lt;Action&gt;, props: Props, actions: Actions) => void |           |                          |
 
 ### Asynchronous action
 

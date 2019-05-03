@@ -55,7 +55,11 @@ export default class Retry extends React.PureComponent<{}> {
             <div># of calls to promise: {retry}</div>
             <div># of calls to reducer: {count}</div>
             <div>
-              <textarea value={this.state.messages.join('\n')} style={{ height: 100, width: 200 }} />
+              <textarea
+                value={this.state.messages.join('\n')}
+                onChange={() => {}}
+                style={{ height: 100, width: 200 }}
+              />
             </div>
             <button onClick={action}>Trigger action</button>
           </div>

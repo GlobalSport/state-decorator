@@ -11,7 +11,7 @@ import StateDecorator, {
   testSyncAction,
   testAsyncAction,
   computeAsyncActionInput,
-  testSyncComplexAction,
+  testAdvancedSyncAction,
 } from '../src/StateDecorator';
 
 // Jest is not handling properly the failure in asynchronous functions
@@ -2242,7 +2242,7 @@ describe('retryDecorator', () => {
     });
 
     it('testSyncComplexAction (promiseGet converted in promise)', (done) => {
-      const p = testSyncComplexAction(actions.incrComplexSync, (action) => {
+      const p = testAdvancedSyncAction(actions.incrComplexSync, (action) => {
         expect(action).toBeDefined();
         expect(action.action).toBeDefined();
         done();
@@ -2253,7 +2253,7 @@ describe('retryDecorator', () => {
     it('testSyncComplexAction (incorrect type)', (done) => {
       const testFunc = jest.fn();
 
-      testSyncComplexAction(actions.increment, testFunc).catch((e) => {
+      testAdvancedSyncAction(actions.increment, testFunc).catch((e) => {
         expect(testFunc).not.toHaveBeenCalled();
         done();
       });
@@ -2262,7 +2262,7 @@ describe('retryDecorator', () => {
     it('testSyncComplexAction (incorrect type2)', (done) => {
       const testFunc = jest.fn();
 
-      testSyncComplexAction(actions.incrAsync, testFunc).catch((e) => {
+      testAdvancedSyncAction(actions.incrAsync, testFunc).catch((e) => {
         expect(testFunc).not.toHaveBeenCalled();
         done();
       });

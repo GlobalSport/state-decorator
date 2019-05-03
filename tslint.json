@@ -1,15 +1,31 @@
 {
   "defaultSeverity": "error",
-  "extends": ["tslint-config-airbnb", "tslint-config-prettier"],
+  "extends": ["tslint-config-airbnb", "tslint-config-prettier", "tslint-react-hooks"],
   "jsRules": {},
   "rules": {
+    "react-hooks-nesting": "error",
     "import-name": false,
     "space-before-function-paren": false,
     "strict-type-predicates": false,
     "variable-name": false,
     "no-increment-decrement": false,
-    "no-unused-variable": true,
-    "curly": true
+    "curly": true,
+    "ter-prefer-arrow-callback": [
+      true,
+      {
+        "allowNamedFunctions": true
+      }
+    ],
+    "function-name": [
+      true,
+      {
+        "method-regex": "^[a-z][\\w\\d]+$",
+        "private-method-regex": "^[a-z][\\w\\d]+$",
+        "protected-method-regex": "^[a-z][\\w\\d]+$",
+        "static-method-regex": "^[a-zA-Z_\\d]+$",
+        "function-regex": "^[a-zA-Z][\\w\\d]+$"
+      }
+    ]
   },
   "rulesDirectory": [],
   "exclude": ["**/*.d.ts"]
