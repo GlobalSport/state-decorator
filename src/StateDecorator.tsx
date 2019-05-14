@@ -282,6 +282,11 @@ export interface StateDecoratorProps<S, A extends DecoratedActions, P = {}> {
   onUnmount?: (s: S, props: P) => void;
 
   /**
+   * Function to call when the StateDecorator is unmounted. Usually used to persist a state.
+   */
+  onBeforeUnload?: (s: S, props: P) => void;
+
+  /**
    * Child function,
    */
   children?: (
@@ -718,12 +723,22 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
     }
   }
 
+  onBeforeUnload = () => {
+    const { onBeforeUnload } = this.props;
+    if (onBeforeUnload) {
+      onBeforeUnload(this.dataState, this.props.props);
+    }
+  };
+
   componentDidMount() {
     const { onMount, props } = this.props;
     if (onMount) {
       onMount(this.actions, props);
     }
+
     this.mounted = true;
+
+    window.addEventListener('beforeunload', this.onBeforeUnload);
   }
 
   static getDerivedStateFromProps(nextProps, prevState) {
@@ -802,6 +817,8 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
     if (onUnmount) {
       onUnmount(this.dataState, this.props.props);
     }
+
+    window.removeEventListener('beforeunload', this.onBeforeUnload);
   }
 
   decorateActions = (actions: StateDecoratorActions<S, A, P>): A => {
