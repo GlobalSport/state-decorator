@@ -346,7 +346,7 @@ _Note_: In conjunction to this parameter, you can use [lodash debounce](https://
 
 ## Persist state on unmount
 
-When the StateDecorator is unmounted, the **onUnmount** property is called with the current state as parameter.
+When the StateDecorator is unmounted, the **onUnmount** property is called with the current state and props as parameter.
 
 ```typescript
 export default class Container extends React.Component {
@@ -366,17 +366,18 @@ export default class Container extends React.Component {
 
 ## Persist state on page unload
 
-When the StateDecorator is unmounted, the **onBeforeUnload** property is called with the current state as parameter.
+For cases where the state is needed to be saved when the window is unloaded (the page is refreshed or the window/tab is closed).
+The StateDecorator listens to the 'beforeunload' window event and call the **onUnload** property with the current state as parameter
 
 ```typescript
 export default class Container extends React.Component {
-  static onBeforeUnload(s: State, p: Props) {
+  static onUnload(s: State, p: Props) {
     localStorage.setItem('state', JSON.stringify(s));
   }
 
   render() {
     return (
-      <StateDecorator actions={Container.actions} onBeforeUnload={Container.onBeforeUnload}>
+      <StateDecorator actions={Container.actions} onUnload={Container.onUnload}>
         {(s, actions) => <View {...s} {...actions} />}
       </StateDecorator>
     );
@@ -809,7 +810,7 @@ _Actions_ is the generic actions class passed to the StateDecorator.
 | logEnabled           | If **true**, logs state changes to the console.                                                                                                             | boolean                                                                                                 |           | false         |
 | notifyError          | Callback function triggered when an asynchronous actions fails and an error message is provided.                                                            | (message: string) => void                                                                               |           |               |
 | notifySuccess        | Callback function triggered when an asynchronous actions succeeds and an success message is provided.                                                       | (message: string) => void                                                                               |           |               |
-| onBeforeUnload       | Function to invoke when the page is about to unload. Used to persist the state.                                                                             | (state: State, props: Props) => void                                                                    |           |               |
+| onUnload       | Function to invoke when the page is about to unload. Used to persist the state.                                                                             | (state: State, props: Props) => void                                                                    |           |               |
 | onMount              | Function to invoke when the StateDecorator is mounted. Used to execute initial actions.                                                                     | (actions: DecoratedActions) => void                                                                     |           |               |
 | onUnmount            | Function to invoke when the StateDecorator is unmounted. Used to persist the state.                                                                         | (state: State, props: Props) => void                                                                    |           |               |
 | children             | The child of the StateDecorator is a function that renders a component tree.                                                                                | (state: State, actions: Actions, loading: boolean, loadingMap: {[name: string]:boolean}) => JSX.Element | true      |               |
