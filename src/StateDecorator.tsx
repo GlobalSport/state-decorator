@@ -1081,7 +1081,7 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
       errorMessage,
       getErrorMessage,
       getSuccessMessage,
-      conflictPolicy = ConflictPolicy.KEEP_LAST,
+      conflictPolicy = ConflictPolicy.KEEP_ALL,
       rejectPromiseOnError,
       getPromiseId = () => {
         throw new Error(
