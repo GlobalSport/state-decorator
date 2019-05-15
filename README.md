@@ -260,7 +260,7 @@ A notification function can be called when the asynchronous action succeeded or 
 - _errorMessage_ (static message) or _getErrorMessage_ (message built from the error and action parameters)
 - _successMessage_ (static message) or _getSuccessMessage_ (message built from the action result and parameters)
 
-### Error management
+### <a name="ErrorManagement"></a>Error management
 
 When an asynchronous action fails, if the state needs to be updated, set the _errorReducer_ property of the asynchronous action.
 
@@ -390,8 +390,11 @@ export default class Container extends React.Component {
 Synchronous and asynchronous actions can be chained.
 
 - Synchronous actions can be chained naturally (one action after the other) in the user code.
-- Asynchronous actions can internally call another action. The promise provider function has the decorated actions in parameter (see [API](#API)) so they can return a promise by calling another action.
-- To chain an asynchronous action to a synchronous action, create a new asynchronous action that will call the synchronous action and returns the asynchronous action.
+- Advanced synchronous actions can internally call another action using **actionDone**.5
+- Asynchronous actions can internally call another action.
+  - The promise provider function has the decorated actions in parameter (see [API](#API)) so they can return a promise by calling another action. To chain an asynchronous action to a synchronous action, create a new asynchronous action that will call the synchronous action and returns the asynchronous action.
+  - Using **onDone**, you can call another action.
+  - The difference is that if the chained action fails, the entire action has failed (see [Error management](#ErrorManagement)). Using **onDone**, the chained action is a side effect of the success of the first action.
 
 ```typescript
 import React from 'react';
