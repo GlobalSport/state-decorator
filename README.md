@@ -260,7 +260,7 @@ A notification function can be called when the asynchronous action succeeded or 
 - _errorMessage_ (static message) or _getErrorMessage_ (message built from the error and action parameters)
 - _successMessage_ (static message) or _getSuccessMessage_ (message built from the action result and parameters)
 
-### Error management
+### <a name="ErrorManagement"></a>Error management
 
 When an asynchronous action fails, if the state needs to be updated, set the _errorReducer_ property of the asynchronous action.
 
@@ -346,7 +346,7 @@ _Note_: In conjunction to this parameter, you can use [lodash debounce](https://
 
 ## Persist state on unmount
 
-When the StateDecorator is unmounted, the **onUnmount** property is called with the current state as parameter.
+When the StateDecorator is unmounted, the **onUnmount** property is called with the current state and props as parameter.
 
 ```typescript
 export default class Container extends React.Component {
@@ -364,13 +364,37 @@ export default class Container extends React.Component {
 }
 ```
 
+## Persist state on page unload
+
+For cases where the state is needed to be saved when the window is unloaded (the page is refreshed or the window/tab is closed).
+The StateDecorator listens to the 'beforeunload' window event and call the **onUnload** property with the current state and props as parameter.
+
+```typescript
+export default class Container extends React.Component {
+  static onUnload(s: State, p: Props) {
+    localStorage.setItem('state', JSON.stringify(s));
+  }
+
+  render() {
+    return (
+      <StateDecorator actions={Container.actions} onUnload={Container.onUnload}>
+        {(s, actions) => <View {...s} {...actions} />}
+      </StateDecorator>
+    );
+  }
+}
+```
+
 # Chain actions
 
 Synchronous and asynchronous actions can be chained.
 
 - Synchronous actions can be chained naturally (one action after the other) in the user code.
-- Asynchronous actions can internally call another action. The promise provider function has the decorated actions in parameter (see [API](#API)) so they can return a promise by calling another action.
-- To chain an asynchronous action to a synchronous action, create a new asynchronous action that will call the synchronous action and returns the asynchronous action.
+- Advanced synchronous actions can internally call another action using **actionDone**.
+- Asynchronous actions can internally call another action.
+  - The promise provider function has the decorated actions in parameter (see [API](#API)) so they can return a promise by calling another action. To chain an asynchronous action to a synchronous action, create a new asynchronous action that will call the synchronous action and returns the asynchronous action.
+  - Using **onDone**, you can call another action.
+  - The difference is that if the chained action fails, the entire action has failed (see [Error management](#ErrorManagement)). Using **onDone**, the chained action is a side effect of the success of the first action.
 
 ```typescript
 import React from 'react';
@@ -789,8 +813,9 @@ _Actions_ is the generic actions class passed to the StateDecorator.
 | logEnabled           | If **true**, logs state changes to the console.                                                                                                             | boolean                                                                                                 |           | false         |
 | notifyError          | Callback function triggered when an asynchronous actions fails and an error message is provided.                                                            | (message: string) => void                                                                               |           |               |
 | notifySuccess        | Callback function triggered when an asynchronous actions succeeds and an success message is provided.                                                       | (message: string) => void                                                                               |           |               |
+| onUnload             | Function to invoke when the page is about to unload. Used to persist the state.                                                                             | (state: State, props: Props) => void                                                                    |           |               |
 | onMount              | Function to invoke when the StateDecorator is mounted. Used to execute initial actions.                                                                     | (actions: DecoratedActions) => void                                                                     |           |               |
-| onUnmount            | Function to invoke when the StateDecorator is unmounted. Used to persist the state                                                                          | (state: State, props: Props) => void                                                                    |           |               |
+| onUnmount            | Function to invoke when the StateDecorator is unmounted. Used to persist the state.                                                                         | (state: State, props: Props) => void                                                                    |           |               |
 | children             | The child of the StateDecorator is a function that renders a component tree.                                                                                | (state: State, actions: Actions, loading: boolean, loadingMap: {[name: string]:boolean}) => JSX.Element | true      |               |
 | getPropsRefValues    | Get a list of values that will be use as reference values. If they are different (shallow compare), onPropsChangeReducer then onPropsChange will be called. | (props: any) => any[];                                                                                  |           |               |
 | onPropsChangeReducer | Triggered when values of reference from props have changed. Allow to update state after a prop change.                                                      | (s: State, newProps: any, updatedIndices: number[]) => State;                                           |           |               |  |

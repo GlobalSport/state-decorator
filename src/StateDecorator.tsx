@@ -282,6 +282,11 @@ export interface StateDecoratorProps<S, A extends DecoratedActions, P = {}> {
   onUnmount?: (s: S, props: P) => void;
 
   /**
+   * Function to call when the page is about to be unloaded (page refreshed, tab/window closed). Usually used to persist a state.
+   */
+  onUnload?: (s: S, props: P) => void;
+
+  /**
    * Child function,
    */
   children?: (
@@ -718,12 +723,22 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
     }
   }
 
+  onUnload = () => {
+    const { onUnload } = this.props;
+    if (onUnload) {
+      onUnload(this.dataState, this.props.props);
+    }
+  };
+
   componentDidMount() {
     const { onMount, props } = this.props;
     if (onMount) {
       onMount(this.actions, props);
     }
+
     this.mounted = true;
+
+    window.addEventListener('beforeunload', this.onUnload);
   }
 
   static getDerivedStateFromProps(nextProps, prevState) {
@@ -802,6 +817,8 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
     if (onUnmount) {
       onUnmount(this.dataState, this.props.props);
     }
+
+    window.removeEventListener('beforeunload', this.onUnload);
   }
 
   decorateActions = (actions: StateDecoratorActions<S, A, P>): A => {
@@ -1064,7 +1081,7 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
       errorMessage,
       getErrorMessage,
       getSuccessMessage,
-      conflictPolicy = ConflictPolicy.KEEP_LAST,
+      conflictPolicy = ConflictPolicy.KEEP_ALL,
       rejectPromiseOnError,
       getPromiseId = () => {
         throw new Error(
