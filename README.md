@@ -390,7 +390,7 @@ export default class Container extends React.Component {
 Synchronous and asynchronous actions can be chained.
 
 - Synchronous actions can be chained naturally (one action after the other) in the user code.
-- Advanced synchronous actions can internally call another action using **actionDone**.5
+- Advanced synchronous actions can internally call another action using **actionDone**.
 - Asynchronous actions can internally call another action.
   - The promise provider function has the decorated actions in parameter (see [API](#API)) so they can return a promise by calling another action. To chain an asynchronous action to a synchronous action, create a new asynchronous action that will call the synchronous action and returns the asynchronous action.
   - Using **onDone**, you can call another action.

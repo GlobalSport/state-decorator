@@ -282,7 +282,7 @@ export interface StateDecoratorProps<S, A extends DecoratedActions, P = {}> {
   onUnmount?: (s: S, props: P) => void;
 
   /**
-   * Function to call when the StateDecorator is unmounted. Usually used to persist a state.
+   * Function to call when the page is about to be unloaded (page refreshed, tab/window closed). Usually used to persist a state.
    */
   onUnload?: (s: S, props: P) => void;
 
