@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { StateDecoratorActions } from '../../../src/StateDecorator';
-import useStateDecorator, { StateDecoratorOptions } from '../../../src/useStateDecorator';
+import useStateDecorator, { StateDecoratorOptions } from '../../../src/useStateDecorator/useStateDecorator';
 import { LoadingProps } from '../../../src/types';
 
 type State = {

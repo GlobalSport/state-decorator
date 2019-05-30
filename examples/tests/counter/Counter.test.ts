@@ -1,4 +1,4 @@
-import { testSyncAction } from '../../../src/StateDecorator';
+import { testSyncAction } from '../../../src/base';
 import { getInitialState, actions } from '../../src/counter/Counter';
 
 describe('Counter', () => {

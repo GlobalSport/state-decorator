@@ -6,7 +6,7 @@ import {
   getUseReducer,
   getInitialHookState,
   ReducerAction,
-} from '../../src/useStateDecorator';
+} from '../../src/useStateDecorator/useStateDecorator';
 import { StateDecoratorActions } from '../../src/types';
 
 describe('decorateSyncAction', () => {
@@ -143,24 +143,25 @@ describe('getUseReducer', () => {
     type A = {
       setValue: (v: string) => void;
     };
-    type P = {};
+    type P = { prop: string };
 
     const actions: StateDecoratorActions<S, A, P> = {
-      setValue: (s, [value]) => ({ ...s, value }),
+      setValue: (s, [value], p) => ({ ...s, value: `${value}_${p.prop}` }),
     };
 
-    const hookState = getInitialHookState(() => ({ value: 'initial' }), actions, {});
+    const hookState = getInitialHookState((p: P) => ({ value: 'initial' }), actions, { prop: '' });
+
     const reducer = getUseReducer(actions, {});
     const reducerAction: ReducerAction<any, P> = {
       type: ReducerActionType.ACTION,
       actionName: 'setValue',
       args: ['value'],
-      props: {},
+      props: { prop: 'prop' },
     };
 
     const newHookState = reducer(hookState, reducerAction);
 
-    expect(newHookState.state).toEqual({ value: 'value' });
+    expect(newHookState.state).toEqual({ value: 'value_prop' });
   });
 
   it('handles correctly advanced sync action', () => {
@@ -168,25 +169,25 @@ describe('getUseReducer', () => {
     type A = {
       setValue: (v: string) => void;
     };
-    type P = {};
+    type P = { prop: string };
 
     const actions: StateDecoratorActions<S, A, P> = {
       setValue: {
-        action: (s, [value]) => ({ ...s, value }),
+        action: (s, [value], p) => ({ ...s, value: `${value}_${p.prop}` }),
       },
     };
 
-    const hookState = getInitialHookState(() => ({ value: 'initial' }), actions, {});
+    const hookState = getInitialHookState((p: P) => ({ value: 'initial' }), actions, { prop: '' });
     const reducer = getUseReducer(actions, {});
     const reducerAction: ReducerAction<any, P> = {
       type: ReducerActionType.ACTION,
       actionName: 'setValue',
       args: ['value'],
-      props: {},
+      props: { prop: 'prop' },
     };
 
     const newHookState = reducer(hookState, reducerAction);
 
-    expect(newHookState.state).toEqual({ value: 'value' });
+    expect(newHookState.state).toEqual({ value: 'value_prop' });
   });
 });

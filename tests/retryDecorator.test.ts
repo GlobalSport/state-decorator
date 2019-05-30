@@ -1,4 +1,5 @@
-import { retryDecorator, PromiseProvider } from '../src/StateDecorator';
+import { PromiseProvider } from '../src/types';
+import { retryDecorator } from '../src/base';
 
 describe('retryDecorator', () => {
   it('3 retries, immediate success', () => {

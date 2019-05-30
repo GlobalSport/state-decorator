@@ -1,19 +1,7 @@
 import React from 'react';
 import { shallow } from 'enzyme';
-import StateDecorator, {
-  isAsyncAction,
-  isSyncAction,
-  StateDecoratorActions,
-  ConflictPolicy,
-  retryDecorator,
-  StateDecoratorProps,
-  PromiseProvider,
-  testSyncAction,
-  testAsyncAction,
-  computeAsyncActionInput,
-  LoadingMap,
-  LoadingMapParallelActions,
-} from '../src/StateDecorator';
+import StateDecorator, { StateDecoratorActions, StateDecoratorProps } from '../src/StateDecorator';
+import { LoadingMap, LoadingMapParallelActions } from '../src/types';
 
 // Jest is not handling properly the failure in asynchronous functions
 // (excepted the if the test returns a reject promise).

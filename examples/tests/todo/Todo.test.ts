@@ -1,5 +1,5 @@
 import TodoContainer, { getInitialState, Filter } from '../../src/todo/Todos';
-import { testSyncAction } from '../../../src/StateDecorator';
+import { testSyncAction } from '../../../src/base';
 
 describe('Todo', () => {
   it('onCreate', () => {

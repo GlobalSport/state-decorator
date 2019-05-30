@@ -1,4 +1,5 @@
-import { testAsyncAction, testAdvancedSyncAction, testSyncAction, StateDecoratorActions } from '../src/StateDecorator';
+import { StateDecoratorActions } from '../src/StateDecorator';
+import { testSyncAction, testAsyncAction, testAdvancedSyncAction } from '../src/base';
 
 describe('Testing utilities', () => {
   type State = {
