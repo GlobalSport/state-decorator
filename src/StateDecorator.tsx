@@ -9,219 +9,34 @@
  */
 
 import React from 'react';
-import isEqual from 'fast-deep-equal';
 import fastClone from 'fast-clone';
+import {
+  StateDecoratorActions as SDA,
+  DecoratedActions,
+  LoadingMap,
+  LoadingMapParallelActions,
+  AsynchAction,
+  SynchAction,
+  AdvancedSynchAction,
+  ConflictPolicy,
+  InternalLoadingMap,
+  AsynchActionPromise,
+  PromiseIdMap,
+  LoadingProps,
+} from './types';
+import {
+  isAsyncAction,
+  logStateChange,
+  isSyncAction,
+  isAdvancedSyncAction,
+  computeAsyncActionInput,
+  areSameArgs,
+  logSingle,
+  retryDecorator,
+  IS_JEST_ENV,
+} from './base';
 
-type PromiseResult<Type> = Type extends Promise<infer X> ? X : null;
-
-// https://github.com/Microsoft/TypeScript/issues/15300
-export interface DecoratedActions {
-  [name: string]: (...args: any[]) => Promise<any> | void;
-}
-
-/**
- * The State decorator can manage only one asynchronous action of same name at a time.
- * This enum is enumertaing all the policies in such case.
- */
-export enum ConflictPolicy {
-  /**
-   * Reject the promise.
-   */
-  REJECT = 'reject',
-
-  /**
-   * Return a resolved promise with no result.
-   */
-  IGNORE = 'ignore',
-
-  /**
-   * Execute only the last call that conflicts after the one ongoing.
-   */
-  KEEP_LAST = 'keepLast',
-
-  /**
-   * Execute all calls one after another.
-   */
-  KEEP_ALL = 'keepAll',
-
-  /**
-   * Execute all calls one after another.
-   * @see getPromiseId
-   */
-  PARALLEL = 'parallel',
-
-  /**
-   * Reuse the ongoing promise if any and if possible (same arguments). Only for GET requests!
-   */
-  REUSE = 'reuse',
-}
-
-export type PromiseProvider<S, F extends (...args: any[]) => any, A, P> = (
-  args: Parameters<F>,
-  state: S,
-  props: P,
-  actions: A
-) => ReturnType<F> | null;
-
-/**
- * Simple form of a synchronous action.
- */
-export type SynchAction<S, F extends (...args: any[]) => any, P> = (
-  state: S,
-  args: Parameters<F>,
-  props: P
-) => S | null;
-
-/**
- * Advanced synchronous action.
- * Allows to set advanced properties to a synchronous action.
- */
-export type AdvancedSynchAction<S, F extends (...args: any[]) => any, A, P> = {
-  /**
-   * The action to execute.
-   */
-  action: (state: S, args: Parameters<F>, props: P) => S | null;
-  /**
-   * Debounces the action if this parameter is defined.
-   */
-  debounceTimeout?: number;
-  /**
-   * Action to call when the action is done. Used to trigger other actions (even asynchronous),
-   */
-  onActionDone?: (state: S, args: Parameters<F>, props: P, actions: A) => void;
-};
-
-type PromiseIdMap = { [promiseId: string]: boolean };
-
-type InternalLoadingMap<A> = { [P in keyof A]: undefined | boolean | PromiseIdMap };
-export type LoadingMap<A> = { [P in keyof A]: undefined | boolean };
-export type LoadingMapParallelActions<A> = { [P in keyof A]: PromiseIdMap };
-
-export type LoadingProps<A> = {
-  loading: boolean;
-  loadingMap: LoadingMap<A>;
-  loadingParallelMap: LoadingMapParallelActions<A>;
-};
-
-export interface AsynchActionBase<S, F extends (...args: any[]) => any, A, P> {
-  /**
-   * The success message to pass to the notifySuccess function passed as property to the StateDecorator.
-   */
-  successMessage?: string;
-
-  /**
-   * A function that provides the success message to pass to the notifySuccess function passed as property to the StateDecorator.
-   */
-  getSuccessMessage?: (result: PromiseResult<ReturnType<F>>, args: Parameters<F>, props: P) => string;
-
-  /**
-   * The error message to pass to the notifyError function passed as property to the StateDecorator.
-   */
-  errorMessage?: string;
-
-  /**
-   * A function that provides the error message to pass to the notifyError function passed as property to the StateDecorator.
-   */
-  getErrorMessage?: (e: Error, args: Parameters<F>, props: P) => string;
-
-  /**
-   * If set, called with the result of the promise to update the current state.
-   */
-  reducer?: (state: S, result: PromiseResult<ReturnType<F>>, args: Parameters<F>, props: P) => S | null;
-
-  /**
-   * If set, called with the error of the promise to update the current state.
-   */
-  errorReducer?: (state: S, error: any, args: Parameters<F>, props: P) => S | null;
-
-  /**
-   * Whether reject the promise instead of handling it.
-   */
-  rejectPromiseOnError?: boolean;
-
-  /**
-   * Handle called when the request is done.
-   * @param result The result of the request
-   * @param newData The data after the reducer is applied
-   * @param args The argument during the call of the request function
-   */
-  onDone?: (state: S, result: PromiseResult<ReturnType<F>>, args: Parameters<F>, props: P, actions: A) => void;
-
-  /**
-   * Retrieve the state to set as current data before the promise is resolved.
-   * If the there's no reducer, this data will be used after the promise is done.
-   */
-  preReducer?: (state: S, args: Parameters<F>, props: P) => S | null;
-
-  /**
-   * Retrieve the state to set as current data before the promise is resolved.
-   * If the there's no reducer, this data will be used after the promise is done.
-   */
-  optimisticReducer?: (state: S, args: Parameters<F>, props: P) => S | null;
-
-  /**
-   * Policy to apply when a call to an asynchronous action is done but a previous call is still not resolved.
-   */
-  conflictPolicy?: ConflictPolicy;
-
-  /**
-   * Get an identifier for an action call. Used only when conflictPolicy is ConflictPolicy.PARALLEL.
-   * This information will be available in loadingMap. loadingMap[actionName] will be an array of promise identifiers.
-   */
-  getPromiseId?: (...args: Parameters<F>) => string;
-
-  /**
-   * Number of retries in case of error (failed to fetch).
-   * Do not use this if you are creating objects...
-   * Default value is 0 (no retry).
-   */
-  retryCount?: number;
-
-  /**
-   * Seed of delay between each retry in milliseconds.
-   * The applied delay is retryDelaySeed * retry count.
-   * Default value is 1000 (1 second).
-   */
-  retryDelaySeed?: number;
-
-  /**
-   * Function to test if the error will trigger an action retry or will fail directly.
-   */
-  isTriggerRetryError?: (e: Error) => boolean;
-}
-
-interface AsynchActionPromise<S, F extends (...args: any[]) => any, A, P> extends AsynchActionBase<S, F, A, P> {
-  /**
-   * The request, returns a promise
-   */
-  promise: PromiseProvider<S, F, A, P>;
-}
-interface AsynchActionPromiseGet<S, F extends (...args: any[]) => any, A, P> extends AsynchActionBase<S, F, A, P> {
-  /**
-   * The request, returns a promise that is a GET request.
-   * A shortcut to set:
-   *   - retryCount: 3
-   *   - conflictPolicy: ConflictPolicy.REUSE
-   */
-  promiseGet: PromiseProvider<S, F, A, P>;
-}
-
-export type AsynchAction<S, F extends (...args: any[]) => any, A, P> =
-  | AsynchActionPromise<S, F, A, P>
-  | AsynchActionPromiseGet<S, F, A, P>;
-
-export type StateDecoratorAction<S, F extends (...args: any[]) => any, A, P> =
-  | AsynchAction<S, F, A, P>
-  | SynchAction<S, F, P>
-  | AdvancedSynchAction<S, F, A, P>;
-
-/**
- * S: The type of the state
- * A: The type of the actions to pass to the children (used to check keys only).
- */
-export type StateDecoratorActions<S, A extends DecoratedActions, P = {}> = {
-  [Prop in keyof A]: StateDecoratorAction<S, A[Prop], A, P>
-};
+export type StateDecoratorActions<S, A extends DecoratedActions, P = {}> = SDA<S, A, P>;
 
 export interface StateDecoratorProps<S, A extends DecoratedActions, P = {}> {
   /**
@@ -317,8 +132,8 @@ interface OptimisticActionsMap {
 
 type FutureActions = {
   args: any[];
-  resolve: (...args) => void;
-  reject: (...args) => void;
+  resolve: (...args: any[]) => void;
+  reject: (...args: any[]) => void;
   timestamp?: number;
 };
 
@@ -326,239 +141,6 @@ type ReducerName = 'reducer' | 'optimisticReducer' | 'errorReducer';
 
 interface ConflictActionsMap {
   [name: string]: FutureActions[];
-}
-
-const IS_JEST_ENV = typeof process !== 'undefined' && process && !(process as any).browser;
-
-export function retryDecorator<S, F extends (...args: any[]) => Promise<any>, A, P>(
-  promiseProvider: PromiseProvider<S, F, A, P>,
-  maxCalls = 1,
-  delay = 1000,
-  isRetryError = StateDecorator.isTriggerRetryError
-): PromiseProvider<S, F, A, P> {
-  if (maxCalls === 1) {
-    return promiseProvider;
-  }
-  return (args: any, state: S, props: P, actions: A): ReturnType<F> => {
-    function call(callCount: number, resolve: (res: any) => any, reject: (e: Error) => any) {
-      const p = promiseProvider(args, state, props, actions);
-
-      if (p === null) {
-        return null;
-      }
-
-      return p.then((res) => resolve(res)).catch((e) => {
-        if (isRetryError(e)) {
-          if (callCount === maxCalls) {
-            reject(e);
-          } else {
-            setTimeout(call, delay * callCount, callCount + 1, resolve, reject);
-          }
-        } else {
-          reject(e);
-        }
-      });
-    }
-
-    return new Promise((resolve, reject) => {
-      call(1, resolve, reject);
-    }) as any;
-  };
-}
-
-/**
- * Type guard function to test if an action is a asynchronous action.
- */
-export function isAsyncAction<S, F extends (...args: any[]) => any, A, P>(
-  action: StateDecoratorAction<S, F, A, P>
-): action is AsynchAction<S, F, A, P> {
-  return !(action instanceof Function) && (action.hasOwnProperty('promise') || action.hasOwnProperty('promiseGet'));
-}
-
-/**
- * Type guard function to test if an action is a synchronous action.
- */
-export function isSyncAction<S, F extends (...args: any[]) => any, A, P>(
-  action: StateDecoratorAction<S, F, A, P>
-): action is SynchAction<S, F, P> {
-  return action instanceof Function;
-}
-
-/**
- * Type guard function to test if an action is a synchronous action.
- */
-export function isAdvancedSyncAction<S, F extends (...args: any[]) => any, A, P>(
-  action: StateDecoratorAction<S, F, A, P>
-): action is AdvancedSynchAction<S, F, A, P> {
-  return !(action instanceof Function) && !action.hasOwnProperty('promise') && !action.hasOwnProperty('promiseGet');
-}
-
-/**
- * Utility to test an asynchronous action.
- * @param action The action to test
- * @param test The test function that takes the discrimined action type and cam return a promise
- */
-export function testAsyncAction<S, F extends (...args: any[]) => any, A, P>(
-  action: StateDecoratorAction<S, F, A, P>,
-  test: (action: AsynchActionPromise<S, F, A, P>) => any | Promise<any>
-) {
-  if (isAsyncAction(action)) {
-    return test(computeAsyncActionInput(action));
-  }
-  return Promise.reject(new Error('This action is not an asynchronous action'));
-}
-
-/**
- * Utility to test an synchronous action.
- * @param action The action to test
- * @param test The test function that takes the discrimined action type and cam return a promise
- */
-export function testSyncAction<S, F extends (...args: any[]) => any, A, P>(
-  action: StateDecoratorAction<S, F, A, P>,
-  test: (action: SynchAction<S, F, P>) => any | Promise<any>
-) {
-  if (isSyncAction(action)) {
-    return test(action);
-  }
-  return Promise.reject(new Error('This action is not a synchronous action'));
-}
-
-/**
- * Utility to test an advanced synchronous action.
- * @param action The action to test
- * @param test The test function that takes the discrimined action type and cam return a promise
- */
-export function testAdvancedSyncAction<S, F extends (...args: any[]) => any, A, P>(
-  action: StateDecoratorAction<S, F, A, P>,
-  test: (action: AdvancedSynchAction<S, F, A, P>) => any | Promise<any>
-) {
-  if (isAdvancedSyncAction(action)) {
-    return test(action);
-  }
-  return Promise.reject(new Error('This action is not a synchronous advanced action'));
-}
-
-/**
- * @private
- */
-export function computeAsyncActionInput<S, F extends (...args: any[]) => any, A, P>(
-  action: AsynchAction<S, F, A, P>
-): AsynchActionPromise<S, F, A, P> {
-  if ('promiseGet' in action) {
-    return {
-      ...action,
-      promise: action.promiseGet,
-      retryCount: 3,
-      conflictPolicy: ConflictPolicy.REUSE,
-    };
-  }
-  return action;
-}
-
-export function areSameArgs(args1: any[], args2: any[]): boolean {
-  if (args1.length !== args2.length) {
-    return false;
-  }
-  return args1.find((value, index) => args2[index] !== value) == null;
-}
-
-function buildDiff<S>(oldState: S, newState: S) {
-  const res = {};
-
-  Object.keys(oldState).forEach((k) => {
-    if (newState.hasOwnProperty(k)) {
-      const oldValue = oldState[k];
-      const newValue = newState[k];
-
-      if (newValue !== oldValue) {
-        const type = newState[k] == null ? typeof oldState[k] : typeof newState[k];
-        if (type === 'number' || type === 'string' || type === 'boolean') {
-          res[k] = `${oldState[k]} => ${newState[k] === '' ? '""' : newState[k]}`;
-        } else if ((oldValue && oldValue.length) || (newValue && newValue.length)) {
-          if (oldValue == null) {
-            res[k] = `was null, now contains ${newValue.length} elements`;
-          } else if (newValue == null) {
-            res[k] = `contained ${oldValue.length} elements, now is null`;
-          } else if (oldValue.length === 0) {
-            res[k] = `was empty, now contains ${newValue.length} elements`;
-          } else if (newValue.length === 0) {
-            res[k] = `contained ${oldValue.length} elements, now is empty`;
-          } else {
-            let addedValues = newValue.filter((a) => !oldValue.find((b) => isEqual(a, b)));
-            let removedValues = oldValue.filter((a) => !newValue.find((b) => isEqual(a, b)));
-
-            if (addedValues.length > 10) {
-              addedValues = `${addedValues.length} elements added`;
-            }
-            if (removedValues.length > 10) {
-              removedValues = `${removedValues.length} elements removed`;
-            }
-            res[k] = {
-              added: addedValues,
-              removed: removedValues,
-            };
-          }
-        } else {
-          res[k] = newState[k];
-        }
-      }
-    } else {
-      res[k] = 'was deleted';
-    }
-  });
-
-  Object.keys(newState).forEach((k) => {
-    if (!oldState.hasOwnProperty(k)) {
-      res[k] = `${newState[k]}`;
-    }
-  });
-
-  return res;
-}
-
-function logStateChange<S>(
-  name: string,
-  logEnabled: boolean,
-  oldState: S,
-  newState: S,
-  args: any[],
-  source: string,
-  failed = false
-) {
-  if (process.env.NODE_ENV === 'development' && logEnabled) {
-    console.group(`[StateDecorator] Action ${name} ${source || ''} ${failed ? 'FAILED' : ''}`);
-    if (Object.keys(args).length > 0) {
-      console.group('Arguments');
-      Object.keys(args).forEach((prop) => console.log(prop, ':', args[prop]));
-      console.groupEnd();
-    }
-    console.groupCollapsed('Before');
-    Object.keys(oldState).forEach((prop) => console.log(prop, ':', oldState[prop]));
-    console.groupEnd();
-
-    console.groupCollapsed('After');
-    Object.keys(newState).forEach((prop) => console.log(prop, ':', newState[prop]));
-    console.groupEnd();
-
-    console.group('Diff');
-    const diff = buildDiff(oldState, newState);
-    Object.keys(diff).forEach((prop) => console.log(prop, ':', diff[prop]));
-    console.groupEnd();
-
-    console.groupEnd();
-  }
-}
-
-function logSingle(name: string, args: any[], logEnabled: boolean, state: string = '') {
-  if (process.env.NODE_ENV === 'development' && logEnabled) {
-    console.group(`[StateDecorator] Action ${name} ${state}`);
-    if (Object.keys(args).length > 0) {
-      console.group('Arguments');
-      Object.keys(args).forEach((prop) => console.log(prop, ':', args[prop]));
-      console.groupEnd();
-    }
-    console.groupEnd();
-  }
 }
 
 /**

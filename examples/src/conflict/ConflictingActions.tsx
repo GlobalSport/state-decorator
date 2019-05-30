@@ -1,7 +1,8 @@
 import React from 'react';
-import StateDecorator, { StateDecoratorActions, ConflictPolicy } from '../../../src/StateDecorator';
+import StateDecorator, { StateDecoratorActions } from '../../../src/StateDecorator';
 import ParallelActions from './ParallelActions';
 import ReuseConflictPolicy from './ReuseConflictPolicy';
+import { ConflictPolicy } from '../../../src/types';
 
 export type State = {
   counter: number;

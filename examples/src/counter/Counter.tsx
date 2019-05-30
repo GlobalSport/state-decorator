@@ -1,5 +1,5 @@
 import React from 'react';
-import StateDecorator, { StateDecoratorActions, injectState, LoadingProps } from '../../../src/StateDecorator';
+import StateDecorator, { StateDecoratorActions, injectState } from '../../../src/StateDecorator';
 
 type State = {
   counter: number;

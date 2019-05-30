@@ -7,11 +7,16 @@ import PropsChangeApp from './propsChange/PropsChange';
 import WrappedComponent from './hoc/WrappedComponent';
 import ContextContainer from './context/Context';
 import Debounce from './debounce/Debounce';
+import Hook from './hook/Hook';
 
 export default class App extends React.Component {
   render() {
     return (
       <div>
+        <section>
+          <h1>Hook</h1>
+          <Hook />
+        </section>
         <section>
           <h1>Debounce</h1>
           <Debounce />

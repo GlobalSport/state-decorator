@@ -1,6 +1,7 @@
 import React from 'react';
-import StateDecorator, { StateDecoratorActions, ConflictPolicy } from '../../../src/StateDecorator';
+import StateDecorator, { StateDecoratorActions } from '../../../src/StateDecorator';
 import produce from 'immer';
+import { ConflictPolicy } from '../../../src/types';
 
 type Item = {
   id: string;
