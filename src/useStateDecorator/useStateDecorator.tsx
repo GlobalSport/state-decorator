@@ -38,6 +38,10 @@ type HookState<S, A> = {
 
 type SideEffect<S> = (s: S) => void;
 
+type DebounceMap = {
+  [name: string]: any;
+};
+
 export enum ReducerActionType {
   ON_PROP_CHANGE_REDUCER,
   ACTION,
@@ -119,6 +123,26 @@ export function addNewSideEffect<S>(
   sideEffectsRef.current.push(newSideEffect);
 }
 
+function processAdvancedSyncAction<S, F extends (...args: any[]) => any, A, P>(
+  dispatch: React.Dispatch<ReducerAction<F, P>>,
+  actionName: string,
+  action: AdvancedSynchAction<S, F, A, P>,
+  args: Parameters<F>,
+  propsRef: React.MutableRefObject<P>,
+  actionsRef: React.MutableRefObject<A>,
+  sideEffectsRef: React.MutableRefObject<SideEffect<S>[]>,
+  options: StateDecoratorOptions<S, A>,
+  addSideEffect: typeof addNewSideEffect
+) {
+  dispatch({ actionName, args, props: propsRef.current, type: ReducerActionType.ACTION });
+  if (action.onActionDone) {
+    addSideEffect(sideEffectsRef, (s: S) => {
+      logSingle(actionName, args, options.logEnabled, 'onActionDone SIDE EFFECT');
+      action.onActionDone(s, args as any, propsRef.current, actionsRef.current);
+    });
+  }
+}
+
 /**
  * Returns a function that decorates the synchronous action.
  * It will dispatch actions for the useReducer.
@@ -131,15 +155,43 @@ export function decorateAdvancedSyncAction<S, F extends (...args: any[]) => any,
   actionsRef: React.MutableRefObject<A>,
   sideEffectsRef: React.MutableRefObject<SideEffect<S>[]>,
   options: StateDecoratorOptions<S, A>,
-  addSideEffect: typeof addNewSideEffect
+  addSideEffect: typeof addNewSideEffect,
+  debounceActionMapRef: React.MutableRefObject<DebounceMap>
 ) {
   return (...args: Parameters<F>) => {
-    dispatch({ actionName, args, props: propsRef.current, type: ReducerActionType.ACTION });
-    if (action.onActionDone) {
-      addSideEffect(sideEffectsRef, (s: S) => {
-        logSingle(actionName, args, options.logEnabled, 'onActionDone SIDE EFFECT');
-        action.onActionDone(s, args as any, propsRef.current, actionsRef.current);
-      });
+    if (action.debounceTimeout != null) {
+      const debounceActionMap = debounceActionMapRef.current;
+
+      if (debounceActionMap[name] != null) {
+        clearTimeout(debounceActionMap[name]);
+      }
+
+      debounceActionMap[name] = setTimeout(() => {
+        debounceActionMap[name] = null;
+        processAdvancedSyncAction(
+          dispatch,
+          actionName,
+          action,
+          args,
+          propsRef,
+          actionsRef,
+          sideEffectsRef,
+          options,
+          addSideEffect
+        );
+      }, action.debounceTimeout);
+    } else {
+      processAdvancedSyncAction(
+        dispatch,
+        actionName,
+        action,
+        args,
+        propsRef,
+        actionsRef,
+        sideEffectsRef,
+        options,
+        addSideEffect
+      );
     }
   };
 }
@@ -203,12 +255,12 @@ export function decorateAsyncAction<S, F extends (...args: any[]) => any, A, P>(
 
         let errorHandled = false;
 
-        if (notifyError && (action.errorMessage !== undefined || action.getErrorMessage !== undefined)) {
+        if (notifyError && (action.errorMessage || action.getErrorMessage)) {
           let msg: string;
 
           errorHandled = true;
 
-          if (action.getErrorMessage !== undefined) {
+          if (action.getErrorMessage) {
             msg = action.getErrorMessage(error, args, propsRef.current);
           }
 
@@ -401,6 +453,7 @@ export default function useStateDecorator<S, A extends DecoratedActions, P = {}>
   const actionsRef = useRef<A>();
   const sideEffectsRef = useRef<SideEffect<S>[]>([]);
   const mountedRef = useRef(false);
+  const debounceActionMapRef = useRef<DebounceMap>({});
 
   propsRef.current = props;
 
@@ -424,7 +477,8 @@ export default function useStateDecorator<S, A extends DecoratedActions, P = {}>
           actionsRef,
           sideEffectsRef,
           options,
-          addNewSideEffect
+          addNewSideEffect,
+          debounceActionMapRef
         );
       } else if (isAsyncAction(action)) {
         acc[actionName] = decorateAsyncAction(
