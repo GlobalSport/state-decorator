@@ -200,46 +200,97 @@ describe('decorateAsyncAction', () => {
 });
 
 describe('getUseReducer', () => {
-  function preReducerTest(preReducer, result) {
-    type S = { value: string };
-    type A = {
-      setValue: (v: string) => void;
-    };
-    type P = { prop: string };
+  describe('preReducer', () => {
+    function preReducerTest(preReducer: any, result: string) {
+      type S = { value: string };
+      type A = {
+        setValue: (v: string) => void;
+      };
+      type P = { prop: string };
 
-    const actions: StateDecoratorActions<S, A, P> = {
-      setValue: {
-        preReducer,
-        promise: () => getTimeoutPromise(0, 'result'),
-      },
-    };
+      const actions: StateDecoratorActions<S, A, P> = {
+        setValue: {
+          preReducer,
+          promise: () => getTimeoutPromise(0, 'result'),
+        },
+      };
 
-    const hookState = getInitialHookState((p: P) => ({ value: 'initial' }), actions, { prop: '' });
+      const hookState = getInitialHookState((p: P) => ({ value: 'initial' }), actions, { prop: '' });
 
-    const reducer = getUseReducer(actions, {});
+      const reducer = getUseReducer(actions, {});
 
-    const reducerAction: ReducerAction<any, P> = {
-      type: ReducerActionType.ACTION,
-      subType: ReducerActionSubType.BEFORE_PROMISE,
-      actionName: 'setValue',
-      args: ['value'],
-      props: { prop: 'prop' },
-    };
+      const reducerAction: ReducerAction<any, P> = {
+        type: ReducerActionType.ACTION,
+        subType: ReducerActionSubType.BEFORE_PROMISE,
+        actionName: 'setValue',
+        args: ['value'],
+        props: { prop: 'prop' },
+      };
 
-    const newHookState = reducer(hookState, reducerAction);
+      const newHookState = reducer(hookState, reducerAction);
 
-    expect(newHookState.state).toEqual({ value: result });
-  }
+      expect(newHookState.state).toEqual({ value: result });
+    }
 
-  it('handles correctly async action (before promise, preReducer)', () => {
-    preReducerTest((s, [value], p) => ({ ...s, value: `pre_${value}_${p.prop}` }), 'pre_value_prop');
+    it('handles correctly async action (before promise, preReducer)', () => {
+      preReducerTest((s, [value], p) => ({ ...s, value: `pre_${value}_${p.prop}` }), 'pre_value_prop');
+    });
+
+    it('handles correctly async action (before promise, preReducer returns null)', () => {
+      preReducerTest((s, [value], p) => null, 'initial');
+    });
+
+    it('handles correctly async action (before promise, no preReducer)', () => {
+      preReducerTest(undefined, 'initial');
+    });
   });
 
-  it('handles correctly async action (before promise, preReducer returns null)', () => {
-    preReducerTest((s, [value], p) => null, 'initial');
-  });
+  describe('reducer', () => {
+    function reducerTest(reducer: any, result: string) {
+      type S = { value: string };
+      type A = {
+        setValue: (v: string) => void;
+      };
+      type P = { prop: string };
 
-  it('handles correctly async action (before promise, no preReducer)', () => {
-    preReducerTest(undefined, 'initial');
+      const actions: StateDecoratorActions<S, A, P> = {
+        setValue: {
+          reducer,
+          promise: () => getTimeoutPromise(0, 'result'),
+        },
+      };
+
+      const hookState = getInitialHookState((p: P) => ({ value: 'initial' }), actions, { prop: '' });
+
+      const reducerFunc = getUseReducer(actions, {});
+
+      const reducerAction: ReducerAction<any, P> = {
+        type: ReducerActionType.ACTION,
+        subType: ReducerActionSubType.SUCCESS,
+        actionName: 'setValue',
+        args: ['value'],
+        result: 'result',
+        props: { prop: 'prop' },
+      };
+
+      const newHookState = reducerFunc(hookState, reducerAction);
+
+      expect(newHookState.state).toEqual({ value: result });
+    }
+
+    it('handles correctly async action (success, reducer)', () => {
+      reducerTest(
+        (s, result, [value], p) => ({ ...s, value: `${s.value}_${value}_${result}_${p.prop}` }),
+        'initial_value_result_prop'
+      );
+    });
+
+    it('handles correctly async action (success, reducer returns null)', () => {
+      reducerTest(() => null, 'initial');
+    });
+
+    it('handles correctly async action (success, no reducer)', () => {
+      reducerTest(undefined, 'initial');
+    });
   });
 });
