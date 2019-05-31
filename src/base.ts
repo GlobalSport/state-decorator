@@ -166,53 +166,55 @@ export function areSameArgs(args1: any[], args2: any[]): boolean {
 function buildDiff<S>(oldState: S, newState: S) {
   const res = {};
 
-  Object.keys(oldState).forEach((k) => {
-    if (newState.hasOwnProperty(k)) {
-      const oldValue = oldState[k];
-      const newValue = newState[k];
+  if (process.env.NODE_ENV === 'development') {
+    Object.keys(oldState).forEach((k) => {
+      if (newState.hasOwnProperty(k)) {
+        const oldValue = oldState[k];
+        const newValue = newState[k];
 
-      if (newValue !== oldValue) {
-        const type = newState[k] == null ? typeof oldState[k] : typeof newState[k];
-        if (type === 'number' || type === 'string' || type === 'boolean') {
-          res[k] = `${oldState[k]} => ${newState[k] === '' ? '""' : newState[k]}`;
-        } else if ((oldValue && oldValue.length) || (newValue && newValue.length)) {
-          if (oldValue == null) {
-            res[k] = `was null, now contains ${newValue.length} elements`;
-          } else if (newValue == null) {
-            res[k] = `contained ${oldValue.length} elements, now is null`;
-          } else if (oldValue.length === 0) {
-            res[k] = `was empty, now contains ${newValue.length} elements`;
-          } else if (newValue.length === 0) {
-            res[k] = `contained ${oldValue.length} elements, now is empty`;
+        if (newValue !== oldValue) {
+          const type = newState[k] == null ? typeof oldState[k] : typeof newState[k];
+          if (type === 'number' || type === 'string' || type === 'boolean') {
+            res[k] = `${oldState[k]} => ${newState[k] === '' ? '""' : newState[k]}`;
+          } else if ((oldValue && oldValue.length) || (newValue && newValue.length)) {
+            if (oldValue == null) {
+              res[k] = `was null, now contains ${newValue.length} elements`;
+            } else if (newValue == null) {
+              res[k] = `contained ${oldValue.length} elements, now is null`;
+            } else if (oldValue.length === 0) {
+              res[k] = `was empty, now contains ${newValue.length} elements`;
+            } else if (newValue.length === 0) {
+              res[k] = `contained ${oldValue.length} elements, now is empty`;
+            } else {
+              let addedValues = newValue.filter((a: any) => !oldValue.find((b: any) => isEqual(a, b)));
+              let removedValues = oldValue.filter((a: any) => !newValue.find((b: any) => isEqual(a, b)));
+
+              if (addedValues.length > 10) {
+                addedValues = `${addedValues.length} elements added`;
+              }
+              if (removedValues.length > 10) {
+                removedValues = `${removedValues.length} elements removed`;
+              }
+              res[k] = {
+                added: addedValues,
+                removed: removedValues,
+              };
+            }
           } else {
-            let addedValues = newValue.filter((a: any) => !oldValue.find((b: any) => isEqual(a, b)));
-            let removedValues = oldValue.filter((a: any) => !newValue.find((b: any) => isEqual(a, b)));
-
-            if (addedValues.length > 10) {
-              addedValues = `${addedValues.length} elements added`;
-            }
-            if (removedValues.length > 10) {
-              removedValues = `${removedValues.length} elements removed`;
-            }
-            res[k] = {
-              added: addedValues,
-              removed: removedValues,
-            };
+            res[k] = newState[k];
           }
-        } else {
-          res[k] = newState[k];
         }
+      } else {
+        res[k] = 'was deleted';
       }
-    } else {
-      res[k] = 'was deleted';
-    }
-  });
+    });
 
-  Object.keys(newState).forEach((k) => {
-    if (!oldState.hasOwnProperty(k)) {
-      res[k] = `${newState[k]}`;
-    }
-  });
+    Object.keys(newState).forEach((k) => {
+      if (!oldState.hasOwnProperty(k)) {
+        res[k] = `${newState[k]}`;
+      }
+    });
+  }
 
   return res;
 }

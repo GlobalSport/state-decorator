@@ -44,7 +44,7 @@ export enum ReducerActionType {
 }
 
 export enum ReducerActionSubType {
-  LOADING,
+  BEFORE_PROMISE,
   SUCCESS,
   ERROR,
 }
@@ -148,7 +148,7 @@ export function decorateAdvancedSyncAction<S, F extends (...args: any[]) => any,
  * Returns a function that decorates the asynchronous action.
  * It will dispatch actions for the useReducer.
  */
-function decorateAsyncAction<S, F extends (...args: any[]) => any, A, P>(
+export function decorateAsyncAction<S, F extends (...args: any[]) => any, A, P>(
   dispatch: React.Dispatch<ReducerAction<F, P>>,
   actionName: string,
   action: AsynchAction<S, F, A, P>,
@@ -156,7 +156,8 @@ function decorateAsyncAction<S, F extends (...args: any[]) => any, A, P>(
   propsRef: React.MutableRefObject<P>,
   actionsRef: React.MutableRefObject<A>,
   sideEffectsRef: React.MutableRefObject<SideEffect<S>[]>,
-  options: StateDecoratorOptions<S, A>
+  options: StateDecoratorOptions<S, A>,
+  addSideEffect: typeof addNewSideEffect
 ) {
   return (...args: Parameters<F>) => {
     const asyncAction = computeAsyncActionInput(action);
@@ -166,7 +167,7 @@ function decorateAsyncAction<S, F extends (...args: any[]) => any, A, P>(
       args,
       props: propsRef.current,
       type: ReducerActionType.ACTION,
-      subType: ReducerActionSubType.LOADING,
+      subType: ReducerActionSubType.BEFORE_PROMISE,
     });
 
     return asyncAction
@@ -174,7 +175,7 @@ function decorateAsyncAction<S, F extends (...args: any[]) => any, A, P>(
       .then((result: PromiseResult<ReturnType<F>>) => {
         if (action.onDone) {
           // delayed job after state update
-          addNewSideEffect(sideEffectsRef, (s: S) => {
+          addSideEffect(sideEffectsRef, (s: S) => {
             logSingle(actionName, args, options.logEnabled, 'onDone SIDE EFFECT');
             action.onDone(s, result, args as any, propsRef.current, actionsRef.current);
           });
@@ -251,7 +252,7 @@ export function getUseReducer<S, A extends DecoratedActions, P>(
         newHookState = {
           ...hookState,
           state: newState || hookState.state,
-          sideEffectRender: action.onActionDone ? hookState.sideEffectRender + 1 : hookState.sideEffectRender,
+          sideEffectRender: action.onActionDone ? 1 - hookState.sideEffectRender : hookState.sideEffectRender,
         };
       }
       return newHookState;
@@ -262,7 +263,7 @@ export function getUseReducer<S, A extends DecoratedActions, P>(
       let newHookState: HookState<S, A> = null;
 
       switch (actionType) {
-        case ReducerActionSubType.LOADING: {
+        case ReducerActionSubType.BEFORE_PROMISE: {
           if (action.preReducer) {
             newState = action.preReducer(state, args as any, props);
             logStateChange(actionName as string, options.logEnabled, state, newState, args, 'preReducer');
@@ -285,7 +286,7 @@ export function getUseReducer<S, A extends DecoratedActions, P>(
           const newHookState = { ...hookState };
 
           if (action.onDone) {
-            newHookState.sideEffectRender++;
+            newHookState.sideEffectRender = 1 - hookState.sideEffectRender;
           }
 
           newHookState.loadingMap = { ...hookState.loadingMap, [actionName]: false };
@@ -327,7 +328,7 @@ function isLoading<A>(loadingMap: LoadingMap<A>) {
 /**
  * Manages onPropsChangeRenducer and onPropsChange side effects.
  */
-function handlePropChange<S, A, P>(
+export function handlePropChange<S, A, P>(
   dispatch: React.Dispatch<ReducerAction<any, P>>,
   isMounted: boolean,
   props: P,
@@ -340,12 +341,12 @@ function handlePropChange<S, A, P>(
 
     if (onPropsChangeReducer) {
       dispatch({ props, type: ReducerActionType.ON_PROP_CHANGE_REDUCER, args: [] });
-      if (onPropsChange) {
-        addNewSideEffect(sideEffectsRef, (s: S) => {
-          logSingle('onPropsChange', [], options.logEnabled);
-          onPropsChange(s, props, actionsRef.current);
-        });
-      }
+    }
+    if (onPropsChange) {
+      addNewSideEffect(sideEffectsRef, (s: S) => {
+        logSingle('onPropsChange', [], options.logEnabled);
+        onPropsChange(s, props, actionsRef.current);
+      });
     }
   }
 }
@@ -411,7 +412,8 @@ export default function useStateDecorator<S, A extends DecoratedActions, P = {}>
           propsRef,
           actionsRef,
           sideEffectsRef,
-          options
+          options,
+          addNewSideEffect
         );
       } // else no-op
 
