@@ -163,6 +163,11 @@ describe('decorateAsyncAction', () => {
     const actionImpl = {
       promise: () => getFailedTimeoutPromise(100, 'error'),
       onDone: jest.fn(),
+      getErrorMessage: () => 'error message',
+    };
+
+    const options = {
+      notifyError: jest.fn(),
     };
 
     const action = decorateAsyncAction(
@@ -173,7 +178,7 @@ describe('decorateAsyncAction', () => {
       propsRef,
       actionsRef,
       sideEffectRef,
-      {},
+      options,
       addSideEffect
     );
 
@@ -195,6 +200,7 @@ describe('decorateAsyncAction', () => {
         subType: ReducerActionSubType.ERROR,
         error: 'error',
       });
+      expect(options.notifyError).toHaveBeenCalledWith('error message');
     });
   });
 });
@@ -233,7 +239,10 @@ describe('getUseReducer', () => {
     }
 
     it('handles correctly async action (before promise, preReducer)', () => {
-      preReducerTest((s, [value], p) => ({ ...s, value: `pre_${value}_${p.prop}` }), 'pre_value_prop');
+      preReducerTest(
+        (s, [value], p) => ({ ...s, value: `pre_${s.value}_${value}_${p.prop}` }),
+        'pre_initial_value_prop'
+      );
     });
 
     it('handles correctly async action (before promise, preReducer returns null)', () => {
@@ -246,7 +255,7 @@ describe('getUseReducer', () => {
   });
 
   describe('reducer', () => {
-    function reducerTest(reducer: any, result: string) {
+    function reducerSuccessTest(reducer: any, result: string) {
       type S = { value: string };
       type A = {
         setValue: (v: string) => void;
@@ -279,18 +288,67 @@ describe('getUseReducer', () => {
     }
 
     it('handles correctly async action (success, reducer)', () => {
-      reducerTest(
+      reducerSuccessTest(
         (s, result, [value], p) => ({ ...s, value: `${s.value}_${value}_${result}_${p.prop}` }),
         'initial_value_result_prop'
       );
     });
 
     it('handles correctly async action (success, reducer returns null)', () => {
-      reducerTest(() => null, 'initial');
+      reducerSuccessTest(() => null, 'initial');
     });
 
     it('handles correctly async action (success, no reducer)', () => {
-      reducerTest(undefined, 'initial');
+      reducerSuccessTest(undefined, 'initial');
+    });
+  });
+
+  describe('errorReducer', () => {
+    function reducerErrorTest(errorReducer: any, result: string) {
+      type S = { value: string };
+      type A = {
+        setValue: (v: string) => void;
+      };
+      type P = { prop: string };
+
+      const actions: StateDecoratorActions<S, A, P> = {
+        setValue: {
+          errorReducer,
+          promise: () => getFailedTimeoutPromise(0, 'error'),
+        },
+      };
+
+      const hookState = getInitialHookState((p: P) => ({ value: 'initial' }), actions, { prop: '' });
+
+      const reducerFunc = getUseReducer(actions, {});
+
+      const reducerAction: ReducerAction<any, P> = {
+        type: ReducerActionType.ACTION,
+        subType: ReducerActionSubType.ERROR,
+        actionName: 'setValue',
+        args: ['value'],
+        error: 'error',
+        props: { prop: 'prop' },
+      };
+
+      const newHookState = reducerFunc(hookState, reducerAction);
+
+      expect(newHookState.state).toEqual({ value: result });
+    }
+
+    it('handles correctly async action (error, reducer)', () => {
+      reducerErrorTest(
+        (s, error, [value], p) => ({ ...s, value: `${s.value}_${value}_${error}_${p.prop}` }),
+        'initial_value_error_prop'
+      );
+    });
+
+    it('handles correctly async action (error, reducer returns null)', () => {
+      reducerErrorTest(() => null, 'initial');
+    });
+
+    it('handles correctly async action (error, no reducer)', () => {
+      reducerErrorTest(undefined, 'initial');
     });
   });
 });

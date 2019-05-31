@@ -198,6 +198,32 @@ export function decorateAsyncAction<S, F extends (...args: any[]) => any, A, P>(
           type: ReducerActionType.ACTION,
           subType: ReducerActionSubType.ERROR,
         });
+
+        const notifyError = options.notifyError || propsRef.current['notifyError'];
+
+        let errorHandled = false;
+
+        if (notifyError && (action.errorMessage !== undefined || action.getErrorMessage !== undefined)) {
+          let msg: string;
+
+          errorHandled = true;
+
+          if (action.getErrorMessage !== undefined) {
+            msg = action.getErrorMessage(error, args, propsRef.current);
+          }
+
+          if (!msg) {
+            msg = action.errorMessage;
+          }
+
+          if (msg) {
+            notifyError(msg);
+          }
+        }
+
+        const result = !errorHandled || action.rejectPromiseOnError ? Promise.reject(error) : undefined;
+
+        return result;
       });
   };
 }
@@ -205,10 +231,12 @@ export function decorateAsyncAction<S, F extends (...args: any[]) => any, A, P>(
 function createNewHookState<S, A>(
   oldHookState: HookState<S, A>,
   actionName: string,
+  newState: S,
   actionLoading: boolean
 ): HookState<S, A> {
   return {
     ...oldHookState,
+    state: newState || oldHookState.state,
     loadingMap: { ...oldHookState.loadingMap, [actionName]: actionLoading } as LoadingMap<A>,
   };
 }
@@ -222,7 +250,7 @@ export function getUseReducer<S, A extends DecoratedActions, P>(
   options: StateDecoratorOptions<S, A>
 ) {
   return (hookState: HookState<S, A>, reducerAction: ReducerAction<any, P>): HookState<S, A> => {
-    const { type, actionName, subType: actionType, args, props, result } = reducerAction;
+    const { type, actionName, subType: actionType, args, props, result, error } = reducerAction;
 
     const state = hookState.state;
 
@@ -260,7 +288,6 @@ export function getUseReducer<S, A extends DecoratedActions, P>(
 
     if (isAsyncAction(action)) {
       let newState = null;
-      let newHookState: HookState<S, A> = null;
 
       switch (actionType) {
         case ReducerActionSubType.BEFORE_PROMISE: {
@@ -269,13 +296,7 @@ export function getUseReducer<S, A extends DecoratedActions, P>(
             logStateChange(actionName as string, options.logEnabled, state, newState, args, 'preReducer');
           }
 
-          // TODO optimistic
-          newHookState = createNewHookState(hookState, actionName, true);
-
-          if (newState !== null) {
-            newHookState.state = newState;
-          }
-          return newHookState;
+          return createNewHookState(hookState, actionName, newState, true);
         }
         case ReducerActionSubType.SUCCESS: {
           if (action.reducer) {
@@ -283,19 +304,21 @@ export function getUseReducer<S, A extends DecoratedActions, P>(
             logStateChange(actionName as string, options.logEnabled, state, newState, args, 'reducer');
           }
 
-          const newHookState = { ...hookState };
+          const newHookState = createNewHookState(hookState, actionName, newState, false);
 
           if (action.onDone) {
             newHookState.sideEffectRender = 1 - hookState.sideEffectRender;
           }
 
-          newHookState.loadingMap = { ...hookState.loadingMap, [actionName]: false };
-          newHookState.state = newState || hookState.state;
-
           return newHookState;
         }
         case ReducerActionSubType.ERROR: {
-          return hookState;
+          if (action.errorReducer) {
+            newState = action.errorReducer(state, error, args as any, props);
+            logStateChange(actionName as string, options.logEnabled, state, newState, args, 'errorReducer');
+          }
+
+          return createNewHookState(hookState, actionName, newState, false);
         }
         default:
           const s: never = actionType;
@@ -326,7 +349,7 @@ function isLoading<A>(loadingMap: LoadingMap<A>) {
 }
 
 /**
- * Manages onPropsChangeRenducer and onPropsChange side effects.
+ * Manages onPropsChangeRenducer dispatch and onPropsChange side effects.
  */
 export function handlePropChange<S, A, P>(
   dispatch: React.Dispatch<ReducerAction<any, P>>,
