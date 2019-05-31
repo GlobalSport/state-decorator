@@ -35,7 +35,7 @@ export function retryDecorator<S, F extends (...args: any[]) => Promise<any>, A,
   promiseProvider: PromiseProvider<S, F, A, P>,
   maxCalls = 1,
   delay = 1000,
-  isRetryError = (e: Error) => true
+  isRetryError: (e: Error) => boolean = () => true
 ): PromiseProvider<S, F, A, P> {
   if (maxCalls === 1) {
     return promiseProvider;
