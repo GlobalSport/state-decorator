@@ -9,15 +9,19 @@
  */
 
 import React, { useReducer, useMemo, useRef, useEffect } from 'react';
+import fastClone from 'fast-clone';
+
 import {
   SynchAction,
   DecoratedActions,
   StateDecoratorActions,
-  AsynchAction,
   LoadingMap,
   LoadingMapParallelActions,
   PromiseResult,
   AdvancedSynchAction,
+  ConflictPolicy,
+  ConflictActionsMap,
+  AsynchActionPromise,
 } from '../types';
 import {
   logStateChange,
@@ -27,6 +31,8 @@ import {
   toMap,
   isAdvancedSyncAction,
   logSingle,
+  retryDecorator,
+  areSameArgs,
 } from '../base';
 
 type HookState<S, A> = {
@@ -57,6 +63,7 @@ export type ReducerAction<F extends (...args: any[]) => any, P> = {
   type: ReducerActionType;
   args: Parameters<F>;
   result?: any;
+  promiseId?: string;
   error?: any;
   props: P;
   actionName?: string;
@@ -196,6 +203,109 @@ export function decorateAdvancedSyncAction<S, F extends (...args: any[]) => any,
   };
 }
 
+type CloneFunction = <C>(obj: C) => C;
+
+let cloneFunc: CloneFunction = fastClone;
+
+function clone(obj) {
+  try {
+    return cloneFunc(obj);
+  } catch (e) {
+    const msg =
+      'useStateDecorator: Cannot clone object. Call setCloneFunction with another implementation like lodash/cloneDeep.';
+    if (process.env.NODE_ENV === 'development') {
+      console.error(msg);
+      console.error(e.toString());
+    }
+    throw new Error(msg);
+  }
+}
+
+export function setCloneFunction(cloneFn: CloneFunction) {
+  cloneFunc = cloneFn;
+}
+
+type PromiseMap = { [name: string]: { promise: Promise<any>; refArgs: any[] } };
+
+function handleConflictingAction(
+  promises: PromiseMap,
+  conflictActions: ConflictActionsMap,
+  logEnabled: boolean,
+  actionName: string,
+  conflictPolicy: ConflictPolicy,
+  args: any[]
+) {
+  let policy: ConflictPolicy = conflictPolicy;
+  if (policy === ConflictPolicy.REUSE) {
+    if (areSameArgs(promises[actionName].refArgs, args)) {
+      return promises[actionName].promise;
+    } // else
+    policy = ConflictPolicy.KEEP_ALL;
+  }
+
+  return new Promise((resolve, reject) => {
+    const futureAction = {
+      resolve,
+      reject,
+      args: clone(args),
+      timestamp: Date.now(),
+    };
+
+    switch (policy) {
+      case ConflictPolicy.IGNORE:
+        logSingle(actionName, args, logEnabled, 'Drop request (Conflict policy is IGNORE)');
+        resolve();
+        break;
+      case ConflictPolicy.REJECT:
+        logSingle(actionName, args, logEnabled, 'Reject request (Conflict policy is REJECT)');
+        reject(new Error(`An asynch action ${actionName} is already ongoing.`));
+        break;
+      case ConflictPolicy.KEEP_LAST: {
+        conflictActions[actionName] = [futureAction];
+        break;
+      }
+      case ConflictPolicy.KEEP_ALL: {
+        let stack = conflictActions[actionName];
+        if (!stack) {
+          conflictActions[actionName] = stack = [];
+        }
+        stack.push(futureAction);
+        break;
+      }
+      case ConflictPolicy.PARALLEL:
+      case ConflictPolicy.REUSE:
+        // no-op
+        break;
+      default:
+        // will trigger a compilation error if one of the enum values is not processed.
+        const exhaustiveCheck: never = policy;
+        exhaustiveCheck;
+        break;
+    }
+  });
+}
+
+function processNextConflictAction<A>(actionName: string, actions: A, conflictActions: ConflictActionsMap) {
+  const futureActions = conflictActions[actionName];
+
+  if (futureActions && futureActions.length > 0) {
+    const futureAction = conflictActions[actionName].shift();
+
+    if (futureAction) {
+      const p = actions[actionName](...futureAction.args) as Promise<any>;
+      if (p == null) {
+        processNextConflictAction(actionName, actions, conflictActions);
+      } else {
+        p.then(futureAction.resolve).catch((e) => futureAction.reject(e));
+      } // else aborted
+    }
+  }
+}
+
+function isTriggerRetryError(error: Error) {
+  return error instanceof TypeError;
+}
+
 /**
  * Returns a function that decorates the asynchronous action.
  * It will dispatch actions for the useReducer.
@@ -203,27 +313,71 @@ export function decorateAdvancedSyncAction<S, F extends (...args: any[]) => any,
 export function decorateAsyncAction<S, F extends (...args: any[]) => any, A, P>(
   dispatch: React.Dispatch<ReducerAction<F, P>>,
   actionName: string,
-  action: AsynchAction<S, F, A, P>,
+  action: AsynchActionPromise<S, F, A, P>,
   stateRef: React.MutableRefObject<S>,
   propsRef: React.MutableRefObject<P>,
   actionsRef: React.MutableRefObject<A>,
   sideEffectsRef: React.MutableRefObject<SideEffect<S>[]>,
+  promisesRef: React.MutableRefObject<PromiseMap>,
+  conflictActionsRef: React.MutableRefObject<ConflictActionsMap>,
   options: StateDecoratorOptions<S, A>,
   addSideEffect: typeof addNewSideEffect
 ) {
-  return (...args: Parameters<F>) => {
+  return (...args: Parameters<F>): Promise<any> => {
     const asyncAction = computeAsyncActionInput(action);
+
+    const { conflictPolicy = ConflictPolicy.KEEP_ALL } = action;
+    const { current: promises } = promisesRef;
+
+    const isParallel = conflictPolicy === ConflictPolicy.PARALLEL;
+
+    if (!isParallel && promises[actionName]) {
+      return handleConflictingAction(
+        promisesRef.current,
+        conflictActionsRef.current,
+        options.logEnabled,
+        actionName,
+        conflictPolicy,
+        args
+      );
+    }
+
+    const { promise, retryCount, retryDelaySeed } = asyncAction;
+
+    let p = retryDecorator(promise, retryCount ? 1 + retryCount : 1, retryDelaySeed, isTriggerRetryError)(
+      args,
+      stateRef.current,
+      propsRef.current,
+      actionsRef.current
+    );
+
+    if (p === null) {
+      logSingle(name, args, options.logEnabled, 'ABORTED');
+      // this.markActionAsLoaded(name, conflictPolicy, promiseId);
+
+      return null; // nothing to do
+    }
+
+    let promiseId = null;
+    if (isParallel) {
+      if (!action.getPromiseId) {
+        throw new Error(
+          'If conflict policy is set to ConflictPolicy.PARALLEL, getPromiseId must be set and returns a string.'
+        );
+      }
+      promiseId = action.getPromiseId(...args);
+    }
 
     dispatch({
       actionName,
       args,
+      promiseId,
       props: propsRef.current,
       type: ReducerActionType.ACTION,
       subType: ReducerActionSubType.BEFORE_PROMISE,
     });
 
-    return asyncAction
-      .promise(args, stateRef.current, propsRef.current, actionsRef.current)
+    p = p
       .then((result: PromiseResult<ReturnType<F>>) => {
         if (action.onDone) {
           // delayed job after state update
@@ -236,16 +390,24 @@ export function decorateAsyncAction<S, F extends (...args: any[]) => any, A, P>(
           actionName,
           args,
           result,
+          promiseId,
           props: propsRef.current,
           type: ReducerActionType.ACTION,
           subType: ReducerActionSubType.SUCCESS,
         });
+
+        delete promisesRef.current[actionName];
+
+        processNextConflictAction(actionName, actionsRef.current, conflictActionsRef.current);
+
+        return result;
       })
       .catch((error: any) => {
         dispatch({
           actionName,
           args,
           error,
+          promiseId,
           props: propsRef.current,
           type: ReducerActionType.ACTION,
           subType: ReducerActionSubType.ERROR,
@@ -275,17 +437,65 @@ export function decorateAsyncAction<S, F extends (...args: any[]) => any, A, P>(
 
         const result = !errorHandled || action.rejectPromiseOnError ? Promise.reject(error) : undefined;
 
+        delete promisesRef.current[actionName];
+
+        processNextConflictAction(name, actionsRef.current, conflictActionsRef.current);
+
         return result;
       });
+
+    promises[actionName] = {
+      promise: p,
+      refArgs: conflictPolicy === ConflictPolicy.REUSE && args.length > 0 ? [...args] : [],
+    };
+
+    return p;
   };
 }
 
-function createNewHookState<S, A>(
+export function createNewHookState<S, A>(
   oldHookState: HookState<S, A>,
   actionName: string,
+  conflictPolicy: ConflictPolicy,
+  promiseId: string,
   newState: S,
   actionLoading: boolean
 ): HookState<S, A> {
+  if (conflictPolicy === ConflictPolicy.PARALLEL) {
+    if (actionLoading) {
+      return {
+        ...oldHookState,
+        state: newState || oldHookState.state,
+        loadingMap: { ...oldHookState.loadingMap, [actionName]: true } as LoadingMap<A>,
+        loadingParallelMap: {
+          ...oldHookState.loadingParallelMap,
+          [actionName]: {
+            ...oldHookState.loadingParallelMap[actionName],
+            [promiseId]: true,
+          },
+        },
+      };
+    }
+
+    const map = {
+      ...oldHookState.loadingParallelMap,
+      [actionName]: {
+        ...oldHookState.loadingParallelMap[actionName],
+      },
+    };
+
+    delete map[actionName][promiseId];
+    const len = Object.keys(map[actionName]).length;
+
+    return {
+      ...oldHookState,
+      loadingMap: {
+        ...oldHookState.loadingMap,
+        [actionName]: len > 0,
+      },
+      loadingParallelMap: map,
+    };
+  }
   return {
     ...oldHookState,
     state: newState || oldHookState.state,
@@ -302,7 +512,7 @@ export function getUseReducer<S, A extends DecoratedActions, P>(
   options: StateDecoratorOptions<S, A>
 ) {
   return (hookState: HookState<S, A>, reducerAction: ReducerAction<any, P>): HookState<S, A> => {
-    const { type, actionName, subType: actionType, args, props, result, error } = reducerAction;
+    const { type, actionName, subType: actionType, promiseId, args, props, result, error } = reducerAction;
 
     const state = hookState.state;
 
@@ -348,7 +558,7 @@ export function getUseReducer<S, A extends DecoratedActions, P>(
             logStateChange(actionName as string, options.logEnabled, state, newState, args, 'preReducer');
           }
 
-          return createNewHookState(hookState, actionName, newState, true);
+          return createNewHookState(hookState, actionName, action.conflictPolicy, promiseId, newState, true);
         }
         case ReducerActionSubType.SUCCESS: {
           if (action.reducer) {
@@ -356,7 +566,14 @@ export function getUseReducer<S, A extends DecoratedActions, P>(
             logStateChange(actionName as string, options.logEnabled, state, newState, args, 'reducer');
           }
 
-          const newHookState = createNewHookState(hookState, actionName, newState, false);
+          const newHookState = createNewHookState(
+            hookState,
+            actionName,
+            action.conflictPolicy,
+            promiseId,
+            newState,
+            false
+          );
 
           if (action.onDone) {
             newHookState.sideEffectRender = 1 - hookState.sideEffectRender;
@@ -370,8 +587,9 @@ export function getUseReducer<S, A extends DecoratedActions, P>(
             logStateChange(actionName as string, options.logEnabled, state, newState, args, 'errorReducer');
           }
 
-          return createNewHookState(hookState, actionName, newState, false);
+          return createNewHookState(hookState, actionName, action.conflictPolicy, promiseId, newState, false);
         }
+
         default:
           const s: never = actionType;
           s;
@@ -445,8 +663,8 @@ function processSideEffects<S>(state: S, sideEffectRef: React.MutableRefObject<S
 export default function useStateDecorator<S, A extends DecoratedActions, P = {}>(
   stateInitializer: (props?: P) => S,
   actions: StateDecoratorActions<S, A, P>,
-  props: P,
-  options: StateDecoratorOptions<S, A>
+  props: P = {} as P,
+  options: StateDecoratorOptions<S, A> = {}
 ) {
   const stateRef = useRef<S>();
   const propsRef = useRef<P>();
@@ -454,6 +672,8 @@ export default function useStateDecorator<S, A extends DecoratedActions, P = {}>
   const sideEffectsRef = useRef<SideEffect<S>[]>([]);
   const mountedRef = useRef(false);
   const debounceActionMapRef = useRef<DebounceMap>({});
+  const promisesRef = useRef<PromiseMap>({});
+  const conflictActionsRef = useRef<ConflictActionsMap>({});
 
   propsRef.current = props;
 
@@ -484,11 +704,13 @@ export default function useStateDecorator<S, A extends DecoratedActions, P = {}>
         acc[actionName] = decorateAsyncAction(
           dispatch,
           actionName,
-          action,
+          computeAsyncActionInput(action),
           stateRef,
           propsRef,
           actionsRef,
           sideEffectsRef,
+          promisesRef,
+          conflictActionsRef,
           options,
           addNewSideEffect
         );
@@ -513,8 +735,6 @@ export default function useStateDecorator<S, A extends DecoratedActions, P = {}>
   useEffect(() => {
     mountedRef.current = true;
   }, []);
-
-  console.log(hookState.loadingMap);
 
   const loading = isLoading(hookState.loadingMap);
   return { loading, state: hookState.state, actions: decoratedActions, loadingMap: hookState.loadingMap };

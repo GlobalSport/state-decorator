@@ -79,7 +79,7 @@ export type AdvancedSynchAction<S, F extends (...args: any[]) => any, A, P> = {
 
 export type PromiseIdMap = { [promiseId: string]: boolean };
 
-export type InternalLoadingMap<A> = { [P in keyof A]: undefined | boolean | PromiseIdMap };
+export type InternalLoadingMap<A> = { [name: string]: undefined | boolean | PromiseIdMap };
 export type LoadingMap<A> = { [P in keyof A]: undefined | boolean };
 export type LoadingMapParallelActions<A> = { [P in keyof A]: PromiseIdMap };
 
@@ -209,3 +209,27 @@ export type StateDecoratorAction<S, F extends (...args: any[]) => any, A, P> =
 export type StateDecoratorActions<S, A extends DecoratedActions, P = {}> = {
   [Prop in keyof A]: StateDecoratorAction<S, A[Prop], A, P>
 };
+
+export interface ActionHistory<S> {
+  name: string;
+  reducer: string;
+  args: any[];
+  beforeState?: S;
+}
+
+export interface OptimisticActionsMap {
+  [name: string]: any;
+}
+
+export type FutureActions = {
+  args: any[];
+  resolve: (...args: any[]) => void;
+  reject: (...args: any[]) => void;
+  timestamp?: number;
+};
+
+export type ReducerName = 'reducer' | 'optimisticReducer' | 'errorReducer';
+
+export interface ConflictActionsMap {
+  [name: string]: FutureActions[];
+}

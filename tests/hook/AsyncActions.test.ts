@@ -8,28 +8,11 @@ import {
   ReducerActionSubType,
 } from '../../src/useStateDecorator/useStateDecorator';
 import { StateDecoratorActions } from '../../src/types';
-import { getTimeoutPromise, getFailedTimeoutPromise } from './testUtils';
+import { getTimeoutPromise, getFailedTimeoutPromise, getAsyncContext } from './testUtils';
 
 describe('decorateAsyncAction', () => {
   it('dispatches an async action correctly (success, no side effect)', () => {
-    const dispatch = jest.fn();
-    const propsRef = {
-      current: {
-        prop: 'value',
-      },
-    };
-
-    const actionsRef = {
-      current: { action: jest.fn() },
-    };
-
-    const sideEffectRef = {
-      current: [],
-    };
-
-    const stateRef = {
-      current: 'initial',
-    };
+    const ctx = getAsyncContext();
 
     const addSideEffect = jest.fn(addNewSideEffect);
 
@@ -38,13 +21,15 @@ describe('decorateAsyncAction', () => {
     };
 
     const action = decorateAsyncAction(
-      dispatch,
+      ctx.dispatch,
       'actionName',
       actionImpl,
-      stateRef,
-      propsRef,
-      actionsRef,
-      sideEffectRef,
+      ctx.stateRef,
+      ctx.propsRef,
+      ctx.actionsRef,
+      ctx.sideEffectRef,
+      ctx.promisesRef,
+      ctx.conflicActionsRef,
       {},
       addSideEffect
     );
@@ -52,18 +37,20 @@ describe('decorateAsyncAction', () => {
     expect(typeof action === 'function').toBeTruthy();
 
     return action('value').then(() => {
-      expect(dispatch).toHaveBeenNthCalledWith(1, {
+      expect(ctx.dispatch).toHaveBeenNthCalledWith(1, {
         actionName: 'actionName',
         args: ['value'],
-        props: propsRef.current,
+        promiseId: null,
+        props: ctx.propsRef.current,
         type: ReducerActionType.ACTION,
         subType: ReducerActionSubType.BEFORE_PROMISE,
       });
 
-      expect(dispatch).toHaveBeenNthCalledWith(2, {
+      expect(ctx.dispatch).toHaveBeenNthCalledWith(2, {
         actionName: 'actionName',
         args: ['value'],
-        props: propsRef.current,
+        promiseId: null,
+        props: ctx.propsRef.current,
         type: ReducerActionType.ACTION,
         subType: ReducerActionSubType.SUCCESS,
         result: 'result',
@@ -74,25 +61,7 @@ describe('decorateAsyncAction', () => {
   });
 
   it('dispatches an async action correctly (success, with side effect)', () => {
-    const dispatch = jest.fn();
-    const propsRef = {
-      current: {
-        prop: 'value',
-      },
-    };
-
-    const actionsRef = {
-      current: { action: jest.fn() },
-    };
-
-    const sideEffectRef = {
-      current: [],
-    };
-
-    const stateRef = {
-      current: 'initial',
-    };
-
+    const ctx = getAsyncContext();
     const addSideEffect = jest.fn(addNewSideEffect);
 
     const actionImpl = {
@@ -101,13 +70,15 @@ describe('decorateAsyncAction', () => {
     };
 
     const action = decorateAsyncAction(
-      dispatch,
+      ctx.dispatch,
       'actionName',
       actionImpl,
-      stateRef,
-      propsRef,
-      actionsRef,
-      sideEffectRef,
+      ctx.stateRef,
+      ctx.propsRef,
+      ctx.actionsRef,
+      ctx.sideEffectRef,
+      ctx.promisesRef,
+      ctx.conflicActionsRef,
       {},
       addSideEffect
     );
@@ -115,48 +86,39 @@ describe('decorateAsyncAction', () => {
     expect(typeof action === 'function').toBeTruthy();
 
     return action('value').then(() => {
-      expect(dispatch).toHaveBeenNthCalledWith(1, {
+      expect(ctx.dispatch).toHaveBeenNthCalledWith(1, {
         actionName: 'actionName',
         args: ['value'],
-        props: propsRef.current,
+        promiseId: null,
+        props: ctx.propsRef.current,
         type: ReducerActionType.ACTION,
         subType: ReducerActionSubType.BEFORE_PROMISE,
       });
-      expect(dispatch).toHaveBeenNthCalledWith(2, {
+      expect(ctx.dispatch).toHaveBeenNthCalledWith(2, {
         actionName: 'actionName',
         args: ['value'],
-        props: propsRef.current,
+        promiseId: null,
+        props: ctx.propsRef.current,
         type: ReducerActionType.ACTION,
         subType: ReducerActionSubType.SUCCESS,
         result: 'result',
       });
 
       const s = { value: 'value' };
-      sideEffectRef.current[0](s);
+      ctx.sideEffectRef.current[0](s);
 
-      expect(actionImpl.onDone).toHaveBeenCalledWith(s, 'result', ['value'], propsRef.current, actionsRef.current);
+      expect(actionImpl.onDone).toHaveBeenCalledWith(
+        s,
+        'result',
+        ['value'],
+        ctx.propsRef.current,
+        ctx.actionsRef.current
+      );
     });
   });
 
-  it('dispatches an async action correctly (error)', () => {
-    const dispatch = jest.fn();
-    const propsRef = {
-      current: {
-        prop: 'value',
-      },
-    };
-
-    const actionsRef = {
-      current: { action: jest.fn() },
-    };
-
-    const sideEffectRef = {
-      current: [],
-    };
-
-    const stateRef = {
-      current: 'initial',
-    };
+  it('dispatches an async action correctly (error)', (done) => {
+    const ctx = getAsyncContext();
 
     const addSideEffect = jest.fn(addNewSideEffect);
 
@@ -171,13 +133,15 @@ describe('decorateAsyncAction', () => {
     };
 
     const action = decorateAsyncAction(
-      dispatch,
+      ctx.dispatch,
       'actionName',
       actionImpl,
-      stateRef,
-      propsRef,
-      actionsRef,
-      sideEffectRef,
+      ctx.stateRef,
+      ctx.propsRef,
+      ctx.actionsRef,
+      ctx.sideEffectRef,
+      ctx.promisesRef,
+      ctx.conflicActionsRef,
       options,
       addSideEffect
     );
@@ -185,22 +149,25 @@ describe('decorateAsyncAction', () => {
     expect(typeof action === 'function').toBeTruthy();
 
     return action('value').then(() => {
-      expect(dispatch).toHaveBeenNthCalledWith(1, {
+      expect(ctx.dispatch).toHaveBeenNthCalledWith(1, {
         actionName: 'actionName',
         args: ['value'],
-        props: propsRef.current,
+        promiseId: null,
+        props: ctx.propsRef.current,
         type: ReducerActionType.ACTION,
         subType: ReducerActionSubType.BEFORE_PROMISE,
       });
-      expect(dispatch).toHaveBeenNthCalledWith(2, {
+      expect(ctx.dispatch).toHaveBeenNthCalledWith(2, {
         actionName: 'actionName',
         args: ['value'],
-        props: propsRef.current,
+        promiseId: null,
+        props: ctx.propsRef.current,
         type: ReducerActionType.ACTION,
         subType: ReducerActionSubType.ERROR,
         error: 'error',
       });
       expect(options.notifyError).toHaveBeenCalledWith('error message');
+      done();
     });
   });
 });

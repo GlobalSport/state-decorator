@@ -23,6 +23,10 @@ import {
   AsynchActionPromise,
   PromiseIdMap,
   LoadingProps,
+  ConflictActionsMap,
+  OptimisticActionsMap,
+  ActionHistory,
+  ReducerName,
 } from './types';
 import {
   isAsyncAction,
@@ -117,30 +121,6 @@ interface StateDecoratorState<S, A> {
   data?: S;
   loading?: boolean;
   actions?: A;
-}
-
-interface ActionHistory<S> {
-  name: string;
-  reducer: string;
-  args: any[];
-  beforeState?: S;
-}
-
-interface OptimisticActionsMap {
-  [name: string]: any;
-}
-
-type FutureActions = {
-  args: any[];
-  resolve: (...args: any[]) => void;
-  reject: (...args: any[]) => void;
-  timestamp?: number;
-};
-
-type ReducerName = 'reducer' | 'optimisticReducer' | 'errorReducer';
-
-interface ConflictActionsMap {
-  [name: string]: FutureActions[];
 }
 
 /**
@@ -444,7 +424,7 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
       })
       .reduce(
         (acc, service) => {
-          acc[service.name] = service.action as any;
+          acc[service.name as keyof A] = service.action as any;
           return acc;
         },
         {} as A
@@ -673,7 +653,7 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
       retryCount,
       retryDelaySeed,
       isTriggerRetryError,
-    }: AsynchActionPromise<S, A[string], A, P>
+    }: AsynchActionPromise<S, any, A, P>
   ) => (...args: Parameters<A[string]>) => {
     const dataState = this.dataState;
 
@@ -895,7 +875,7 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
         } else {
           res = v as boolean;
         }
-        acc[name] = res;
+        acc[name as keyof A] = res;
         return acc;
       },
       {} as LoadingMap<A>
@@ -912,9 +892,9 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
         if (isAsyncAction(rawAction)) {
           if (rawAction.conflictPolicy === ConflictPolicy.PARALLEL) {
             if (this.loadingMap[name] === undefined) {
-              acc[name] = {};
+              acc[name as keyof A] = {};
             } else {
-              acc[name] = this.loadingMap[name] as PromiseIdMap;
+              acc[name as keyof A] = this.loadingMap[name] as PromiseIdMap;
             }
           }
         }
