@@ -13,7 +13,7 @@ export default class App extends React.Component {
   render() {
     return (
       <div>
-        {/* <section>
+        <section>
           <h1>Hook</h1>
           <Hook />
         </section>
@@ -32,7 +32,7 @@ export default class App extends React.Component {
         <section>
           <h1>Todo</h1>
           <TodoContainer />
-        </section> */}
+        </section>
         <section>
           <h1>Conflict</h1>
           <ConflictingActionsApp />

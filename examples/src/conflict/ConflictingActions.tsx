@@ -68,7 +68,7 @@ export default class ConflictApp extends React.Component {
           conflictPolicy={ConflictPolicy.KEEP_ALL}
           description="Chain all action calls"
         />
-        {/* <ConflictingActionsContainer
+        <ConflictingActionsContainer
           title="Keep Last"
           conflictPolicy={ConflictPolicy.KEEP_LAST}
           description="Keep only last (more recent) call to be executed when the previous call is resolved"
@@ -83,7 +83,7 @@ export default class ConflictApp extends React.Component {
           conflictPolicy={ConflictPolicy.REJECT}
           description="Return a rejected promise on a conflicting action call."
         />
-        <ParallelActions /> */}
+        <ParallelActions />
       </div>
     );
   }
