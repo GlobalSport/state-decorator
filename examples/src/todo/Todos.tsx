@@ -146,7 +146,7 @@ const Footer = React.memo(function Footer(props: Pick<State, 'filter'> & Actions
   );
 });
 
-const actionsImpl: StateDecoratorActions<State, Actions> = {
+export const todoActions: StateDecoratorActions<State, Actions> = {
   onCreate: (state) =>
     produce<State>(state, (draftState) => {
       const newTodo: TodoItem = {
@@ -201,7 +201,7 @@ const actionsImpl: StateDecoratorActions<State, Actions> = {
 
 // Container that is managing the state.
 export default function TodoContainer() {
-  const { state, actions } = useStateDecorator(getInitialState, actionsImpl);
+  const { state, actions } = useStateDecorator(getInitialState, todoActions);
   const todoProps = pick(state, 'todoMap', 'todoIds', 'filter');
 
   return (

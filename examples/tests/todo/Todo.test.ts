@@ -1,4 +1,4 @@
-import TodoContainer, { getInitialState, Filter } from '../../src/todo/Todos';
+import TodoContainer, { getInitialState, Filter, todoActions } from '../../src/todo/Todos';
 import { testSyncAction } from '../../../src/base';
 
 describe('Todo', () => {
@@ -8,7 +8,7 @@ describe('Todo', () => {
       newTitle: 'new todo',
     };
 
-    return testSyncAction(TodoContainer.actions.onCreate, (action) => {
+    return testSyncAction(todoActions.onCreate, (action) => {
       const newState = action(state, null, null);
       expect(newState).not.toBe(state);
       expect(newState.todoIds).toHaveLength(1);
@@ -30,7 +30,7 @@ describe('Todo', () => {
       },
     };
 
-    return testSyncAction(TodoContainer.actions.onEdit, (action) => {
+    return testSyncAction(todoActions.onEdit, (action) => {
       const newState = action(state, ['id', 'new todo'], null);
       expect(newState).not.toBe(state);
       expect(newState.todoIds).toHaveLength(1);
@@ -58,7 +58,7 @@ describe('Todo', () => {
       },
     };
 
-    return testSyncAction(TodoContainer.actions.onDelete, (action) => {
+    return testSyncAction(todoActions.onDelete, (action) => {
       const newState = action(state, ['id'], null);
       expect(newState).not.toBe(state);
       expect(state.todoIds).toHaveLength(2);
@@ -81,7 +81,7 @@ describe('Todo', () => {
       },
     };
 
-    return testSyncAction(TodoContainer.actions.onToggle, (action) => {
+    return testSyncAction(todoActions.onToggle, (action) => {
       const newState = action(state, ['id'], null);
       expect(newState).not.toBe(state);
       expect(state.todoMap[state.todoIds[0]].completed).toBeTruthy();
@@ -110,7 +110,7 @@ describe('Todo', () => {
       },
     };
 
-    return testSyncAction(TodoContainer.actions.onClearCompleted, (action) => {
+    return testSyncAction(todoActions.onClearCompleted, (action) => {
       const newState = action(state, null, null);
       expect(newState).not.toBe(state);
       expect(state.todoIds).toHaveLength(2);
@@ -126,7 +126,7 @@ describe('Todo', () => {
       newTitle: 'title',
     };
 
-    return testSyncAction(TodoContainer.actions.onSetNewTitle, (action) => {
+    return testSyncAction(todoActions.onSetNewTitle, (action) => {
       const newState = action(state, ['new title'], null);
       expect(newState).not.toBe(state);
       expect(state.newTitle).toEqual('title');
@@ -140,8 +140,8 @@ describe('Todo', () => {
       filter: Filter.ALL,
     };
 
-    const onSetFilter = TodoContainer.actions.onSetFilter;
-    return testSyncAction(TodoContainer.actions.onSetFilter, (action) => {
+    const onSetFilter = todoActions.onSetFilter;
+    return testSyncAction(todoActions.onSetFilter, (action) => {
       const newState = action(state, [Filter.COMPLETED], null);
       expect(newState).not.toBe(state);
       expect(state.filter).toEqual(Filter.ALL);
