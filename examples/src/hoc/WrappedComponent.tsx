@@ -1,5 +1,7 @@
 import React from 'react';
 import { StateDecoratorActions, injectState } from '../../../src/StateDecorator';
+import useCommonStyles from '../style.js';
+import { Button } from '@material-ui/core';
 
 type State = {
   count: number;
@@ -20,19 +22,20 @@ const actions: StateDecoratorActions<State, Actions, Props> = {
   }),
 };
 
-export class WrappedComponentView extends React.PureComponent<State & Actions & Props> {
-  increment = () => this.props.increment(10);
+export const WrappedComponentView = (props: Props & State & Actions) => {
+  const increment = () => props.increment(10);
+  const commonClasses = useCommonStyles();
 
-  render() {
-    const { count } = this.props;
-    return (
-      <div>
-        {count}
-        <button onClick={this.increment}>Increment</button>
-      </div>
-    );
-  }
-}
+  const { count } = props;
+  return (
+    <div className={commonClasses.smallCardContainer}>
+      <Button className={commonClasses.button} onClick={increment}>
+        Increment
+      </Button>
+      <div className={commonClasses.smallCardValue}>{count}</div>
+    </div>
+  );
+};
 
 export default injectState(
   (props) => ({

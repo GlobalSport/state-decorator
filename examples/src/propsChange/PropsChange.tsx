@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import StateDecorator, { StateDecoratorActions } from '../../../src/StateDecorator';
+import useCommonStyles from '../style.js';
+import { Button } from '@material-ui/core';
 
 export type State = {
   value: string;
@@ -45,22 +47,21 @@ export class PropsChange extends React.PureComponent<PropsChangeProps> {
 
 export interface PropsChangeAppProps {}
 
-export default class PropsChangeApp extends React.PureComponent<PropsChangeAppProps> {
-  state = {
-    value: 'value',
-  };
+const PropsChangeApp = (props: PropsChangeAppProps) => {
+  const [value, setValue] = useState('value');
+  const commonClasses = useCommonStyles();
 
-  render() {
-    return (
-      <div>
-        <h1>Props change</h1>
-        <div>A state decorator can update its state from its props</div>
-        <div>Click on button change the StateDecorator property</div>
-        <br />
-        <PropsChange value={this.state.value} />
-        <br />
-        <button onClick={() => this.setState({ value: 'value 2' })}>Update value</button>
-      </div>
-    );
-  }
-}
+  return (
+    <div className={commonClasses.smallCardContainer}>
+      <div>A state decorator can update its state from its props</div>
+      <div>Click on button change the StateDecorator property</div>
+      <br />
+        <Button className={commonClasses.button} onClick={() => setValue('value 2')}>
+          Update value
+        </Button>
+        <div className={commonClasses.smallCardValue}><PropsChange value={value} /></div>
+    </div>
+  );
+};
+
+export default PropsChangeApp;

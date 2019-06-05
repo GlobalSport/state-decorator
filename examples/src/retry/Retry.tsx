@@ -1,5 +1,8 @@
 import React from 'react';
 import StateDecorator, { StateDecoratorActions } from '../../../src/StateDecorator';
+import useCommonStyles from '../style.js';
+import TextField from '@material-ui/core/TextField';
+import { Button } from '@material-ui/core';
 
 export type State = {
   count: number;
@@ -14,14 +17,36 @@ export const getInitialState = (): State => ({
 });
 
 let retry = 0;
+let messages = [];
+
+export const RetryView = (props) => {
+  const { action, count } = props;
+  const commonClasses = useCommonStyles();
+  return (
+    <div className={commonClasses.smallCardContainer}>
+      <div># of calls to promise: {retry}</div>
+      <div># of calls to reducer: {count}</div>
+      <br />
+      <Button className={commonClasses.button} onClick={action}>
+        Trigger action
+      </Button>
+      <div className={commonClasses.smallCardValue}>
+        <TextField
+          multiline
+          variant="outlined"
+          value={messages.join('\n')}
+          rows="4"
+          onChange={() => {}}
+          style={{ width: 300 }}
+        />
+      </div>
+    </div>
+  );
+};
 
 export default class Retry extends React.PureComponent<{}> {
-  state = {
-    messages: [],
-  };
-
   addToLog = (message) => {
-    this.setState({ messages: [...this.state.messages, message] });
+    messages = messages.concat(message);
   };
 
   actions: StateDecoratorActions<State, Actions> = {
@@ -49,21 +74,7 @@ export default class Retry extends React.PureComponent<{}> {
   render() {
     return (
       <StateDecorator<State, Actions> actions={this.actions} initialState={getInitialState()}>
-        {({ count }, { action }) => (
-          <div>
-            <h1>Retry</h1>
-            <div># of calls to promise: {retry}</div>
-            <div># of calls to reducer: {count}</div>
-            <div>
-              <textarea
-                value={this.state.messages.join('\n')}
-                onChange={() => {}}
-                style={{ height: 100, width: 200 }}
-              />
-            </div>
-            <button onClick={action}>Trigger action</button>
-          </div>
-        )}
+        {({ count }, { action }) => <RetryView action={action} count={count} />}
       </StateDecorator>
     );
   }

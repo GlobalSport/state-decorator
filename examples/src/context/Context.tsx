@@ -1,5 +1,7 @@
 import React from 'react';
 import StateDecorator, { StateDecoratorActions } from '../../../src/StateDecorator';
+import Button from '@material-ui/core/Button';
+import useCommonStyles from '../style.js';
 
 export type State = {
   color: string;
@@ -13,20 +15,22 @@ const initialState = { color: 'blue' };
 
 export const Context = React.createContext<State & Actions>(null);
 
-class SubComponent extends React.Component {
-  render() {
-    return (
-      <Context.Consumer>
-        {(context) => (
-          <div>
-            <div className="sub-component">{context.color}</div>
-            <button onClick={() => context.setColor('red')}>Click</button>
-          </div>
-        )}
-      </Context.Consumer>
-    );
-  }
-}
+const SubComponent = () => {
+  const commonClasses = useCommonStyles();
+
+  return (
+    <Context.Consumer>
+      {(context) => (
+        <div className={commonClasses.smallCardContainer}>
+          <Button className={commonClasses.button} onClick={() => context.setColor('red')}>
+            Click
+          </Button>
+          <div className={commonClasses.smallCardValue}>{context.color}</div>
+        </div>
+      )}
+    </Context.Consumer>
+  );
+};
 
 const MainComponent = () => <SubComponent />;
 

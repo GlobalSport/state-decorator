@@ -1,5 +1,14 @@
 import React from 'react';
 import StateDecorator, { StateDecoratorActions, injectState, LoadingProps } from '../../../src/StateDecorator';
+import Button from '@material-ui/core/Button';
+import useCommonStyles from '../style.js';
+import { makeStyles } from '@material-ui/styles';
+
+const useLocalStyle = makeStyles({
+  buttonRight: {
+    marginLeft: 20
+  }
+})
 
 type State = {
   counter: number;
@@ -20,18 +29,23 @@ export const actions: StateDecoratorActions<State, Actions> = {
 };
 
 // Stateless component, in real life use React.memo()
-class CounterView extends React.PureComponent<State & Actions> {
-  render() {
-    const { counter, increment, decrement } = this.props;
-    return (
-      <div>
-        {counter}
-        <button onClick={() => decrement(10)}>Substracts 10</button>
-        <button onClick={() => increment(10)}>Adds 10</button>
-      </div>
-    );
-  }
-}
+const CounterView = (props) => {
+  const commonClasses = useCommonStyles();
+  const localClasses = useLocalStyle();
+  const { counter, increment, decrement } = props;
+
+  return (
+    <div className={commonClasses.smallCardContainer}>
+      <Button className={commonClasses.button} onClick={() => increment(10)}>
+        Adds 10
+      </Button>
+      <Button className={[commonClasses.button, localClasses.buttonRight].join(' ')} onClick={() => decrement(10)}>
+        Subs 10
+      </Button>
+      <div className={commonClasses.smallCardValue}>Value: {counter}</div>
+    </div>
+  );
+};
 
 // Container that is managing the state.
 export const CounterContainer = () => (

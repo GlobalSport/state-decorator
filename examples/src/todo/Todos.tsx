@@ -2,6 +2,9 @@ import React from 'react';
 import StateDecorator, { StateDecoratorActions } from '../../../src/StateDecorator';
 import produce from 'immer';
 import { pick } from 'lodash';
+import { Button } from '@material-ui/core';
+import TextField from '@material-ui/core/TextField';
+import useCommonStyles from '../style.js';
 
 export enum Filter {
   ALL = 'all',
@@ -41,22 +44,23 @@ export type Actions = {
   onSetFilter: (filter: Filter) => void;
 };
 
-class Header extends React.PureComponent<Pick<State, 'newTitle'> & Pick<Actions, 'onSetNewTitle' | 'onCreate'>> {
-  onChange = (e) => this.props.onSetNewTitle(e.target.value);
-  onSubmit = (e) => {
+const Header = (props: Pick<State, 'newTitle'> & Pick<Actions, 'onSetNewTitle' | 'onCreate'>) => {
+  const classes = useCommonStyles();
+  const onChange = (e) => props.onSetNewTitle(e.target.value);
+  const onSubmit = (e) => {
     e.preventDefault();
-    this.props.onCreate();
+    props.onCreate();
   };
-  render() {
-    const { newTitle } = this.props;
-    return (
-      <form onSubmit={this.onSubmit}>
-        <input value={newTitle} onChange={this.onChange} />
-        <button type="submit">Create</button>
-      </form>
-    );
-  }
-}
+  const { newTitle } = props;
+  return (
+    <form onSubmit={onSubmit}>
+      <TextField label="title" value={newTitle} onChange={onChange} />
+      <Button className={classes.button} type="submit">
+        Create
+      </Button>
+    </form>
+  );
+};
 
 class Todo extends React.PureComponent<{ todo: TodoItem } & Actions> {
   onToggle = (e) => this.props.onToggle(this.props.todo.id);
@@ -75,9 +79,9 @@ class Todo extends React.PureComponent<{ todo: TodoItem } & Actions> {
   }
 }
 
-class Todos extends React.PureComponent<Pick<State, 'todoIds' | 'todoMap' | 'filter'> & Actions> {
-  filter = (todoId) => {
-    const { filter, todoMap } = this.props;
+const Todos = (props: Pick<State, 'todoIds' | 'todoMap' | 'filter'> & Actions) => {
+  const filter = (todoId) => {
+    const { filter, todoMap } = props;
     const todo = todoMap[todoId];
 
     if (filter === Filter.ALL) {
@@ -87,61 +91,60 @@ class Todos extends React.PureComponent<Pick<State, 'todoIds' | 'todoMap' | 'fil
     return filter === Filter.COMPLETED ? todo.completed : !todo.completed;
   };
 
-  render() {
-    const { todoIds, todoMap } = this.props;
+  const { todoIds, todoMap } = props;
 
-    return (
-      <div>
-        {todoIds.filter(this.filter).map((todoId) => (
-          <Todo key={todoId} todo={todoMap[todoId]} {...this.props} />
-        ))}
-      </div>
-    );
-  }
-}
+  return (
+    <div>
+      {todoIds.filter(filter).map((todoId) => (
+        <Todo key={todoId} todo={todoMap[todoId]} {...props} />
+      ))}
+    </div>
+  );
+};
 
-class Footer extends React.PureComponent<Pick<State, 'filter'> & Actions> {
-  onFilterChange = (e) => this.props.onSetFilter(e.target.value);
+const Footer = (props: Pick<State, 'filter'> & Actions) => {
+  const classes = useCommonStyles();
+  const onFilterChange = (e) => props.onSetFilter(e.target.value);
 
-  render() {
-    const { onClearCompleted, filter } = this.props;
-    return (
-      <div>
-        <label>
-          <input
-            type="radio"
-            name="filter"
-            value={Filter.ALL}
-            checked={filter === Filter.ALL}
-            onChange={this.onFilterChange}
-          />
-          All
-        </label>
-        <label>
-          <input
-            type="radio"
-            name="filter"
-            value={Filter.NON_COMPLETED}
-            checked={filter === Filter.NON_COMPLETED}
-            onChange={this.onFilterChange}
-          />
-          Non Completed
-        </label>
-        <label>
-          <input
-            type="radio"
-            name="filter"
-            value={Filter.COMPLETED}
-            checked={filter === Filter.COMPLETED}
-            onChange={this.onFilterChange}
-          />
-          Completed
-        </label>
-        <button onClick={onClearCompleted}>Clear completed</button>
-      </div>
-    );
-  }
-}
+  const { onClearCompleted, filter } = props;
+  return (
+    <div>
+      <label>
+        <input
+          type="radio"
+          name="filter"
+          value={Filter.ALL}
+          checked={filter === Filter.ALL}
+          onChange={onFilterChange}
+        />
+        All
+      </label>
+      <label>
+        <input
+          type="radio"
+          name="filter"
+          value={Filter.NON_COMPLETED}
+          checked={filter === Filter.NON_COMPLETED}
+          onChange={onFilterChange}
+        />
+        Non Completed
+      </label>
+      <label>
+        <input
+          type="radio"
+          name="filter"
+          value={Filter.COMPLETED}
+          checked={filter === Filter.COMPLETED}
+          onChange={onFilterChange}
+        />
+        Completed
+      </label>
+      <Button className={classes.button} onClick={onClearCompleted}>
+        Clear completed
+      </Button>
+    </div>
+  );
+};
 // Container that is managing the state.
 export default class TodoContainer extends React.Component {
   static actions: StateDecoratorActions<State, Actions> = {
