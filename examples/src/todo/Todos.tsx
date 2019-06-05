@@ -5,6 +5,27 @@ import { pick } from 'lodash';
 import { Button } from '@material-ui/core';
 import TextField from '@material-ui/core/TextField';
 import useCommonStyles from '../style.js';
+import Checkbox from '@material-ui/core/Checkbox';
+import Radio from '@material-ui/core/Radio';
+import { makeStyles } from '@material-ui/styles';
+
+const useLocalStyle = makeStyles({
+  header: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  headerButton: {
+    marginTop: 20,
+  },
+  todo: {
+    display: 'flex',
+    alignItems: 'center',
+  },
+  underline: {
+    textDecoration: 'line-through',
+  },
+});
 
 export enum Filter {
   ALL = 'all',
@@ -44,8 +65,11 @@ export type Actions = {
   onSetFilter: (filter: Filter) => void;
 };
 
-const Header = (props: Pick<State, 'newTitle'> & Pick<Actions, 'onSetNewTitle' | 'onCreate'>) => {
-  const classes = useCommonStyles();
+const Header = React.memo(function Header(
+  props: Pick<State, 'newTitle'> & Pick<Actions, 'onSetNewTitle' | 'onCreate'>
+) {
+  const commonClasses = useCommonStyles();
+  const localClasses = useLocalStyle();
   const onChange = (e) => props.onSetNewTitle(e.target.value);
   const onSubmit = (e) => {
     e.preventDefault();
@@ -54,32 +78,33 @@ const Header = (props: Pick<State, 'newTitle'> & Pick<Actions, 'onSetNewTitle' |
   const { newTitle } = props;
   return (
     <form onSubmit={onSubmit}>
-      <TextField label="title" value={newTitle} onChange={onChange} />
-      <Button className={classes.button} type="submit">
-        Create
-      </Button>
+      <div className={localClasses.header}>
+        <TextField label="title" value={newTitle} onChange={onChange} />
+        <Button className={[commonClasses.button, localClasses.headerButton].join(' ')} type="submit">
+          Create
+        </Button>
+      </div>
     </form>
   );
-};
+});
 
-class Todo extends React.PureComponent<{ todo: TodoItem } & Actions> {
-  onToggle = (e) => this.props.onToggle(this.props.todo.id);
+const Todo = React.memo(function Todo(props: { todo: TodoItem } & Actions) {
+  const onToggle = (e) => props.onToggle(props.todo.id);
+  const localClasses = useLocalStyle();
 
-  render() {
-    const { todo } = this.props;
-    return (
-      <div>
-        <div>{todo.title}</div>
-        <label>
-          <input type="checkbox" checked={todo.completed} onChange={this.onToggle} />
-          completed
-        </label>
-      </div>
-    );
-  }
-}
+  const { todo } = props;
+  return (
+    <div className={localClasses.todo}>
+      <div className={todo.completed ? localClasses.underline : ''}>{todo.title}</div>
+      <label>
+        <Checkbox checked={todo.completed} onChange={onToggle} />
+      </label>
+    </div>
+  );
+});
 
-const Todos = (props: Pick<State, 'todoIds' | 'todoMap' | 'filter'> & Actions) => {
+const Todos = React.memo(function Todos(props: Pick<State, 'todoIds' | 'todoMap' | 'filter'> & Actions) {
+  const commonClasses = useCommonStyles();
   const filter = (todoId) => {
     const { filter, todoMap } = props;
     const todo = todoMap[todoId];
@@ -91,60 +116,54 @@ const Todos = (props: Pick<State, 'todoIds' | 'todoMap' | 'filter'> & Actions) =
     return filter === Filter.COMPLETED ? todo.completed : !todo.completed;
   };
 
-  const { todoIds, todoMap } = props;
+  const { onClearCompleted, todoIds, todoMap } = props;
 
   return (
     <div>
       {todoIds.filter(filter).map((todoId) => (
         <Todo key={todoId} todo={todoMap[todoId]} {...props} />
       ))}
-    </div>
-  );
-};
-
-const Footer = (props: Pick<State, 'filter'> & Actions) => {
-  const classes = useCommonStyles();
-  const onFilterChange = (e) => props.onSetFilter(e.target.value);
-
-  const { onClearCompleted, filter } = props;
-  return (
-    <div>
-      <label>
-        <input
-          type="radio"
-          name="filter"
-          value={Filter.ALL}
-          checked={filter === Filter.ALL}
-          onChange={onFilterChange}
-        />
-        All
-      </label>
-      <label>
-        <input
-          type="radio"
-          name="filter"
-          value={Filter.NON_COMPLETED}
-          checked={filter === Filter.NON_COMPLETED}
-          onChange={onFilterChange}
-        />
-        Non Completed
-      </label>
-      <label>
-        <input
-          type="radio"
-          name="filter"
-          value={Filter.COMPLETED}
-          checked={filter === Filter.COMPLETED}
-          onChange={onFilterChange}
-        />
-        Completed
-      </label>
-      <Button className={classes.button} onClick={onClearCompleted}>
+      <Button className={commonClasses.button} onClick={onClearCompleted}>
         Clear completed
       </Button>
     </div>
   );
-};
+});
+
+const Footer = React.memo(function Footer(props: Pick<State, 'filter'> & Actions) {
+  const commonClasses = useCommonStyles();
+  const onFilterChange = (e) => props.onSetFilter(e.target.value);
+
+  const { filter } = props;
+  return (
+    <div>
+      <div>
+        <div>
+          <Radio name="filter" value={Filter.ALL} checked={filter === Filter.ALL} onChange={onFilterChange} />
+          All
+        </div>
+        <div>
+          <Radio
+            name="filter"
+            value={Filter.NON_COMPLETED}
+            checked={filter === Filter.NON_COMPLETED}
+            onChange={onFilterChange}
+          />
+          Non Completed
+        </div>
+        <div>
+          <Radio
+            name="filter"
+            value={Filter.COMPLETED}
+            checked={filter === Filter.COMPLETED}
+            onChange={onFilterChange}
+          />
+          Completed
+        </div>
+      </div>
+    </div>
+  );
+});
 // Container that is managing the state.
 export default class TodoContainer extends React.Component {
   static actions: StateDecoratorActions<State, Actions> = {
@@ -206,10 +225,10 @@ export default class TodoContainer extends React.Component {
         {(state, actions) => {
           const todoProps = pick(state, 'todoMap', 'todoIds', 'filter');
           return (
-            <div>
+            <div style={{ width: '75%', margin: '0 auto' }}>
               <Header {...actions} newTitle={state.newTitle} />
-              <Todos {...actions} {...todoProps} />
               <Footer {...actions} filter={state.filter} />
+              <Todos {...actions} {...todoProps} />
             </div>
           );
         }}

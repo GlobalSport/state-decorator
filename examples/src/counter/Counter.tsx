@@ -6,9 +6,9 @@ import { makeStyles } from '@material-ui/styles';
 
 const useLocalStyle = makeStyles({
   buttonRight: {
-    marginLeft: 20
-  }
-})
+    marginLeft: 20,
+  },
+});
 
 type State = {
   counter: number;
@@ -29,7 +29,7 @@ export const actions: StateDecoratorActions<State, Actions> = {
 };
 
 // Stateless component, in real life use React.memo()
-const CounterView = (props) => {
+const CounterView = React.memo(function CounterView(props: State & Actions) {
   const commonClasses = useCommonStyles();
   const localClasses = useLocalStyle();
   const { counter, increment, decrement } = props;
@@ -45,7 +45,7 @@ const CounterView = (props) => {
       <div className={commonClasses.smallCardValue}>Value: {counter}</div>
     </div>
   );
-};
+});
 
 // Container that is managing the state.
 export const CounterContainer = () => (

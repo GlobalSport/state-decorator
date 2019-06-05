@@ -6,7 +6,7 @@ import useCommonStyles from '../style.js';
 
 const useLocalStyle = makeStyles({
   container: {
-    width: '50%',
+    width: '75%',
     margin: '0 auto',
   },
   textField: {
@@ -56,7 +56,13 @@ const DebounceView = React.memo(function DebounceView(p: State & Actions) {
   return (
     <div className={localClasses.container}>
       <div>
-        <TextField className={localClasses.textField} label="uncontrolled input" onChange={onChange} value={p.value} />{' '}
+        <TextField
+          className={localClasses.textField}
+          label="uncontrolled input"
+          onChange={onChange}
+          value={p.value}
+          fullWidth
+        />{' '}
       </div>
       <div className={[commonClasses.smallCardValue, localClasses.overflow].join(' ')}>Value: {p.value}</div>
       <div className={commonClasses.smallCardValue}>Validation: {p.validationMessage}</div>

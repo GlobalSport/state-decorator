@@ -15,8 +15,8 @@ export const getInitialState = (): State => ({
   counter: 0,
 });
 
-const ReuseConflictPolicy = () => {
-  const classes = useCommonStyles();
+const ReuseConflictPolicy = React.memo(function ReuseConflictPolicy() {
+  const commonClasses = useCommonStyles();
 
   const actions: StateDecoratorActions<State, Actions> = {
     getData: {
@@ -28,19 +28,16 @@ const ReuseConflictPolicy = () => {
   return (
     <StateDecorator<State, Actions> actions={actions} initialState={getInitialState()}>
       {({ counter }, actions, loading) => (
-        <div style={{ border: '1px solid grey', marginBottom: 10 }}>
-          <h3>Reuse</h3>
-          <p>Returns the current promise, if any, or create a new promise.</p>
-          <p>The buttons triggers an action that takes 3 seconds to return.</p>
-          <Button className={classes.button} onClick={() => actions.getData()}>
+        <div className={commonClasses.smallCardContainer}>
+          <Button className={commonClasses.button} onClick={() => actions.getData()}>
             Get Data
           </Button>
-          <div>{loading ? 'loading...' : ''}</div>
-          <div>Counter: {counter}</div>
+          <div className={commonClasses.smallCardValue}>{loading ? 'loading...' : ''}</div>
+          <div className={commonClasses.smallCardValue}>Counter: {counter}</div>
         </div>
       )}
     </StateDecorator>
   );
-};
+});
 
 export default ReuseConflictPolicy;

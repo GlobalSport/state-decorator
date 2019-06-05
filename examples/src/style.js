@@ -23,13 +23,14 @@ const useCommonStyles = makeStyles({
   container: {
     display: 'flex',
     flexWrap: 'wrap',
-    justifyContent: 'center',
-    marginTop: '50px',
+    width: 'calc(100% - 40px)',
+    margin: '50px auto 0 auto',
   },
   card: {
-    width: 'calc(100% / 3 - 60px)',
-    margin: '0 20px 50px 20px',
+    width: '400px',
+    margin: '0 auto 50px auto',
   },
+  todoCard: {},
   cardHeader: {
     textAlign: 'center',
   },

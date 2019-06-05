@@ -22,7 +22,7 @@ const actions: StateDecoratorActions<State, Actions, Props> = {
   }),
 };
 
-export const WrappedComponentView = (props: Props & State & Actions) => {
+export const WrappedComponentView = React.memo(function WrappedComponentView(props: Props & State & Actions) {
   const increment = () => props.increment(10);
   const commonClasses = useCommonStyles();
 
@@ -35,12 +35,11 @@ export const WrappedComponentView = (props: Props & State & Actions) => {
       <div className={commonClasses.smallCardValue}>{count}</div>
     </div>
   );
-};
+});
 
 export default injectState(
   (props) => ({
     count: props.value || 0,
   }),
-  actions,
-  { logEnabled: true }
+  actions
 )(WrappedComponentView);

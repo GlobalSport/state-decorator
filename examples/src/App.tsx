@@ -11,55 +11,54 @@ import { Card, CardHeader, CardContent } from '@material-ui/core';
 import useCommonStyles from './style.js';
 
 const App = () => {
-  const classes = useCommonStyles();
+  const commonClasses = useCommonStyles();
 
   return (
-    <div className={classes.app}>
-      <div className={classes.container}>
-        <Card className={classes.card}>
-          <CardHeader className={classes.cardHeader} title="Debounce" />
+    <div className={commonClasses.app}>
+      <div className={commonClasses.container}>
+        <Card className={commonClasses.card}>
+          <CardHeader className={commonClasses.cardHeader} title="Debounce" />
           <CardContent>
             <Debounce />
           </CardContent>
         </Card>
-        <Card className={classes.card}>
-          <CardHeader className={classes.cardHeader} title="Counter" />
+        <Card className={commonClasses.card}>
+          <CardHeader className={commonClasses.cardHeader} title="Counter" />
           <CardContent>
             <CounterContainer />
           </CardContent>
         </Card>
-        <Card className={classes.card}>
-          <CardHeader className={classes.cardHeader} title="Context" />
+        <Card className={commonClasses.card}>
+          <CardHeader className={commonClasses.cardHeader} title="Context" />
           <CardContent>
             <ContextContainer />
           </CardContent>
         </Card>
-        <Card className={classes.card}>
-          <CardHeader className={classes.cardHeader} title="Retry" />
+        <Card className={commonClasses.card}>
+          <CardHeader className={commonClasses.cardHeader} title="Retry" />
           <CardContent>
             <Retry />
           </CardContent>
         </Card>
-        <Card className={classes.card}>
-          <CardHeader className={classes.cardHeader} title="Props change" />
+        <Card className={commonClasses.card}>
+          <CardHeader className={commonClasses.cardHeader} title="Props change" />
           <CardContent>
             <PropsChangeApp />
           </CardContent>
         </Card>
-        <Card className={classes.card}>
-          <CardHeader className={classes.cardHeader} title="HOC" />
+        <Card className={commonClasses.card}>
+          <CardHeader className={commonClasses.cardHeader} title="HOC" />
           <CardContent>
             <WrappedComponent value={10} />
           </CardContent>
         </Card>
+        <Card className={[commonClasses.card, commonClasses.todoCard].join(' ')}>
+          <CardHeader className={commonClasses.cardHeader} title="Todo" />
+          <CardContent>
+            <TodoContainer />
+          </CardContent>
+        </Card>
       </div>
-      <div className={classes.container} />
-      <Card className={classes.card}>
-        <CardHeader className={classes.cardHeader} title="Todo" />
-        <CardContent>
-          <TodoContainer />
-        </CardContent>
-      </Card>
       <section>
         <h1>Conflict</h1>
         <ConflictingActionsApp />

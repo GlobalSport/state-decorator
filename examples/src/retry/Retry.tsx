@@ -17,10 +17,11 @@ export const getInitialState = (): State => ({
 });
 
 let retry = 0;
-let messages = [];
 
-export const RetryView = (props) => {
-  const { action, count } = props;
+export const RetryView = React.memo(function RetryView(
+  props: State & Pick<Actions, 'action'> & { messages: string[] }
+) {
+  const { action, count, messages } = props;
   const commonClasses = useCommonStyles();
   return (
     <div className={commonClasses.smallCardContainer}>
@@ -42,11 +43,14 @@ export const RetryView = (props) => {
       </div>
     </div>
   );
-};
+});
 
 export default class Retry extends React.PureComponent<{}> {
+  state = {
+    messages: [],
+  };
   addToLog = (message) => {
-    messages = messages.concat(message);
+    this.setState({ messages: [...this.state.messages, message] });
   };
 
   actions: StateDecoratorActions<State, Actions> = {
@@ -74,7 +78,7 @@ export default class Retry extends React.PureComponent<{}> {
   render() {
     return (
       <StateDecorator<State, Actions> actions={this.actions} initialState={getInitialState()}>
-        {({ count }, { action }) => <RetryView action={action} count={count} />}
+        {({ count }, { action }) => <RetryView action={action} count={count} messages={this.state.messages} />}
       </StateDecorator>
     );
   }

@@ -47,7 +47,7 @@ export class PropsChange extends React.PureComponent<PropsChangeProps> {
 
 export interface PropsChangeAppProps {}
 
-const PropsChangeApp = (props: PropsChangeAppProps) => {
+const PropsChangeApp = React.memo(function PropsChangeApp(props: PropsChangeAppProps) {
   const [value, setValue] = useState('value');
   const commonClasses = useCommonStyles();
 
@@ -56,12 +56,14 @@ const PropsChangeApp = (props: PropsChangeAppProps) => {
       <div>A state decorator can update its state from its props</div>
       <div>Click on button change the StateDecorator property</div>
       <br />
-        <Button className={commonClasses.button} onClick={() => setValue('value 2')}>
-          Update value
-        </Button>
-        <div className={commonClasses.smallCardValue}><PropsChange value={value} /></div>
+      <Button className={commonClasses.button} onClick={() => setValue('value 2')}>
+        Update value
+      </Button>
+      <div className={commonClasses.smallCardValue}>
+        <PropsChange value={value} />
+      </div>
     </div>
   );
-};
+});
 
 export default PropsChangeApp;
