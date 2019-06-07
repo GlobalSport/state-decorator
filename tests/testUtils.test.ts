@@ -1,5 +1,6 @@
 import { StateDecoratorActions } from '../src/StateDecorator';
-import { testSyncAction, testAsyncAction, testAdvancedSyncAction } from '../src/base';
+import { testSyncAction, testAsyncAction, testAdvancedSyncAction, computeAsyncActionInput } from '../src/base';
+import { ConflictPolicy } from '../src/types';
 
 describe('Testing utilities', () => {
   type State = {
@@ -121,5 +122,17 @@ describe('Testing utilities', () => {
       expect(testFunc).not.toHaveBeenCalled();
       done();
     });
+  });
+
+  it('computeAsyncAction', () => {
+    const action = {
+      promiseGet: () => Promise.resolve(),
+    };
+
+    const newAction = computeAsyncActionInput(action);
+
+    expect(newAction.promise).toBeDefined();
+    expect(newAction.retryCount).toEqual(3);
+    expect(newAction.conflictPolicy).toEqual(ConflictPolicy.REUSE);
   });
 });

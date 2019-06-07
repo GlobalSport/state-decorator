@@ -2,7 +2,7 @@ import React, { useCallback } from 'react';
 import produce from 'immer';
 import { pick } from 'lodash';
 import { StateDecoratorActions } from '../../../src/types';
-import useStateDecorator from '../../../src/useStateDecorator/useStateDecorator';
+import useStateDecorator from '../../../src/useStateDecorator';
 
 export enum Filter {
   ALL = 'all',
@@ -148,7 +148,7 @@ const Footer = React.memo(function Footer(props: Pick<State, 'filter'> & Actions
 
 export const todoActions: StateDecoratorActions<State, Actions> = {
   onCreate: (state) =>
-    produce<State>(state, (draftState) => {
+    produce(state, (draftState) => {
       const newTodo: TodoItem = {
         title: state.newTitle,
         id: `${draftState.idCount}`,
@@ -161,24 +161,24 @@ export const todoActions: StateDecoratorActions<State, Actions> = {
     }),
 
   onEdit: (state, [id, title]) =>
-    produce<State>(state, (draftState) => {
+    produce(state, (draftState) => {
       draftState.todoMap[id].title = title;
     }),
 
   onDelete: (state, [id]) =>
-    produce<State>(state, (draftState) => {
+    produce(state, (draftState) => {
       delete draftState.todoMap[id];
       draftState.todoIds = draftState.todoIds.filter((todoId) => todoId !== id);
     }),
 
   onToggle: (state, [id]) =>
-    produce<State>(state, (draftState) => {
+    produce(state, (draftState) => {
       const todo = draftState.todoMap[id];
       todo.completed = !todo.completed;
     }),
 
   onClearCompleted: (state) =>
-    produce<State>(state, (draftState) => {
+    produce(state, (draftState) => {
       draftState.todoIds = draftState.todoIds.filter((id) => {
         const todo = draftState.todoMap[id];
         if (todo.completed) {

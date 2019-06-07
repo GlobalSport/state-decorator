@@ -3,7 +3,7 @@ import StateDecorator, { StateDecoratorActions } from '../../../src/StateDecorat
 import ParallelActions from './ParallelActions';
 import ReuseConflictPolicy from './ReuseConflictPolicy';
 import { ConflictPolicy } from '../../../src/types';
-import useStateDecorator from '../../../src/useStateDecorator/useStateDecorator';
+import useStateDecorator from '../../../src/useStateDecorator';
 
 export type State = {
   counter: number;

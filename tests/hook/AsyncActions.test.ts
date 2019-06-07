@@ -6,7 +6,7 @@ import {
   ReducerAction,
   decorateAsyncAction,
   ReducerActionSubType,
-} from '../../src/useStateDecorator/useStateDecorator';
+} from '../../src/useStateDecorator';
 import { StateDecoratorActions } from '../../src/types';
 import { getTimeoutPromise, getFailedTimeoutPromise, getAsyncContext } from './testUtils';
 
@@ -16,17 +16,19 @@ describe('decorateAsyncAction', () => {
 
     const addSideEffect = jest.fn(addNewSideEffect);
 
-    const actionImpl = {
-      promise: () => getTimeoutPromise(0, 'result'),
+    const actions = {
+      setValue: {
+        promise: () => getTimeoutPromise(0, 'result'),
+      },
     };
 
     const action = decorateAsyncAction(
       ctx.dispatch,
-      'actionName',
-      actionImpl,
+      'setValue',
       ctx.stateRef,
       ctx.propsRef,
       ctx.actionsRef,
+      { current: actions },
       ctx.sideEffectRef,
       ctx.promisesRef,
       ctx.conflicActionsRef,
@@ -38,7 +40,7 @@ describe('decorateAsyncAction', () => {
 
     return action('value').then(() => {
       expect(ctx.dispatch).toHaveBeenNthCalledWith(1, {
-        actionName: 'actionName',
+        actionName: 'setValue',
         args: ['value'],
         promiseId: null,
         props: ctx.propsRef.current,
@@ -47,7 +49,7 @@ describe('decorateAsyncAction', () => {
       });
 
       expect(ctx.dispatch).toHaveBeenNthCalledWith(2, {
-        actionName: 'actionName',
+        actionName: 'setValue',
         args: ['value'],
         promiseId: null,
         props: ctx.propsRef.current,
@@ -64,18 +66,20 @@ describe('decorateAsyncAction', () => {
     const ctx = getAsyncContext();
     const addSideEffect = jest.fn(addNewSideEffect);
 
-    const actionImpl = {
-      promise: () => getTimeoutPromise(100, 'result'),
-      onDone: jest.fn(),
+    const actions = {
+      setValue: {
+        promise: () => getTimeoutPromise(100, 'result'),
+        onDone: jest.fn(),
+      },
     };
 
     const action = decorateAsyncAction(
       ctx.dispatch,
-      'actionName',
-      actionImpl,
+      'setValue',
       ctx.stateRef,
       ctx.propsRef,
       ctx.actionsRef,
+      { current: actions },
       ctx.sideEffectRef,
       ctx.promisesRef,
       ctx.conflicActionsRef,
@@ -87,7 +91,7 @@ describe('decorateAsyncAction', () => {
 
     return action('value').then(() => {
       expect(ctx.dispatch).toHaveBeenNthCalledWith(1, {
-        actionName: 'actionName',
+        actionName: 'setValue',
         args: ['value'],
         promiseId: null,
         props: ctx.propsRef.current,
@@ -95,7 +99,7 @@ describe('decorateAsyncAction', () => {
         subType: ReducerActionSubType.BEFORE_PROMISE,
       });
       expect(ctx.dispatch).toHaveBeenNthCalledWith(2, {
-        actionName: 'actionName',
+        actionName: 'setValue',
         args: ['value'],
         promiseId: null,
         props: ctx.propsRef.current,
@@ -107,7 +111,7 @@ describe('decorateAsyncAction', () => {
       const s = { value: 'value' };
       ctx.sideEffectRef.current[0](s);
 
-      expect(actionImpl.onDone).toHaveBeenCalledWith(
+      expect(actions.setValue.onDone).toHaveBeenCalledWith(
         s,
         'result',
         ['value'],
@@ -122,10 +126,12 @@ describe('decorateAsyncAction', () => {
 
     const addSideEffect = jest.fn(addNewSideEffect);
 
-    const actionImpl = {
-      promise: () => getFailedTimeoutPromise(100, 'error'),
-      onDone: jest.fn(),
-      getErrorMessage: () => 'error message',
+    const actions = {
+      setValue: {
+        promise: () => getFailedTimeoutPromise(100, 'error'),
+        onDone: jest.fn(),
+        getErrorMessage: () => 'error message',
+      },
     };
 
     const options = {
@@ -134,11 +140,11 @@ describe('decorateAsyncAction', () => {
 
     const action = decorateAsyncAction(
       ctx.dispatch,
-      'actionName',
-      actionImpl,
+      'setValue',
       ctx.stateRef,
       ctx.propsRef,
       ctx.actionsRef,
+      { current: actions },
       ctx.sideEffectRef,
       ctx.promisesRef,
       ctx.conflicActionsRef,
@@ -150,7 +156,7 @@ describe('decorateAsyncAction', () => {
 
     return action('value').then(() => {
       expect(ctx.dispatch).toHaveBeenNthCalledWith(1, {
-        actionName: 'actionName',
+        actionName: 'setValue',
         args: ['value'],
         promiseId: null,
         props: ctx.propsRef.current,
@@ -158,12 +164,13 @@ describe('decorateAsyncAction', () => {
         subType: ReducerActionSubType.BEFORE_PROMISE,
       });
       expect(ctx.dispatch).toHaveBeenNthCalledWith(2, {
-        actionName: 'actionName',
+        actionName: 'setValue',
         args: ['value'],
         promiseId: null,
         props: ctx.propsRef.current,
         type: ReducerActionType.ACTION,
         subType: ReducerActionSubType.ERROR,
+        rawActionsRef: { current: actions },
         error: 'error',
       });
       expect(options.notifyError).toHaveBeenCalledWith('error message');
@@ -192,7 +199,7 @@ describe('getUseReducer', () => {
 
       const reducer = getUseReducer(actions, {});
 
-      const reducerAction: ReducerAction<any, P> = {
+      const reducerAction: ReducerAction<S, any, A, P> = {
         type: ReducerActionType.ACTION,
         subType: ReducerActionSubType.BEFORE_PROMISE,
         actionName: 'setValue',
@@ -240,7 +247,7 @@ describe('getUseReducer', () => {
 
       const reducerFunc = getUseReducer(actions, {});
 
-      const reducerAction: ReducerAction<any, P> = {
+      const reducerAction: ReducerAction<S, any, A, P> = {
         type: ReducerActionType.ACTION,
         subType: ReducerActionSubType.SUCCESS,
         actionName: 'setValue',
@@ -252,6 +259,7 @@ describe('getUseReducer', () => {
       const newHookState = reducerFunc(hookState, reducerAction);
 
       expect(newHookState.state).toEqual({ value: result });
+      expect(newHookState.loadingMap.setValue).toBeFalsy();
     }
 
     it('handles correctly async action (success, reducer)', () => {
@@ -289,7 +297,7 @@ describe('getUseReducer', () => {
 
       const reducerFunc = getUseReducer(actions, {});
 
-      const reducerAction: ReducerAction<any, P> = {
+      const reducerAction: ReducerAction<S, any, A, P> = {
         type: ReducerActionType.ACTION,
         subType: ReducerActionSubType.ERROR,
         actionName: 'setValue',

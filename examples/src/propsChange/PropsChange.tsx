@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import StateDecorator, { StateDecoratorActions } from '../../../src/StateDecorator';
+import useStateDecorator from '../../../src/useStateDecorator';
 
 export type State = {
   value: string;
@@ -15,52 +16,39 @@ export const getInitialState = (): State => ({
 
 type PropsChangeProps = { value: string };
 
-// State decorator managed class that depends on value from props.
-export class PropsChange extends React.PureComponent<PropsChangeProps> {
-  static actions: StateDecoratorActions<State, Actions> = {
-    get: {
-      promise: ([param]) => new Promise((resolve) => setTimeout(resolve, 1000, param)),
-      reducer: (s, param) => {
-        return { ...s, value: param };
-      },
+const propChangeActions: StateDecoratorActions<State, Actions, PropsChangeProps> = {
+  get: {
+    promise: ([param]) => new Promise((resolve) => setTimeout(resolve, 1000, param)),
+    reducer: (s, param) => {
+      return { ...s, value: param };
     },
-  };
+  },
+};
 
-  render() {
-    return (
-      <StateDecorator<State, Actions, PropsChangeProps>
-        actions={PropsChange.actions}
-        initialState={getInitialState()}
-        props={this.props}
-        getPropsRefValues={(p) => [p.value]}
-        onPropsChangeReducer={(s, p) => ({ ...s, value: p.value })}
-        onPropsChange={(s, p, actions) => actions.get('value 3')}
-        logEnabled
-      >
-        {({ value }) => <div>value: {value}</div>}
-      </StateDecorator>
-    );
-  }
+// State decorator managed class that depends on value from props.
+export function PropsChange(props: PropsChangeProps) {
+  const { state } = useStateDecorator(getInitialState, propChangeActions, props, {
+    getPropsRefValues: (p) => [p.value],
+    onPropsChangeReducer: (s, p) => ({ ...s, value: p.value }),
+    onPropsChange: (s, p, actions) => actions.get('Updated value from onPropsChange'),
+  });
+  return <div>value: {state.value}</div>;
 }
 
 export interface PropsChangeAppProps {}
 
-export default class PropsChangeApp extends React.PureComponent<PropsChangeAppProps> {
-  state = {
-    value: 'value',
-  };
+export default function PropsChangeApp(props: PropsChangeAppProps) {
+  const [state, setState] = useState({ value: 'value' });
 
-  render() {
-    return (
-      <div>
-        <h1>Props change</h1>
-        <div>A state decorator can update its state from its props</div>
-        <div>Click on button change the StateDecorator property</div>
-        <br />
-        <PropsChange value={this.state.value} />
-        <br />
-        <button onClick={() => this.setState({ value: 'value 2' })}>Update value</button>
-      </div>
-    );
-  }
+  return (
+    <div>
+      <h1>Props change</h1>
+      <div>A state decorator can update its state from its props</div>
+      <div>Click on button change the StateDecorator inbound props and update its internal state.</div>
+      <br />
+      <PropsChange value={state.value} />
+      <br />
+      <button onClick={() => setState({ value: 'Updated value from props' })}>Update value</button>
+    </div>
+  );
 }

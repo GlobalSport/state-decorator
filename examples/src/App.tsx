@@ -7,16 +7,12 @@ import PropsChangeApp from './propsChange/PropsChange';
 import WrappedComponent from './hoc/WrappedComponent';
 import ContextContainer from './context/Context';
 import Debounce from './debounce/Debounce';
-import Hook from './hook/Hook';
+import Optimistic from './Optimistic/Optimistic';
 
 export default class App extends React.Component {
   render() {
     return (
       <div>
-        <section>
-          <h1>Hook</h1>
-          <Hook />
-        </section>
         <section>
           <h1>Debounce</h1>
           <Debounce />
@@ -37,16 +33,20 @@ export default class App extends React.Component {
           <h1>Conflict</h1>
           <ConflictingActionsApp />
         </section>
-        {/* <section>
+        <section>
           <Retry />
         </section>
         <section>
           <PropsChangeApp />
         </section>
         <section>
+          <h1>Optimistic</h1>
+          <Optimistic />
+        </section>
+        <section>
           <h1>HOC</h1>
           <WrappedComponent value={10} />
-        </section> */}
+        </section>
       </div>
     );
   }

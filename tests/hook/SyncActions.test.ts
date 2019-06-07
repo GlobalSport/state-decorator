@@ -6,7 +6,7 @@ import {
   getUseReducer,
   getInitialHookState,
   ReducerAction,
-} from '../../src/useStateDecorator/useStateDecorator';
+} from '../../src/useStateDecorator';
 import { StateDecoratorActions } from '../../src/types';
 import { getTimeoutPromise } from './testUtils';
 
@@ -19,7 +19,7 @@ describe('decorateSyncAction', () => {
       },
     };
 
-    const action = decorateSyncAction(dispatch, 'actionName', (s) => s, propsRef);
+    const action = decorateSyncAction(dispatch, 'actionName', propsRef);
 
     expect(typeof action === 'function').toBeTruthy();
 
@@ -218,7 +218,7 @@ describe('getUseReducer', () => {
     const hookState = getInitialHookState((p: P) => ({ value: 'initial' }), actions, { prop: '' });
 
     const reducer = getUseReducer(actions, {});
-    const reducerAction: ReducerAction<any, P> = {
+    const reducerAction: ReducerAction<S, any, A, P> = {
       type: ReducerActionType.ACTION,
       actionName: 'setValue',
       args: ['value'],
@@ -245,7 +245,7 @@ describe('getUseReducer', () => {
 
     const hookState = getInitialHookState((p: P) => ({ value: 'initial' }), actions, { prop: '' });
     const reducer = getUseReducer(actions, {});
-    const reducerAction: ReducerAction<any, P> = {
+    const reducerAction: ReducerAction<S, any, A, P> = {
       type: ReducerActionType.ACTION,
       actionName: 'setValue',
       args: ['value'],

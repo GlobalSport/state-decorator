@@ -13,9 +13,7 @@
     "test": "jest tests",
     "bump-version": "yarn test && yarn clean && yarn build && yarn rimraf ./dist/useStateDecorator && bump --prompt --commit --tag --push",
     "clean": "rimraf ./dist",
-    "build": "yarn build:renderProps && yarn build:hook",
-    "build:renderProps": "cross-env NODE_ENV=production rollup -c rollup.config.js",
-    "build:hook": "cross-env NODE_ENV=production rollup -c rollup.config.hook.js",
+    "build": "cross-env NODE_ENV=production rollup -c rollup.config.js",
     "tslint": "tslint -p ./tsconfig.json --fix"
   },
   "files": [
@@ -39,11 +37,12 @@
     "prettier": "^1.14.3",
     "react": "16.8.6",
     "react-dom": "16.8.6",
-    "rollup": "^0.66.2",
+    "rollup": "^1.14.3",
     "rollup-plugin-babel": "^4.0.3",
-    "rollup-plugin-commonjs": "^9.1.8",
-    "rollup-plugin-node-resolve": "^3.4.0",
-    "rollup-plugin-typescript2": "^0.17.0",
+    "rollup-plugin-commonjs": "^10.0.0",
+    "rollup-plugin-node-resolve": "^5.0.1",
+    "rollup-plugin-terser": "^5.0.0",
+    "rollup-plugin-typescript2": "^0.21.1",
     "rollup-plugin-visualizer": "^0.9.2",
     "ts-jest": "^24.0.0",
     "tslint": "^5.11.0",
@@ -80,7 +79,9 @@
     "setupFiles": [
       "<rootDir>/jest/shims.js"
     ],
-    "setupFilesAfterEnv": ["<rootDir>/jest/setup.js"],
+    "setupFilesAfterEnv": [
+      "<rootDir>/jest/setup.js"
+    ],
     "testPathIgnorePatterns": [
       "/__snapshots__/",
       "/.history/",

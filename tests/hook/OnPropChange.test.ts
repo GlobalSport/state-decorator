@@ -4,10 +4,11 @@ import {
   getInitialHookState,
   getUseReducer,
   ReducerAction,
-} from '../../src/useStateDecorator/useStateDecorator';
+} from '../../src/useStateDecorator';
 import { StateDecoratorActions } from '../../src/types';
 
 describe('handlePropChange', () => {
+  const getPropsRefValues = (p: { prop: string }) => [p.prop];
   const props = { prop: 'prop' };
 
   it('does nothing on first call', () => {
@@ -15,8 +16,16 @@ describe('handlePropChange', () => {
     const onPropsChangeReducer = jest.fn();
     const sideEffectRef = { current: [] };
     const actionsRef = { current: {} };
+    const oldPropRef = { current: null };
 
-    handlePropChange(dispatch, false, props, { onPropsChangeReducer }, sideEffectRef, actionsRef);
+    handlePropChange(
+      dispatch,
+      props,
+      { getPropsRefValues, onPropsChangeReducer },
+      oldPropRef,
+      sideEffectRef,
+      actionsRef
+    );
 
     expect(onPropsChangeReducer).not.toHaveBeenCalled();
   });
@@ -25,13 +34,21 @@ describe('handlePropChange', () => {
     const onPropsChangeReducer = jest.fn();
     const sideEffectRef = { current: [] };
     const actionsRef = { current: {} };
+    const oldPropRef = { current: { prop: 'old' } };
 
-    handlePropChange(dispatch, true, props, { onPropsChangeReducer }, sideEffectRef, actionsRef);
+    handlePropChange(
+      dispatch,
+      props,
+      { getPropsRefValues, onPropsChangeReducer },
+      oldPropRef,
+      sideEffectRef,
+      actionsRef
+    );
 
     expect(dispatch).toHaveBeenCalledWith({
       props,
       type: ReducerActionType.ON_PROP_CHANGE_REDUCER,
-      args: [],
+      args: [0],
     });
   });
 
@@ -40,13 +57,14 @@ describe('handlePropChange', () => {
     const onPropsChange = jest.fn();
     const sideEffectRef = { current: [] };
     const actionsRef = { current: { setValue: (s) => s } };
+    const oldPropRef = { current: { prop: 'old' } };
 
-    handlePropChange(dispatch, true, props, { onPropsChange }, sideEffectRef, actionsRef);
+    handlePropChange(dispatch, props, { getPropsRefValues, onPropsChange }, oldPropRef, sideEffectRef, actionsRef);
 
     const s = { value: 'value' };
     sideEffectRef.current[0](s);
 
-    expect(onPropsChange).toHaveBeenCalledWith(s, props, actionsRef.current);
+    expect(onPropsChange).toHaveBeenCalledWith(s, props, actionsRef.current, [0]);
   });
 
   it('calls onPropChangeReducer & onPropChange correctly', () => {
@@ -54,20 +72,29 @@ describe('handlePropChange', () => {
     const onPropsChangeReducer = jest.fn();
     const onPropsChange = jest.fn();
     const sideEffectRef = { current: [] };
+    const oldPropRef = { current: { prop: 'old' } };
+
     const actionsRef = { current: { setValue: (s) => s } };
 
-    handlePropChange(dispatch, true, props, { onPropsChangeReducer, onPropsChange }, sideEffectRef, actionsRef);
+    handlePropChange(
+      dispatch,
+      props,
+      { getPropsRefValues, onPropsChangeReducer, onPropsChange },
+      oldPropRef,
+      sideEffectRef,
+      actionsRef
+    );
 
     expect(dispatch).toHaveBeenCalledWith({
       props,
       type: ReducerActionType.ON_PROP_CHANGE_REDUCER,
-      args: [],
+      args: [0],
     });
 
     const s = { value: 'value' };
     sideEffectRef.current[0](s);
 
-    expect(onPropsChange).toHaveBeenCalledWith(s, props, actionsRef.current);
+    expect(onPropsChange).toHaveBeenCalledWith(s, props, actionsRef.current, [0]);
   });
 });
 
@@ -87,7 +114,7 @@ describe('onGetReducer', () => {
     const onPropsChangeReducer = (s: S, p: P) => ({ value: p.prop });
 
     const reducer = getUseReducer(actions, { onPropsChangeReducer });
-    const reducerAction: ReducerAction<any, P> = {
+    const reducerAction: ReducerAction<S, any, A, P> = {
       type: ReducerActionType.ON_PROP_CHANGE_REDUCER,
       args: [],
       props: { prop: 'prop' },

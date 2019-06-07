@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import StateDecorator, { StateDecoratorActions } from '../../../src/StateDecorator';
 
 type State = {
@@ -6,7 +6,7 @@ type State = {
   value: string;
 };
 type Actions = {
-  update: (value: string) => void;
+  onChange: (value: string) => void;
   validate: () => void;
 };
 
@@ -18,29 +18,30 @@ function getInitialState() {
 }
 
 const actions: StateDecoratorActions<State, Actions> = {
-  update: {
+  onChange: {
     action: (s, [value]) => ({ ...s, value }),
-    debounceTimeout: 500,
     onActionDone: (s, args, props, actions) => {
       actions.validate();
     },
   },
-  validate: (s) => ({
-    ...s,
-    validationMessage: s.value.length > 10 ? 'Greater than 10 characters' : 'Lower  than 10 characters',
-  }),
+  validate: {
+    action: (s) => ({
+      ...s,
+      validationMessage: s.value.length > 10 ? 'Greater than 10 characters' : 'Lower  than 10 characters',
+    }),
+    debounceTimeout: 250,
+  },
 };
 
 const DebounceView = React.memo(function DebounceView(p: State & Actions) {
-  const onChange = (e: any) => p.update(e.target.value);
+  const onChange = useCallback((e: any) => p.onChange(e.target.value), [p.onChange]);
 
   return (
     <div>
-      <div>State value: {p.value}</div>
       <div>
-        Uncontrolled input: <input onChange={onChange} />{' '}
+        <input value={p.value} onChange={onChange} />{' '}
       </div>
-      <div>Validation: {p.validationMessage}</div>
+      <div>Validation (debounced): {p.validationMessage}</div>
     </div>
   );
 });

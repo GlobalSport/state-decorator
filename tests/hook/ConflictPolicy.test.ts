@@ -1,8 +1,4 @@
-import {
-  getInitialHookState,
-  createNewHookState,
-  decorateAsyncAction,
-} from '../../src/useStateDecorator/useStateDecorator';
+import { getInitialHookState, createNewHookState, decorateAsyncAction } from '../../src/useStateDecorator';
 import { StateDecoratorActions, ConflictPolicy, AsynchActionPromise } from '../../src/types';
 import { getTimeoutPromise, getAsyncContext } from './testUtils';
 
@@ -20,14 +16,14 @@ describe('createNewHookState', () => {
 
   it('sets the new state', () => {
     const oldHookState = getInitialHookState(() => ({ value: 'initial' }), {}, {});
-    const newHookState = createNewHookState(oldHookState, 'setValue', null, null, { value: 'newValue' }, true);
+    const newHookState = createNewHookState(oldHookState, 'setValue', null, null, { value: 'newValue' }, true, null);
     expect(oldHookState === newHookState).toBeFalsy();
   });
 
   it('sets the loading state', () => {
     const oldHookState = getInitialHookState(() => ({ value: 'initial' }), {}, {});
     oldHookState.loadingMap.setValue = false;
-    const newHookState = createNewHookState(oldHookState, 'setValue', null, null, { value: 'newValue' }, true);
+    const newHookState = createNewHookState(oldHookState, 'setValue', null, null, { value: 'newValue' }, true, null);
 
     expect(oldHookState === newHookState).toBeFalsy();
     expect(newHookState.loadingMap.setValue).toBeTruthy();
@@ -36,7 +32,7 @@ describe('createNewHookState', () => {
   it('sets the loading state (false)', () => {
     const oldHookState = getInitialHookState(() => ({ value: 'initial' }), {}, {});
     oldHookState.loadingMap.setValue = true;
-    const newHookState = createNewHookState(oldHookState, 'setValue', null, null, { value: 'newValue' }, false);
+    const newHookState = createNewHookState(oldHookState, 'setValue', null, null, { value: 'newValue' }, false, null);
 
     expect(oldHookState === newHookState).toBeFalsy();
     expect(newHookState.loadingMap.setValue).toBeFalsy();
@@ -52,7 +48,8 @@ describe('createNewHookState', () => {
       ConflictPolicy.PARALLEL,
       'id',
       { value: 'newValue' },
-      true
+      true,
+      null
     );
 
     expect(oldHookState === newHookState).toBeFalsy();
@@ -70,7 +67,8 @@ describe('createNewHookState', () => {
       ConflictPolicy.PARALLEL,
       'id',
       { value: 'newValue' },
-      false
+      false,
+      null
     );
 
     expect(oldHookState === newHookState).toBeFalsy();
@@ -89,7 +87,8 @@ describe('createNewHookState', () => {
       ConflictPolicy.PARALLEL,
       'id',
       { value: 'newValue' },
-      false
+      false,
+      null
     );
 
     expect(oldHookState === newHookState).toBeFalsy();
@@ -112,30 +111,32 @@ describe('ConflictPolicy', () => {
 
     let count = 1;
     const saveRes = [];
-    const actionImpl: AsynchActionPromise<S, (s: string) => Promise<string>, A, P> = {
-      promise: ([value]) => {
-        if (count === 2) {
-          count++;
-          return null;
-        }
+    const actions: StateDecoratorActions<S, A, P> = {
+      setValue: {
+        promise: ([value]) => {
+          if (count === 2) {
+            count++;
+            return null;
+          }
 
-        count++;
-        return getTimeoutPromise(100, value).then((res) => {
-          saveRes.push(res);
-          return res;
-        });
+          count++;
+          return getTimeoutPromise(100, value).then((res) => {
+            saveRes.push(res);
+            return res;
+          });
+        },
+        reducer: (s, value) => ({ ...s, value: `${s.value}_${value}` }),
+        conflictPolicy: ConflictPolicy.KEEP_ALL,
       },
-      reducer: (s, value) => ({ ...s, value: `${s.value}_${value}` }),
-      conflictPolicy: ConflictPolicy.KEEP_ALL,
     };
 
     const action = decorateAsyncAction(
       ctx.dispatch,
       'setValue',
-      actionImpl,
       ctx.stateRef,
       ctx.propsRef,
       ctx.actionsRef,
+      { current: actions },
       ctx.sideEffectRef,
       ctx.promisesRef,
       ctx.conflicActionsRef,
@@ -159,19 +160,21 @@ describe('ConflictPolicy', () => {
   it('handles 2 calls to an asynchronous action (reuse)', (done) => {
     const ctx = getAsyncContext();
 
-    const actionImpl: AsynchActionPromise<S, (s: string) => Promise<string>, A, P> = {
-      promise: ([value]) => getTimeoutPromise(100, value),
-      reducer: (s, value) => ({ ...s, value: `${s.value}_${value}` }),
-      conflictPolicy: ConflictPolicy.REUSE,
+    const actions: StateDecoratorActions<S, A, P> = {
+      setValue: {
+        promise: ([value]) => getTimeoutPromise(100, value),
+        reducer: (s, value) => ({ ...s, value: `${s.value}_${value}` }),
+        conflictPolicy: ConflictPolicy.REUSE,
+      },
     };
 
     const action = decorateAsyncAction(
       ctx.dispatch,
       'setValue',
-      actionImpl,
       ctx.stateRef,
       ctx.propsRef,
       ctx.actionsRef,
+      { current: actions },
       ctx.sideEffectRef,
       ctx.promisesRef,
       ctx.conflicActionsRef,
@@ -191,19 +194,21 @@ describe('ConflictPolicy', () => {
   it('handles 2 calls to an asynchronous action (reuse, not same arguments)', (done) => {
     const ctx = getAsyncContext();
 
-    const actionImpl: AsynchActionPromise<S, (s: string) => Promise<string>, A, P> = {
-      promise: ([value]) => getTimeoutPromise(100, value),
-      reducer: (s, value) => ({ ...s, value: `${s.value}_${value}` }),
-      conflictPolicy: ConflictPolicy.REUSE,
+    const actions: StateDecoratorActions<S, A, P> = {
+      setValue: {
+        promise: ([value]) => getTimeoutPromise(100, value),
+        reducer: (s, value) => ({ ...s, value: `${s.value}_${value}` }),
+        conflictPolicy: ConflictPolicy.REUSE,
+      },
     };
 
     const action = decorateAsyncAction(
       ctx.dispatch,
       'setValue',
-      actionImpl,
       ctx.stateRef,
       ctx.propsRef,
       ctx.actionsRef,
+      { current: actions },
       ctx.sideEffectRef,
       ctx.promisesRef,
       ctx.conflicActionsRef,
@@ -223,19 +228,21 @@ describe('ConflictPolicy', () => {
   it('handles 2 calls to an asynchronous action (reject)', (done) => {
     const ctx = getAsyncContext();
 
-    const actionImpl: AsynchActionPromise<S, (s: string) => Promise<string>, A, P> = {
-      promise: ([value]) => getTimeoutPromise(100, value),
-      reducer: (s, value) => ({ ...s, value: `${s.value}_${value}` }),
-      conflictPolicy: ConflictPolicy.REJECT,
+    const actions: StateDecoratorActions<S, A, P> = {
+      setValue: {
+        promise: ([value]) => getTimeoutPromise(100, value),
+        reducer: (s, value) => ({ ...s, value: `${s.value}_${value}` }),
+        conflictPolicy: ConflictPolicy.REJECT,
+      },
     };
 
     const action = decorateAsyncAction(
       ctx.dispatch,
       'setValue',
-      actionImpl,
       ctx.stateRef,
       ctx.propsRef,
       ctx.actionsRef,
+      { current: actions },
       ctx.sideEffectRef,
       ctx.promisesRef,
       ctx.conflicActionsRef,
@@ -259,24 +266,26 @@ describe('ConflictPolicy', () => {
     const ctx = getAsyncContext();
 
     const saveRes = [];
-    const actionImpl: AsynchActionPromise<S, (s: string, timeout: number) => Promise<string>, A, P> = {
-      promise: ([value, timeout]) => {
-        return getTimeoutPromise(timeout, value).then((res) => {
-          saveRes.push(res);
-          return res;
-        });
+    const actions: StateDecoratorActions<S, A, P> = {
+      setValue: {
+        promise: ([value, timeout]) => {
+          return getTimeoutPromise(timeout, value).then((res) => {
+            saveRes.push(res);
+            return res;
+          });
+        },
+        reducer: (s, value) => ({ ...s, value }),
+        conflictPolicy: ConflictPolicy.IGNORE,
       },
-      reducer: (s, value) => ({ ...s, value }),
-      conflictPolicy: ConflictPolicy.IGNORE,
     };
 
     const action = decorateAsyncAction(
       ctx.dispatch,
       'setValue',
-      actionImpl,
       ctx.stateRef,
       ctx.propsRef,
       ctx.actionsRef,
+      { current: actions },
       ctx.sideEffectRef,
       ctx.promisesRef,
       ctx.conflicActionsRef,
@@ -301,25 +310,27 @@ describe('ConflictPolicy', () => {
     const ctx = getAsyncContext();
 
     const saveRes = [];
-    const actionImpl: AsynchActionPromise<S, (s: string, timeout: number) => Promise<string>, A, P> = {
-      promise: ([value, timeout]) => {
-        return getTimeoutPromise(timeout, value).then((res) => {
-          saveRes.push(res);
-          return res;
-        });
+    const actions: StateDecoratorActions<S, A, P> = {
+      setValue: {
+        promise: ([value, timeout]) => {
+          return getTimeoutPromise(timeout, value).then((res) => {
+            saveRes.push(res);
+            return res;
+          });
+        },
+        getPromiseId: (value) => value,
+        reducer: (s, value) => ({ ...s, value }),
+        conflictPolicy: ConflictPolicy.PARALLEL,
       },
-      getPromiseId: (value) => value,
-      reducer: (s, value) => ({ ...s, value }),
-      conflictPolicy: ConflictPolicy.PARALLEL,
     };
 
     const action = decorateAsyncAction(
       ctx.dispatch,
       'setValue',
-      actionImpl,
       ctx.stateRef,
       ctx.propsRef,
       ctx.actionsRef,
+      { current: actions },
       ctx.sideEffectRef,
       ctx.promisesRef,
       ctx.conflicActionsRef,
@@ -340,24 +351,26 @@ describe('ConflictPolicy', () => {
     const ctx = getAsyncContext();
 
     const saveRes = [];
-    const actionImpl: AsynchActionPromise<S, (s: string) => Promise<string>, A, P> = {
-      promise: ([value]) => {
-        return getTimeoutPromise(100, value).then((res) => {
-          saveRes.push(res);
-          return res;
-        });
+    const actions: StateDecoratorActions<S, A, P> = {
+      setValue: {
+        promise: ([value]) => {
+          return getTimeoutPromise(100, value).then((res) => {
+            saveRes.push(res);
+            return res;
+          });
+        },
+        reducer: (s, value) => ({ ...s, value }),
+        conflictPolicy: ConflictPolicy.KEEP_LAST,
       },
-      reducer: (s, value) => ({ ...s, value }),
-      conflictPolicy: ConflictPolicy.KEEP_LAST,
     };
 
     const action = decorateAsyncAction(
       ctx.dispatch,
       'setValue',
-      actionImpl,
       ctx.stateRef,
       ctx.propsRef,
       ctx.actionsRef,
+      { current: actions },
       ctx.sideEffectRef,
       ctx.promisesRef,
       ctx.conflicActionsRef,

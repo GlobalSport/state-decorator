@@ -29,6 +29,12 @@ export function getAsyncContext() {
     current: { value: 'initial' },
   };
 
+  const optimisticData = {
+    history: [],
+    optimisticActions: {},
+    shouldRecordHistory: false,
+  };
+
   return {
     dispatch,
     propsRef,
@@ -37,5 +43,6 @@ export function getAsyncContext() {
     promisesRef,
     conflicActionsRef,
     stateRef,
+    optimisticData,
   };
 }

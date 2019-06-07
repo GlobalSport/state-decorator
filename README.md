@@ -13,6 +13,17 @@ The StateDecorator is a React component that manages a local or global state.
 - Enforce separation of container components and presentation components.
 - Strongly typed
 
+# 4.0: The one with the hook
+
+## v4.x vs v3.x
+
+- React >= 16.8: use 4.x version and _useStateDecorator_ hook. The _StateDecorator_ and _injectState_ HOC are still valid but are using internally the hook.
+- React < 16.8: use 3.x version.
+
+## migration
+
+- TODO
+
 # Getting started
 
 ## Installation
@@ -36,7 +47,7 @@ The simpler example: the state is a literal value and two synchronous actions to
 
 ```typescript
 import React from 'react';
-import StateDecorator, { StateDecoratorActions, injectState } from 'state-decorator';
+import { useStateDecorator, StateDecoratorActions } from 'state-decorator';
 
 type State = {
   counter: number;

@@ -211,8 +211,8 @@ export type StateDecoratorActions<S, A extends DecoratedActions, P = {}> = {
 };
 
 export interface ActionHistory<S> {
-  name: string;
-  reducer: string;
+  actionName: string;
+  reducer: ReducerName;
   args: any[];
   beforeState?: S;
 }
@@ -228,7 +228,7 @@ export type FutureActions = {
   timestamp?: number;
 };
 
-export type ReducerName = 'reducer' | 'optimisticReducer' | 'errorReducer';
+export type ReducerName = 'onPropChangeReducer' | 'preReducer' | 'optimisticReducer' | 'reducer' | 'errorReducer';
 
 export interface ConflictActionsMap {
   [name: string]: FutureActions[];
