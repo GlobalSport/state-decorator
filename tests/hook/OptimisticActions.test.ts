@@ -16,7 +16,7 @@ describe('optimistic actions', () => {
   type A = {
     setValue: (v: string) => void;
   };
-  type P = {};
+  type P = { prop: string };
 
   const actions: StateDecoratorActions<S, A> = {
     setValue: (s, [value]) => ({ ...s, value }),
