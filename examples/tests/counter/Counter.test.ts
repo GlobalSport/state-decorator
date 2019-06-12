@@ -1,5 +1,5 @@
 import { testSyncAction } from '../../../src/base';
-import { getInitialState, actions } from '../../src/counter/Counter';
+import { getInitialState, actionsImpl } from '../../src/counter/Counter';
 
 describe('Counter', () => {
   it('has a correct default state', () => {
@@ -7,7 +7,7 @@ describe('Counter', () => {
   });
 
   it('increments correctly', () => {
-    return testSyncAction(actions.increment, (action) => {
+    return testSyncAction(actionsImpl.increment, (action) => {
       const state = { counter: 10 };
       let newState = action(state, [10], null);
       expect(newState.counter).toEqual(20);
@@ -17,7 +17,7 @@ describe('Counter', () => {
   });
 
   it('decrements correctly', () => {
-    return testSyncAction(actions.decrement, (action) => {
+    return testSyncAction(actionsImpl.decrement, (action) => {
       const state = { counter: 30 };
       let newState = action(state, [10], null);
       expect(newState.counter).toEqual(20);
