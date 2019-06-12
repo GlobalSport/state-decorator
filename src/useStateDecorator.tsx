@@ -547,6 +547,23 @@ export function decorateAsyncAction<S, F extends (...args: any[]) => any, A exte
 
         delete promisesRef.current[actionName];
 
+        const notifySuccess = options.notifySuccess || propsRef.current['notifySuccess'];
+        if (notifySuccess) {
+          let msg: string;
+
+          if (asyncAction.getSuccessMessage) {
+            msg = asyncAction.getSuccessMessage(result, args, propsRef.current);
+          }
+
+          if (!msg) {
+            msg = asyncAction.successMessage;
+          }
+
+          if (msg) {
+            notifySuccess(msg);
+          }
+        }
+
         processNextConflictAction(actionName, actionsRef.current, conflictActionsRef.current);
 
         return result;

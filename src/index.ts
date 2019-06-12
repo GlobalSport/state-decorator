@@ -1,9 +1,18 @@
 import useStateDecorator from './useStateDecorator';
-import { StateDecoratorActions } from './types';
+import { StateDecoratorActions, ConflictPolicy, LoadingProps } from './types';
 import { useOnMount, useOnUnmount, useOnUnload } from './hooks';
+import { testSyncAction, testAsyncAction, testAdvancedSyncAction } from './base';
 
-import StateDecorator from './StateDecorator';
-
-export { StateDecoratorActions, StateDecorator, useOnMount, useOnUnmount, useOnUnload };
+export {
+  StateDecoratorActions,
+  ConflictPolicy,
+  LoadingProps,
+  useOnMount,
+  useOnUnmount,
+  useOnUnload,
+  testSyncAction,
+  testAsyncAction,
+  testAdvancedSyncAction,
+};
 
 export default useStateDecorator;

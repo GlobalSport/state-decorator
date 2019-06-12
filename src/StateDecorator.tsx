@@ -9,13 +9,30 @@
  */
 
 import React from 'react';
-import { DecoratedActions, LoadingMap, LoadingMapParallelActions, LoadingProps, StateDecoratorActions } from './types';
-
+import {
+  DecoratedActions,
+  LoadingMap,
+  LoadingMapParallelActions,
+  LoadingProps,
+  StateDecoratorActions,
+  ConflictPolicy,
+} from './types';
 import { useOnMount, useOnUnmount, useOnUnload } from './hooks';
-
 import useStateDecorator from './useStateDecorator';
+import { testSyncAction, testAsyncAction, testAdvancedSyncAction } from './base';
 
-export { StateDecoratorActions, LoadingMap, LoadingMapParallelActions, LoadingProps };
+export {
+  StateDecoratorActions,
+  ConflictPolicy,
+  LoadingProps,
+  useStateDecorator,
+  useOnMount,
+  useOnUnmount,
+  useOnUnload,
+  testSyncAction,
+  testAsyncAction,
+  testAdvancedSyncAction,
+};
 
 export interface StateDecoratorProps<S, A extends DecoratedActions, P = {}> {
   /**

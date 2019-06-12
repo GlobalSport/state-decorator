@@ -13,15 +13,17 @@
     "test": "jest tests",
     "bump-version": "yarn test && yarn clean && yarn build && yarn rimraf ./dist/useStateDecorator && bump --prompt --commit --tag --push",
     "clean": "rimraf ./dist",
-    "build": "cross-env NODE_ENV=production rollup -c rollup.config.js",
+    "build": "yarn build:hooks && yarn build:render-props",
+    "build:hooks": "cross-env NODE_ENV=production rollup -c rollup.config.js",
+    "build:render-props": "cross-env NODE_ENV=production rollup -c rollup.config.renderprops.js",
     "tslint": "tslint -p ./tsconfig.json --fix"
   },
   "files": [
     "dist/"
   ],
   "devDependencies": {
-    "@babel/core": "^7.0.0",
-    "@babel/preset-env": "^7.0.0",
+    "@babel/core": "^7.4.5",
+    "@babel/preset-env": "^7.4.5",
     "@types/jest": "^23.3.2",
     "@types/react": "^16.8.0",
     "babel-core": "^7.0.0-0",
