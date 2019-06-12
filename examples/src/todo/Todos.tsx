@@ -199,7 +199,12 @@ export default class TodoContainer extends React.Component {
 
   render() {
     return (
-      <StateDecorator<State, Actions> actions={TodoContainer.actions} initialState={getInitialState()}>
+      <StateDecorator<State, Actions>
+        actions={TodoContainer.actions}
+        initialState={getInitialState()}
+        name="TODO"
+        logEnabled
+      >
         {(state, actions) => {
           const todoProps = pick(state, 'todoMap', 'todoIds', 'filter');
           return (

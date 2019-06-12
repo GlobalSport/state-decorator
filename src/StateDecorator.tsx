@@ -225,6 +225,11 @@ export type StateDecoratorActions<S, A extends DecoratedActions, P = {}> = {
 
 export interface StateDecoratorProps<S, A extends DecoratedActions, P = {}> {
   /**
+   * Optional name to be displayed on debug traces.
+   */
+  name?: string;
+
+  /**
    * The action definitions.
    */
   actions: StateDecoratorActions<S, A, P>;
@@ -517,7 +522,8 @@ function buildDiff<S>(oldState: S, newState: S) {
 }
 
 function logStateChange<S>(
-  name: string,
+  name: string = '',
+  actionName: string,
   logEnabled: boolean,
   oldState: S,
   newState: S,
@@ -526,7 +532,7 @@ function logStateChange<S>(
   failed = false
 ) {
   if (process.env.NODE_ENV === 'development' && logEnabled) {
-    console.group(`[StateDecorator] Action ${name} ${source || ''} ${failed ? 'FAILED' : ''}`);
+    console.group(`[StateDecorator ${name}] Action ${actionName} ${source || ''} ${failed ? 'FAILED' : ''}`);
     if (Object.keys(args).length > 0) {
       console.group('Arguments');
       Object.keys(args).forEach((prop) => console.log(prop, ':', args[prop]));
@@ -549,9 +555,9 @@ function logStateChange<S>(
   }
 }
 
-function logSingle(name: string, args: any[], logEnabled: boolean, state: string = '') {
+function logSingle(name: string = '', actionName: string, args: any[], logEnabled: boolean, state: string = '') {
   if (process.env.NODE_ENV === 'development' && logEnabled) {
-    console.group(`[StateDecorator] Action ${name} ${state}`);
+    console.group(`[StateDecorator ${name}] Action ${actionName} ${state}`);
     if (Object.keys(args).length > 0) {
       console.group('Arguments');
       Object.keys(args).forEach((prop) => console.log(prop, ':', args[prop]));
@@ -781,7 +787,7 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
             refValues: values,
             data: newData,
           };
-          logStateChange('onPropsChangeReducer', nextProps.logEnabled, data, newData, [], '');
+          logStateChange(nextProps.name, 'onPropsChangeReducer', nextProps.logEnabled, data, newData, [], '');
         } else {
           newState = {
             refValues: values,
@@ -826,7 +832,7 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
 
     this.loadingMap = asynchActionNames.reduce(
       (acc, name) => {
-        acc[name] = undefined;
+        acc[name as keyof A] = undefined;
         return acc;
       },
       {} as InternalLoadingMap<A>
@@ -862,7 +868,7 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
       })
       .reduce(
         (acc, service) => {
-          acc[service.name] = service.action as any;
+          acc[service.name as keyof A] = service.action as any;
           return acc;
         },
         {} as A
@@ -903,11 +909,11 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
 
       switch (policy) {
         case ConflictPolicy.IGNORE:
-          logSingle(name, args, this.props.logEnabled, 'Drop request (Conflict policy is IGNORE)');
+          logSingle(this.props.name, name, args, this.props.logEnabled, 'Drop request (Conflict policy is IGNORE)');
           resolve();
           break;
         case ConflictPolicy.REJECT:
-          logSingle(name, args, this.props.logEnabled, 'Reject request (Conflict policy is REJECT)');
+          logSingle(this.props.name, name, args, this.props.logEnabled, 'Reject request (Conflict policy is REJECT)');
           reject(new Error(`An asynch action ${name} is already ongoing.`));
           break;
         case ConflictPolicy.KEEP_LAST: {
@@ -944,7 +950,7 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
     if (newDataState !== null) {
       this.pushActionToHistory(name, null, [args, props]);
 
-      logStateChange(name, logEnabled, this.state.data, newDataState, args, 'synch reducer');
+      logStateChange(this.props.name, name, logEnabled, this.state.data, newDataState, args, 'synch reducer');
 
       this.dataState = newDataState;
       this.setState({
@@ -974,7 +980,7 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
     if (newDataState !== null) {
       this.pushActionToHistory(name, null, [args, props]);
 
-      logStateChange(name, logEnabled, this.state.data, newDataState, args, 'synch reducer');
+      logStateChange(this.props.name, name, logEnabled, this.state.data, newDataState, args, 'synch reducer');
 
       this.dataState = newDataState;
       this.setState(
@@ -1050,9 +1056,9 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
         v[promiseId] = true;
       }
 
-      this.loadingMap[name] = v;
+      this.loadingMap[name as keyof A] = v;
     } else {
-      this.loadingMap[name] = true;
+      this.loadingMap[name as keyof A] = true;
     }
   }
 
@@ -1061,10 +1067,10 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
       const v = this.loadingMap[name];
       delete v[promiseId];
       if (Object.keys(v).length === 0) {
-        this.loadingMap[name] = false;
+        this.loadingMap[name as keyof A] = false;
       }
     } else {
-      this.loadingMap[name] = false;
+      this.loadingMap[name as keyof A] = false;
     }
   };
 
@@ -1091,8 +1097,8 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
       retryCount,
       retryDelaySeed,
       isTriggerRetryError,
-    }: AsynchActionPromise<S, A[string], A, P>
-  ) => (...args: Parameters<A[string]>) => {
+    }: AsynchActionPromise<S, any, A, P>
+  ) => (...args: Parameters<any>) => {
     const dataState = this.dataState;
 
     const { logEnabled, notifySuccess: _notifySuccess, notifyError: _notifyError, props } = this.props;
@@ -1119,7 +1125,7 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
       if (newDataState !== null) {
         loadingState.data = newDataState;
         this.dataState = newDataState;
-        logStateChange(name, logEnabled, dataState, newDataState, args, 'pre reducer');
+        logStateChange(this.props.name, name, logEnabled, dataState, newDataState, args, 'pre reducer');
       }
     }
 
@@ -1141,7 +1147,15 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
         // However, the loading state is available in the loading map.
         loadingState.loading = isSomeRequestLoadingBefore;
 
-        logStateChange(name, logEnabled, loadingState.data || dataState, newDataState, args, 'Optimistic reducer');
+        logStateChange(
+          this.props.name,
+          name,
+          logEnabled,
+          loadingState.data || dataState,
+          newDataState,
+          args,
+          'Optimistic reducer'
+        );
       }
     } else {
       loadingState.loading = true;
@@ -1161,7 +1175,7 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
     );
 
     if (p === null) {
-      logSingle(name, args, logEnabled, 'ABORTED');
+      logSingle(this.props.name, name, args, logEnabled, 'ABORTED');
       this.markActionAsLoaded(name, conflictPolicy, promiseId);
 
       return null; // nothing to do
@@ -1188,10 +1202,10 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
             newState.data = newDataState;
             this.dataState = newState.data;
 
-            logStateChange(name, logEnabled, dataState, newState.data, args, 'reducer');
+            logStateChange(this.props.name, name, logEnabled, dataState, newState.data, args, 'reducer');
           }
         } else if (!optimisticReducer) {
-          logSingle(name, args, logEnabled, 'NO REDUCER');
+          logSingle(this.props.name, name, args, logEnabled, 'NO REDUCER');
         }
 
         if (notifySuccess && (successMessage !== undefined || getSuccessMessage !== undefined)) {
@@ -1271,7 +1285,7 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
 
         StateDecorator.onAsyncError(error, errorHandled);
 
-        logStateChange(name, logEnabled, dataState, newState.data, args, 'Error reducer', true);
+        logStateChange(this.props.name, name, logEnabled, dataState, newState.data, args, 'Error reducer', true);
 
         const result = !errorHandled || rejectPromiseOnError ? Promise.reject(error) : undefined;
 
@@ -1313,7 +1327,7 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
         } else {
           res = v as boolean;
         }
-        acc[name] = res;
+        acc[name as keyof A] = res;
         return acc;
       },
       {} as LoadingMap<A>
@@ -1330,9 +1344,9 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
         if (isAsyncAction(rawAction)) {
           if (rawAction.conflictPolicy === ConflictPolicy.PARALLEL) {
             if (this.loadingMap[name] === undefined) {
-              acc[name] = {};
+              acc[name as keyof A] = {};
             } else {
-              acc[name] = this.loadingMap[name] as PromiseIdMap;
+              acc[name as keyof A] = this.loadingMap[name] as PromiseIdMap;
             }
           }
         }
