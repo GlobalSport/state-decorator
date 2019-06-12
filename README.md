@@ -20,9 +20,44 @@ The StateDecorator is a React component that manages a local or global state.
 - React >= 16.8: use 4.x version and _useStateDecorator_ hook. The _StateDecorator_ and _injectState_ HOC are still valid but are using internally the hook.
 - React < 16.8: use 3.x version.
 
-## migration
+## Progressive migration
 
-- TODO
+- Actions implememtation is 100% compatible (same type).
+- The **useStateDecorator** hook is now the default way to go but to ease transition, the **StateDecorator** was rewritten using the hook.
+
+Change the import from
+
+`import StateDecorator from 'state-decorator';`
+
+to
+
+`import StateDecorator from 'state-decorator/StateDecorator';`
+
+In 'state-decorator/StateDecorator' both the hook and the legacy are contained:
+
+- no need to import from both `state-decorator/StateDecorator` and `state-decorator/StateDecorator`: you would double the imported code size.
+- you can import the hook from `state-decorator/StateDecorator` during migration:
+
+  - `typescript import { useStateDecorator } from 'state-decorator/StateDecorator';`
+
+## Migrating from the StateDecorator to useStateDecorator
+
+```typescript
+const { state, actions, loading, loadingMap, loadingParallelMap } = useStateDecorator(
+  getInitialState,
+  actions,
+  props,
+  options
+);
+```
+
+- First parameter of the hook is the function that returns the initial state from the props.
+  - Advice: export it, you will need it in your unit tests. This can also be used in _onPropsChangeReducer_.
+- Second parameter is the actions. You can reuse as-is the actions from previous version.
+- Third parameter is the props.
+- Last parameter are the options.
+
+The onMount, onUnmount, onUnload that were in the props are now other hooks you can import from the StateDecorator.
 
 # Getting started
 
@@ -62,59 +97,51 @@ export const getInitialState = (): State => ({
   counter: 0,
 });
 
-export const actions: StateDecoratorActions<State, Actions> = {
+export const actionsImpl: StateDecoratorActions<State, Actions> = {
   decrement: (s, [incr]) => ({ counter: s.counter - incr }),
   increment: (s, [incr]) => ({ counter: s.counter + incr }),
 };
 
-// Stateless component, in real life use React.memo()
-class CounterView extends React.PureComponent<State & Actions> {
-  render() {
-    const { counter, increment, decrement } = this.props;
-    return (
-      <div>
-        {counter}
-        <button onClick={() => decrement(10)}>Substracts 10</button>
-        <button onClick={() => increment(10)}>Adds 10</button>
-      </div>
-    );
-  }
-}
-```
+// Stateless component
+// Separate container from view to test more easily the view.
+const CounterView = React.memo(function CounterView(props: State & Actions) {
+  const { counter, increment, decrement } = props;
+  return (
+    <div>
+      {counter}
+      <button onClick={() => decrement(10)}>Substracts 10</button>
+      <button onClick={() => increment(10)}>Adds 10</button>
+    </div>
+  );
+});
 
-Finally inject the state and actions using the **StateDecorator** component that is using the [render props pattern](https://reactjs.org/docs/render-props.html).
-
-```typescript
-// Container that is managing the state using StateDecorator component
-export const CounterContainer = () => (
-  <StateDecorator initialState={getInitialState()} actions={actions}>
-    {(state, actions) => <CounterView {...state} {...actions} />}
-  </StateDecorator>
-);
-```
-
-or using the [injectState in HOC function](#HOC)</a>.
-
-```typescript
-// Container that is managing the state using HOC
-export default injectState(getInitialState, actions)(CounterView);
+// Container that is managing the state using usetateDecorator hook
+export const CounterContainer = () => {
+  const { state, actions } = useStateDecorator(getInitialState, actionsImpl);
+  return <CounterView {...state} {...actions} />;
+};
 ```
 
 # Types
 
-The StateDecorator is a generic React component class that needs two interfaces: State and Actions.
+The useStateDecorator is a generic React hook that needs two interfaces: State and Actions.
 
-- State: The interface of the state managed by the StateDecorator.
-- Actions: The interface of the actions that will update the state.
+- State: The type of the state managed by the StateDecorator.
+- Actions: The type of the actions that will update the state.
 
 # Initial state
 
-The initial state is passed in the _initialState_ property of the StateDecorator.
+The initial state is retrieved using the first hook parameter which is a function that takes the props and returns a state.
 
 ```typescript
-<StateDecorator<State, Actions> actions={MyContainer.actions} initialState={{ text: 'Hello' }}>
-  {(actions, state) => <MyView {...state} {...actions} />}
-</StateDecorator>
+export const getInitialState = (): State => ({
+  counter: 0,
+});
+
+export const CounterContainer = () => {
+  const { state, actions } = useStateDecorator(getInitialState, actionsImpl);
+  return <CounterView {...state} {...actions} />;
+};
 ```
 
 # Actions
@@ -123,27 +150,19 @@ The StateDecorator is taking a list of actions and decorate them to inject state
 
 ## Initial action
 
+To execute an action when the hook is mounted, you can use a _useEffect_ hook or the **useOnMount** hook.
 When the StateDecorator is mounted, the **onMount** property is called with the decorated actions as parameter.
 
 ```typescript
-export default class CounterContainer extends React.Component {
-  static actions: StateDecoratorActions<State, Actions, Props> = {
-    initialAction: () => 100,
-  };
+import useStateDecorator, { useOnMount } from 'state-decorator';
 
-  // initial action
-  static onMount(actions: Actions) {
-    actions.initialAction();
-  }
-
-  render() {
-    return (
-      <StateDecorator<State, Actions> actions={CounterContainer.actions} onMount={CounterContainer.onMount}>
-        {(counter, actions) => <CounterView counter={counter} {...actions} />}
-      </StateDecorator>
-    );
-  }
-}
+export const CounterContainer = () => {
+  const { state, actions } = useStateDecorator(getInitialState, actionsImpl);
+  useOnMount(() => {
+    actions.increment(10);
+  });
+  return <CounterView {...state} {...actions} />;
+};
 ```
 
 This is usually used to load asynchronous data to populate the state.
@@ -155,8 +174,8 @@ This is usually used to load asynchronous data to populate the state.
 A simple synchronous action is a function that takes the current state and an optional list of parameters and returns a new state or _null_ if there's no change.
 
 ```typescript
-static actions: StateDecoratorActions<State, Actions> = {
-  setText: (s, [text], props) => ({ ...s, text })
+const actions: StateDecoratorActions<State, Actions> = {
+  setText: (s, [text], props) => ({ ...s, text }),
 };
 ```
 
@@ -167,11 +186,13 @@ An advanced synchronous action is a made of, at least, an **action**. It's funct
 The advanced form allows to add some additional properties for this action.
 
 ```typescript
-static actions: StateDecoratorActions<State, Actions> = {
+const actions: StateDecoratorActions<State, Actions> = {
   setText: {
     action: (s, [text], props) => ({ ...s, text }),
-    onDone: (s, args, props, actions) => { /* insert code here but beware of infinite loop!! */ }
-  }
+    onDone: (s, args, props, actions) => {
+      /* insert code here but beware of infinite loop!! */
+    },
+  },
 };
 ```
 
@@ -186,31 +207,34 @@ and
 - a reducer (to use redux terminology), ie. a function that takes as parameter the old state, the result of the request, the list of call arguments and returns a new state or _null_ if there's no change.
 
 ```typescript
-export default class MyContainer extends React.Component {
-  static actions: StateDecoratorActions<State, Actions, Props> = {
-    loadList: {
-      promise: ([arg1, arg2], state, props, actions) =>
-        new Promise((resolve) => setTimeout(resolve, 500, ['hello', 'world'])),
-      reducer: (state, result, args, props) => ({ ...state, list: result }),
-    },
-  };
+import React from 'react';
+import useStateDecorator, { StateDecoratorActions, LoadingProps } from 'state-decorator';
 
-  // initial action on mount
-  static onMount(actions: Actions) {
-    actions.loadList();
-  }
+type State = {
+  list: string[];
+};
 
-  render() {
-    return (
-      <StateDecorator<State, Actions>
-        actions={MyContainer.actions}
-        onMount={MyContainer.onMount}
-        initialState={{ list: [] }}
-      >
-        {(state, actions, loading) => <MyView {...state} {...actions} loading={loading} />}
-      </StateDecorator>
-    );
-  }
+type Actions = {
+  loadList: (param1: string) => Promise<string[]>;
+};
+
+type Props = {};
+
+const getInitialState = (p: Props) => ({ list: [] });
+
+const actionsImpl: StateDecoratorActions<State, Actions, Props> = {
+  loadList: {
+    promise: ([param1], state, props, actions) =>
+      new Promise((resolve) => setTimeout(resolve, 500, ['hello', 'world'])) as Promise<string[]>,
+    reducer: (state, result, args, props) => ({ ...state, list: result }),
+  },
+};
+
+const MyView = (props: State & Actions & LoadingProps<Actions>) => <div />;
+
+export default function MyContainer(props: Props) {
+  const { state, actions, ...loadingProps } = useStateDecorator(getInitialState, actionsImpl, props);
+  return <MyView {...state} {...actions} {...loadingProps} />;
 }
 ```
 
@@ -244,11 +268,7 @@ If **null** is returned by **promise**, the action is aborted. It allows to canc
 The loading state of asynchronous actions are automatically computed and injected to the render property.
 
 ```typescript
-<StateDecorator actions={MyContainer.actions}>
-  {(state, actions, loading, loadingMap) => (
-    <MyView {...state} {...actions} loading={loading} loadingMap={loadingMap} />
-  )}
-</StateDecorator>
+const { state, actions, loading, loadingMap, loadingParallelMap } = useStateDecorator(getInitialState, actionsImpl);
 ```
 
 There are two properties:
@@ -276,12 +296,12 @@ A notification function can be called when the asynchronous action succeeded or 
 When an asynchronous action fails, if the state needs to be updated, set the _errorReducer_ property of the asynchronous action.
 
 ```typescript
-static actions: StateDecoratorActions<State, Actions> = {
+const actions: StateDecoratorActions<State, Actions> = {
   loadList: {
     promise: () => new Promise((_, reject) => setTimeout(reject, 500, new Error('Too bad'))),
     reducer: (state, list) => ({ ...state, list, error: undefined }),
-    errorReducer: (state, error: Error) => ({ ...state, error: error.message, list: [] })
-  }
+    errorReducer: (state, error: Error) => ({ ...state, error: error.message, list: [] }),
+  },
 };
 ```
 
@@ -316,12 +336,12 @@ The undo strategy is the following:
 Example:
 
 ```typescript
-static actions: StateDecoratorActions<State, Actions> = {
+const actions: StateDecoratorActions<State, Actions> = {
   deleteItem: {
     promise: ([id]) => new Promise((resolve) => setTimeout(resolve, 500)),
-    optimisticReducer: (state, args) => ({ ...state, list: list.filter(item => item.id === args[0]) }),
-    errorReducer: (state, error: Error) => ({ ...state, error: error.message })
-  }
+    optimisticReducer: (state, args) => ({ ...state, list: list.filter((item) => item.id === args[0]) }),
+    errorReducer: (state, error: Error) => ({ ...state, error: error.message }),
+  },
 };
 ```
 
@@ -348,8 +368,8 @@ It can takes the following values (use ConflictPolicy enum), choose the one the 
 - **ConflictPolicy.REUSE**: If an action is already ongoing, the promise is reused, if the arguments are the same (shallow comparison). Otherwise fallback to **ConflictPolicy.KEEP_ALL**. Useful for GET requests.
 - **ConflictPolicy.PARALLEL**: Actions are executed in parallel.
   - Use case: several calls with different parameters.
-  - A _getPromiseId_ function must be provided to assign an identifier to each call from call arguments.
-  - The _loadingParallelMap_ of the render prop function contains for each parallel action the promise identifiers that are ongoing.
+  - A **getPromiseId** function must be provided to assign an identifier to each call from call arguments.
+  - The **loadingParallelMap** of the render prop function contains for each parallel action the promise identifiers that are ongoing.
 
 Run the "Conflicting actions" example.
 
@@ -357,21 +377,19 @@ _Note_: In conjunction to this parameter, you can use [lodash debounce](https://
 
 ## Persist state on unmount
 
-When the StateDecorator is unmounted, the **onUnmount** property is called with the current state and props as parameter.
+To persist the state when the container hook is unmounted, use the **onUnmount** hook.
 
 ```typescript
-export default class Container extends React.Component {
-  static onUnmount(s: State, p: Props) {
-    localStorage.setItem('state', JSON.stringify(s));
-  }
+import useStateDecorator, { StateDecoratorActions, useOnUnmount } from 'state-decorator';
 
-  render() {
-    return (
-      <StateDecorator actions={Container.actions} onUnmount={Container.onUnmount}>
-        {(s, actions) => <View {...s} {...actions} />}
-      </StateDecorator>
-    );
-  }
+export default function Container(props: Props) {
+  const { state, actions } = useStateDecorator(getInitialState, actions, props);
+
+  useOnUnmount(() => {
+    localStorage.setItem('state', JSON.stringify(s));
+  });
+
+  return <View {...state} {...actions} />;
 }
 ```
 
@@ -381,18 +399,16 @@ For cases where the state is needed to be saved when the window is unloaded (the
 The StateDecorator listens to the 'beforeunload' window event and call the **onUnload** property with the current state and props as parameter.
 
 ```typescript
-export default class Container extends React.Component {
-  static onUnload(s: State, p: Props) {
-    localStorage.setItem('state', JSON.stringify(s));
-  }
+import useStateDecorator, { StateDecoratorActions, useOnUnload } from 'state-decorator';
 
-  render() {
-    return (
-      <StateDecorator actions={Container.actions} onUnload={Container.onUnload}>
-        {(s, actions) => <View {...s} {...actions} />}
-      </StateDecorator>
-    );
-  }
+export default function Container(props: Props) {
+  const { state, actions } = useStateDecorator(getInitialState, actions, props);
+
+  useOnUnload(() => {
+    localStorage.setItem('state', JSON.stringify(s));
+  });
+
+  return <View {...state} {...actions} />;
 }
 ```
 
@@ -409,7 +425,7 @@ Synchronous and asynchronous actions can be chained.
 
 ```typescript
 import React from 'react';
-import StateDecorator, { StateDecoratorActions } from 'state-decorator';
+import useStateDecorator, { StateDecoratorActions } from 'state-decorator';
 
 interface Item {
   id?: string;
@@ -440,26 +456,23 @@ class APIClient {
   }
 }
 
-export default class ChainContainer extends React.PureComponent<{}> {
-  static actions: StateDecoratorActions<State, Actions> = {
-    getItems: {
-      promise: () => APIClient.getItems(),
-      reducer: (s, list) => ({ ...s, list }),
-    },
-    addItem: {
-      // As addItem is silly, we must reload the list after having added the item...
-      promise: ([item], state, props, actions) => APIClient.addItem(item).then(() => actions.getItems()),
-      // No reducer needed, the decorated action will call its reducer
-    },
-  };
+const actionsImpl: StateDecoratorActions<State, Actions> = {
+  getItems: {
+    promise: () => APIClient.getItems(),
+    reducer: (s, list) => ({ ...s, list }),
+  },
+  addItem: {
+    // As addItem is silly, we must reload the list after having added the item...
+    promise: ([item], state, props, actions) => APIClient.addItem(item).then(() => actions.getItems()),
+    // No reducer needed, the decorated action will call its reducer
+  },
+};
 
-  render() {
-    return (
-      <StateDecorator<State, Actions> actions={ChainContainer.actions} initialState={getInitialState()}>
-        {(state, actions) => <div />}
-      </StateDecorator>
-    );
-  }
+const View = (p: State & Actions) => <div />;
+
+export default function ChainContainer() {
+  const { state, actions } = useStateDecorator(getInitialState, actionsImpl);
+  return <View {...state} {...actions} />;
 }
 ```
 
@@ -467,27 +480,68 @@ export default class ChainContainer extends React.PureComponent<{}> {
 
 The _props_ property of the StateDecorator is passed to nearly all action callbacks. It's usually used to pass some context data.
 
-Sometimes the state is built from one of several _props_. If one of these props change the state must be recomputed.
+Sometimes the state is built from one of several _props_. If one of these props change the state must be recomputed or some action must be executed.
 
-3 props of the StateDecorator are used for this.
+In the options parameter of the useStateDecorator, set these following properties:
 
-- **getPropsRefValues**: a function that computes from the props the reference values that will be used to detect a prop change. For example: `(p) => [p.item.id, p.otherProps];`
+- **getPropsRefValues**: **mandatory**: a function that computes from the props the reference values that will be used to detect a prop change. For example: `(p) => [p.item.id, p.otherProps];`.
 - **onPropsChangeReducer**: a reducer function to update the state from new props. For example: `(state, newProps, updatedIndices) => ({...state, item: {...newProps.item})`
 - **onPropsChange**: a callback to trigger an action. The reducer of the _loadData_ action will then update the state.
-  For example:
 
-```
-(state, newProps, actions, updatedIndices) => {
-  // Result at index 1 of getPropsRefValues has changed.
-  if (updateIndices.includes(1)) {
-    actions.loadData(newProps.id)
-  }
+Note: The **onPropsChangeReducer** is called _before_ the **onPropsChange**.
+
+```typescript
+import React, { useState } from 'react';
+import useStateDecorator, { StateDecoratorActions } from '../../../state-decorator';
+
+export type State = {
+  value: string;
+};
+
+export type Actions = {
+  get: (param: string) => Promise<any>;
+};
+
+export const getInitialState = (): State => ({
+  value: 'initial value',
+});
+
+type PropsChangeProps = { value: string };
+
+const propChangeActions: StateDecoratorActions<State, Actions, PropsChangeProps> = {
+  get: {
+    promise: ([param]) => new Promise((resolve) => setTimeout(resolve, 1000, param)),
+    reducer: (s, param) => {
+      return { ...s, value: param };
+    },
+  },
+};
+
+export function PropsChange(props: PropsChangeProps) {
+  const { state } = useStateDecorator(getInitialState, propChangeActions, props, {
+    // we will react if the value prop is changed
+    getPropsRefValues: (p) => [p.value],
+    // inner state is updated using the updated value prop. updateIndices is 0.
+    onPropsChangeReducer: (s, p, updatedIndices) => ({ ...s, value: p.value }),
+    // we can call an action on prop change.
+    onPropsChange: (s, p, actions, updatedIndices) => actions.get('Updated value from onPropsChange'),
+  });
+  return <div>value: {state.value}</div>;
 }
 ```
 
 # Debug actions
 
-The StateDecorator has a _logEnabled_ property that logs in the Browser console the actions and related state changes.
+The StateDecorator has a _logEnabled_ option property that logs in the Browser console the actions and related state changes.
+
+```typescript
+function Comp(props: Props) {
+  const { state, actions } = useStateDecorator(getInitialState, actionsImpl, props, { logEnabled: true });
+  return <div />;
+}
+```
+
+Example of console log:
 
 ```
 [StateDecorator] Action onCalendarTimeRangeChange
@@ -514,36 +568,54 @@ If the asynchronous action is processing the result before passing it to the red
 
 The synchronous actions and the asynchronous reducers are all pure functions, ie. all the data you need is provided by the user (arguments) or injected (state & props).
 
-Use _testSyncAction_ and _testAsyncAction_ utility function that allows to easily test actions in a typed manner.
+Use _testSyncAction_, _testAdvancedSyncAction_ and _testAsyncAction_ utility function that allows to easily test actions in a typed manner.
 
 ## Example
 
-### Class
+### Component
 
 ```typescript
-export class MyContainer extends React.Component {
-  static actions: StateDecoratorActions<State, Actions> = {
-    loadList: {
-      promise: () => new Promise((_, reject) => setTimeout(reject, 500, new Error('Too bad'))),
-      reducer: (state, list: Item[]): State => ({ ...state, list }),
-    },
-    addItem: {
-      promise: ([item]) => Promise.resolve(),
-      optimisticReducer: (s, [item]: Item[]): State => ({ ...s, list: [...s.list, item] }),
-    },
-    removeItem: {
-      promise: ([id]) => Promise.resolve(),
-      optimisticReducer: (s, [id]): State => ({ ...s, list: s.list.filter((i) => i.id !== id) }),
-    },
-  };
+import React from 'react';
+import useStateDecorator, { StateDecoratorActions, LoadingProps } from 'state-decorator';
 
-  render() {
-    return (
-      <StateDecorator<State, Actions> actions={MyContainer.actions} initialState={{ list: [] }}>
-        {(state, actions, loading) => <MyView {...state} {...actions} loading={loading} />}
-      </StateDecorator>
-    );
-  }
+type Item = {
+  id: string;
+};
+
+type State = {
+  list: Item[];
+};
+
+type Actions = {
+  loadList: () => Promise<Item[]>;
+  addItem: (item: Item) => Promise<void>;
+  removeItem: (id: string) => Promise<void>;
+};
+
+type Props = {};
+
+export const getInitialState = (p: Props) => ({ list: [] });
+
+export const actionsImpl: StateDecoratorActions<State, Actions, Props> = {
+  loadList: {
+    promise: () => new Promise((_, reject) => setTimeout(reject, 500, new Error('Too bad'))),
+    reducer: (state, list: Item[]): State => ({ ...state, list }),
+  },
+  addItem: {
+    promise: ([item]) => Promise.resolve(),
+    optimisticReducer: (s, [item]: Item[]): State => ({ ...s, list: [...s.list, item] }),
+  },
+  removeItem: {
+    promise: ([id]) => Promise.resolve(),
+    optimisticReducer: (s, [id]): State => ({ ...s, list: s.list.filter((i) => i.id !== id) }),
+  },
+};
+
+const MyView = (props: State & Actions & LoadingProps<Actions>) => <div />;
+
+export default function MyContainer(props: Props) {
+  const { state, actions, ...loadingProps } = useStateDecorator(getInitialState, actionsImpl, props);
+  return <MyView {...state} {...actions} {...loadingProps} />;
 }
 ```
 
@@ -552,18 +624,17 @@ export class MyContainer extends React.Component {
 This example is using [Jest](https://jestjs.io/).
 
 ```typescript
-import StateDecoratorActions, { testSyncAction } from 'state-decorator';
-
-const actions: StateDecoratorActions<State, Actions> = MyContainer.actions;
+import { testSyncAction, testAsyncAction } from 'state-decorator';
+import { actionsImpl, getInitialState } from '../../../examples/src/doc/Async';
 
 describe('MyContainer', () => {
   describe('loadList', () => {
     it('reducer add list to state', () => {
-      const initialState = { list: [] };
+      const initialState = getInitialState({});
       const list = [{ id: '1', value: 'item1' }, { id: '2', value: 'item2' }];
 
-      return testSyncAction(actions.loadList, (action) => {
-        const newState = action.reducer(initialState, list);
+      return testAsyncAction(actionsImpl.loadList, (action) => {
+        const newState = action.reducer(initialState, list, [], {});
         expect(newState.list).toBe(list);
       });
     });
@@ -573,10 +644,10 @@ describe('MyContainer', () => {
     it('reducer add item list correctly', () => {
       const list = [{ id: '1', value: 'item1' }, { id: '2', value: 'item2' }];
       const item = { id: '3', value: 'item3' };
-      const initialState = { list };
+      const initialState = { ...getInitialState({}), list };
 
-      return testSyncAction(actions.addItem, (action) => {
-        const newState = action.optimisticReducer(initialState, [item]);
+      return testAsyncAction(actionsImpl.addItem, (action) => {
+        const newState = action.optimisticReducer(initialState, [item], {});
 
         expect(newState.list).not.toBe(list);
         expect(newState.list).toHaveLength(3);
@@ -590,10 +661,10 @@ describe('MyContainer', () => {
   describe('removeItem', () => {
     it('reducer remove item from list correctly', () => {
       const list = [{ id: '1', value: 'item1' }, { id: '2', value: 'item2' }, { id: '3', value: 'item3' }];
-      const initialState = { list };
+      const initialState = { ...getInitialState({}), list };
 
-      return testSyncAction(actions.removeItem, (action) => {
-        const newState = action.optimisticReducer(initialState, ['2']);
+      return testAsyncAction(actionsImpl.removeItem, (action) => {
+        const newState = action.optimisticReducer(initialState, ['2'], {});
 
         expect(newState.list).not.toBe(list);
         expect(newState.list).toHaveLength(2);
@@ -626,78 +697,18 @@ Time:        1.814s
 # Immutability
 
 - Immutability: each action/reducer **must** return a new state instance (or **null** if there's no change).
-- Pure components: thanks to immutability, React can detect that some renders are not needed if you are using React.PureComponent. See [React.PureComponent API](https://reactjs.org/docs/react-api.html#reactpurecomponent)
+- Pure components: thanks to immutability, React can detect that some renders are not needed if you are using React.memo (functional components) or React.PureComponent (classes). See [React.memo API](https://reactjs.org/docs/react-api.html#reactmemo) and [React.PureComponent API](https://reactjs.org/docs/react-api.html#reactpurecomponent)
 
 You can use immutable libraries in your state / reducers to help you manage immutability.
-Then, use PureComponents in the StateDecorator child component tree to prevent useless renderings.
-
-# <a name="HOC"></a>Higher Order Component (HOC)
-
-The state decorator can be used through a higher order component function named **injectState**.
-
-The **injectState** function takes as arguments:
-
-- A function that returns the initial state from props of the wrapped component,
-- The actions,
-- An options object to set the various options of the state decorator.
-
-Like other HOC (like Redux connect!), injectState returns a function that takes as parameter a React component and returns a decorated React component with the injected state (thus the function name).
-
-Example:
-
-```typescript
-import React from 'react';
-import { StateDecoratorActions, injectState } from 'state-decorator';
-
-type State = {
-  count: number;
-};
-
-type Actions = {
-  increment: (value: number) => void;
-};
-
-interface Props {
-  value: number;
-}
-
-const actions: StateDecoratorActions<State, Actions, Props> = {
-  increment: (s, [value]) => ({
-    ...s,
-    count: s.count + value,
-  }),
-};
-
-export class WrappedComponentView extends React.PureComponent<State & Actions & Props> {
-  increment = () => this.props.increment(10);
-
-  render() {
-    const { count } = this.props;
-    return (
-      <div>
-        {count}
-        <button onClick={this.increment}>Increment</button>
-      </div>
-    );
-  }
-}
-
-export default injectState(
-  (props) => ({
-    count: props.value || 0,
-  }),
-  actions,
-  { logEnabled: true }
-)(WrappedComponentView);
-```
+Then, use React.memo / PureComponents in the view component tree to prevent useless renderings.
 
 # Global state
 
 The [React 16 context API](https://reactjs.org/docs/context.html) can be used to use the StateDecorator to manage the global state and thus allow injection in a component deeper in the component tree.
 
 ```typescript
-import React from 'react';
-import StateDecorator, { StateDecoratorActions } from 'state-decorator';
+import React, { useContext } from 'react';
+import useStateDecorator, { StateDecoratorActions } from 'state-decorator';
 
 export type State = {
   color: string;
@@ -707,49 +718,41 @@ export type Actions = {
   setColor: (color: string) => void;
 };
 
-const initialState = { color: 'blue' };
+const getInitialState = () => ({
+  color: 'blue',
+});
 
 export const Context = React.createContext<State & Actions>(null);
 
-// SubComponent will retrieve the color from the context.
-class SubComponent extends React.Component {
-  render() {
-    return (
-      <Context.Consumer>
-        {(context) => (
-          <div>
-            <div className="sub-component">{context.color}</div>
-            <button onClick={() => context.setColor('red')}>Click</button>
-          </div>
-        )}
-      </Context.Consumer>
-    );
-  }
-}
+const SubComponent = () => {
+  const { color, setColor } = useContext(Context);
 
-// Main component does not have the color property.
+  return (
+    <div>
+      <div className="sub-component">{color}</div>
+      <button onClick={() => setColor('red')}>Click</button>
+    </div>
+  );
+};
+
 const MainComponent = () => <SubComponent />;
 
-export default class ContextContainer extends React.Component {
-  static actions: StateDecoratorActions<State, Actions> = {
-    setColor: (s, [color]) => ({ ...s, color }),
-  };
-  render() {
-    return (
-      <StateDecorator<State, Actions> actions={ContextContainer.actions} initialState={initialState}>
-        {(state, actions) => (
-          <Context.Provider
-            value={{
-              ...state,
-              ...actions,
-            }}
-          >
-            <MainComponent />
-          </Context.Provider>
-        )}
-      </StateDecorator>
-    );
-  }
+const actionsImpl: StateDecoratorActions<State, Actions> = {
+  setColor: (s, [color]) => ({ ...s, color }),
+};
+
+export default function ContextContainer() {
+  const { state, actions } = useStateDecorator(getInitialState, actionsImpl);
+  return (
+    <Context.Provider
+      value={{
+        ...state,
+        ...actions,
+      }}
+    >
+      <MainComponent />
+    </Context.Provider>
+  );
 }
 ```
 
@@ -759,9 +762,9 @@ export default class ContextContainer extends React.Component {
 
 ```typescript
 import cloneDeep from 'lodash.cloneDeep';
-import StateDecorator from 'state-decorator';
+import { setCloneFunction } from 'state-decorator';
 
-StateDecorator.clone = cloneDeep;
+setCloneFunction(cloneDeep);
 ```
 
 - "Index signature is missing in type" or "'XxxXxx' does not satisfy the constraint 'DecoratedActions'" error during TS compilation:
@@ -814,23 +817,16 @@ The StateDecorator has these feature built-in.
 _State_ is the generic state class passed to the StateDecorator.
 _Actions_ is the generic actions class passed to the StateDecorator.
 
-### StateDecorator properties
+### useStateDecorator options
 
-| Property             | Description                                                                                                                                                 | Type                                                                                                    | Mandatory | Default value |
-| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- | --------- | ------------- |
-| actions              | The actions to decorate and pass to the child render property.                                                                                              | { [actionName: string]: SynchAction \| AsynchAction}                                                    | true      |               |
-| initialState         | The initial state.                                                                                                                                          | State                                                                                                   |           |               |
-| props                | Additional properties injected to reducers .                                                                                                                | any                                                                                                     |           |               |
-| logEnabled           | If **true**, logs state changes to the console.                                                                                                             | boolean                                                                                                 |           | false         |
-| notifyError          | Callback function triggered when an asynchronous actions fails and an error message is provided.                                                            | (message: string) => void                                                                               |           |               |
-| notifySuccess        | Callback function triggered when an asynchronous actions succeeds and an success message is provided.                                                       | (message: string) => void                                                                               |           |               |
-| onUnload             | Function to invoke when the page is about to unload. Used to persist the state.                                                                             | (state: State, props: Props) => void                                                                    |           |               |
-| onMount              | Function to invoke when the StateDecorator is mounted. Used to execute initial actions.                                                                     | (actions: DecoratedActions) => void                                                                     |           |               |
-| onUnmount            | Function to invoke when the StateDecorator is unmounted. Used to persist the state.                                                                         | (state: State, props: Props) => void                                                                    |           |               |
-| children             | The child of the StateDecorator is a function that renders a component tree.                                                                                | (state: State, actions: Actions, loading: boolean, loadingMap: {[name: string]:boolean}) => JSX.Element | true      |               |
-| getPropsRefValues    | Get a list of values that will be use as reference values. If they are different (shallow compare), onPropsChangeReducer then onPropsChange will be called. | (props: any) => any[];                                                                                  |           |               |
-| onPropsChangeReducer | Triggered when values of reference from props have changed. Allow to update state after a prop change.                                                      | (s: State, newProps: any, updatedIndices: number[]) => State;                                           |           |               |  |
-| onPropsChange        | Triggered when values of reference from props have changed. Allow to call actions after a prop change.                                                      | (s: State, newProps: any, actions: Actions, updatedIndices: number[]) => void;                          |           |               |  |
+| Property             | Description                                                                                                                                                 | Type                                                                           | Mandatory | Default value |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ | --------- | ------------- |
+| logEnabled           | If **true**, logs state changes to the console.                                                                                                             | boolean                                                                        |           | false         |
+| notifyError          | Callback function triggered when an asynchronous actions fails and an error message is provided.                                                            | (message: string) => void                                                      |           |               |
+| notifySuccess        | Callback function triggered when an asynchronous actions succeeds and an success message is provided.                                                       | (message: string) => void                                                      |           |               |
+| getPropsRefValues    | Get a list of values that will be use as reference values. If they are different (shallow compare), onPropsChangeReducer then onPropsChange will be called. | (props: any) => any[];                                                         |           |               |
+| onPropsChangeReducer | Triggered when values of reference from props have changed. Allow to update state after a prop change.                                                      | (s: State, newProps: any, updatedIndices: number[]) => State;                  |           |               |  |
+| onPropsChange        | Triggered when values of reference from props have changed. Allow to call actions after a prop change.                                                      | (s: State, newProps: any, actions: Actions, updatedIndices: number[]) => void; |           |               |  |
 
 ### Synchronous action
 
@@ -844,33 +840,33 @@ Type:
 
 ## Advanced form
 
-| Property        | Description                                | Type                                                                                  | Mandatory | Default value            |
-| --------------- | ------------------------------------------ | ------------------------------------------------------------------------------------- | --------- | ------------------------ |
-| action          | The action                                 | (state:State, args: Arguments&lt;Action&gt, props: Props) => State                    | null      | true (or **promiseGet**) |  |
-| debounceTimeout | Debounce action if set                     | number                                                                                |           |                          |
-| onActionDone    | Callback executed when the action is done. | (state: State, args: Arguments&lt;Action&gt;, props: Props, actions: Actions) => void |           |                          |
+| Property        | Description                                | Type                                                                              | Mandatory | Default value            |
+| --------------- | ------------------------------------------ | --------------------------------------------------------------------------------- | --------- | ------------------------ |
+| action          | The action                                 | `(state:State, args: Arguments<Action>, props: Props) => State`                   | `null`    | true (or **promiseGet**) |  |
+| debounceTimeout | Debounce action if set                     | `number`                                                                          |           |                          |
+| onActionDone    | Callback executed when the action is done. | `(state: State, args: Arguments<Action>, props: Props, actions: Actions) => void` |           |                          |
 
 ### Asynchronous action
 
 | Property             | Description                                                                                                                                                                                                                             | Type                                                                                                      | Mandatory                                                     | Default value                             |
 | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- | ----------------------------------------- |
-| promise              | The asynchronous action promise provider. If null is returned, nothing is done.                                                                                                                                                         | (args: Arguments&lt;Action&gt;, state:State, props: Props, actions:Actions) => Promise<any>               | null                                                          | true (or **promiseGet**)                  |  |
-| promiseGet           | The asynchronous action promise provider shortcut for a GET request. Sets **conflictPolicy** to **ConflictPolicy.REUSE** and **retryCount** to **3**.                                                                                   | (args: Arguments&lt;Action&gt;, state:State, props: Props, actions:Actions) => Promise<any>               | true (or **promise**)                                         |                                           |
-| preReducer           | The state update function triggered before optimisticReducer and the promise provider                                                                                                                                                   | (state: State, args: Arguments&lt;Action&gt;, props: Props) => State \| null                              |                                                               |                                           |
-| reducer              | The state update function triggered when the promise is resolved.                                                                                                                                                                       | (state: State, promiseResult: any, args: Arguments&lt;Action&gt;, props: Props) => State \| null          |                                                               |                                           |
-| errorReducer         | The state update function triggered when the promise is rejected.                                                                                                                                                                       | (state: State, error: any, args: Arguments&lt;Action&gt;, props: Props) => State \| null                  |                                                               |                                           |
-| optimisticReducer    | The state update function triggered when promise started                                                                                                                                                                                | (state: State, args: Arguments&lt;Action&gt;, props: Props) => State \| null                              |                                                               |                                           |
-| onDone               | Callback executed when the promise is resolved.                                                                                                                                                                                         | (state: State, promiseResult: any, args: Arguments&lt;Action&gt;, props: Props, actions: Actions) => void |                                                               |                                           |
-| successMessage       | Success message provided to the **notifySuccess** function of the StateDecorator                                                                                                                                                        | string                                                                                                    |                                                               |                                           |
-| getSuccessMessage    | Success message provider function to pass to the **notifySuccess** function of the StateDecorator                                                                                                                                       | (promiseResult: any, args: Arguments&lt;Action&gt;, props: Props) => string                               |                                                               |                                           |
-| errorMessage         | Error message provided to the **notifyError** function of the StateDecorator                                                                                                                                                            |                                                                                                           |                                                               |                                           |
-| getErrorMessage      | Error message provider function to pass to the **notifyError** function of the StateDecorator                                                                                                                                           |                                                                                                           |                                                               |                                           |
-| rejectPromiseOnError | When an errorReducer or an error message is provided the outer promise is marked as resolved to prevent error in console or other error management. Set this property to true to reject the promise and process it in a catch function. | boolean                                                                                                   |                                                               | false                                     |
-| conflictPolicy       | Policy to apply when a call to an asynchronous action is done but a previous call is still not resolved.                                                                                                                                | ConflictPolicy                                                                                            |                                                               | ConflictPolicy.KEEP_ALL                   |
-| getPromiseId         | A function that returns the promise identifier from the arguments.                                                                                                                                                                      | (...args:Arguments&lt;Action&gt;) => string                                                               | Mandatory if conflictPolicy is set to ConflictPolicy.PARALLEL |                                           |
-| retryCount           | Number of tentative call to promise function.                                                                                                                                                                                           | number                                                                                                    |                                                               | 0                                         |
-| retryDelaySeed       | Seed of delay between each retry in milliseconds. The applied delay is retryDelaySeed x retry count.                                                                                                                                    | number                                                                                                    |                                                               | 1000                                      |
-| isTriggerRetryError  | Function to test if the error will trigger an action retry or will fail directly.                                                                                                                                                       | (e:Error) => boolean                                                                                      |                                                               | A function that tests TypeError instances |
+| promise              | The asynchronous action promise provider. If null is returned, nothing is done.                                                                                                                                                         | `(args: Arguments<Action>, state:State, props: Props, actions:Actions) => Promise<Result<Action>> | null` | `null` (or **promise**)                                       | true (or **promiseGet**)                  |  |
+| promiseGet           | The asynchronous action promise provider shortcut for a GET request. Sets **conflictPolicy** to **ConflictPolicy.REUSE** and **retryCount** to **3**.                                                                                   | `(args: Arguments<Action>, state:State, props: Props, actions:Actions) => Promise<Result<Action>> | null` | `null` (or **promise**)                                       |                                           |
+| preReducer           | The state update function triggered before optimisticReducer and the promise provider                                                                                                                                                   | `(state: State, args: Arguments<Action>, props: Props) => State | null`                                   |                                                               |                                           |
+| reducer              | The state update function triggered when the promise is resolved.                                                                                                                                                                       | `(state: State, promiseResult: any, args: Arguments<Action>, props: Props) => State | null`               |                                                               |                                           |
+| errorReducer         | The state update function triggered when the promise is rejected.                                                                                                                                                                       | `(state: State, error: any, args: Arguments<Action>, props: Props) => State | null`                       |                                                               |                                           |
+| optimisticReducer    | The state update function triggered when promise started                                                                                                                                                                                | `(state: State, args: Arguments<Action>, props: Props) => State | null`                                   |                                                               |                                           |
+| onDone               | Callback executed when the promise is resolved.                                                                                                                                                                                         | `(state: State, promiseResult: any, args: Arguments<Action>, props: Props, actions: Actions) => void`     |                                                               |                                           |
+| successMessage       | Success message provided to the **notifySuccess** function of the StateDecorator                                                                                                                                                        | `string`                                                                                                  |                                                               |                                           |
+| getSuccessMessage    | Success message provider function to pass to the **notifySuccess** function of the StateDecorator                                                                                                                                       | `(promiseResult: any, args: Arguments<Action>, props: Props) => string`                                   |                                                               |                                           |
+| errorMessage         | Error message provided to the **notifyError** function of the StateDecorator                                                                                                                                                            | `string`                                                                                                  |                                                               |                                           |
+| getErrorMessage      | Error message provider function to pass to the **notifyError** function of the StateDecorator                                                                                                                                           | `(error: any, args: Arguments<Action>, props: Props) => string`                                           |                                                               |                                           |
+| rejectPromiseOnError | When an errorReducer or an error message is provided the outer promise is marked as resolved to prevent error in console or other error management. Set this property to true to reject the promise and process it in a catch function. | `boolean`                                                                                                 |                                                               | `false`                                   |
+| conflictPolicy       | Policy to apply when a call to an asynchronous action is done but a previous call is still not resolved.                                                                                                                                | `ConflictPolicy`                                                                                          |                                                               | `ConflictPolicy.KEEP_ALL`                 |
+| getPromiseId         | A function that returns the promise identifier from the arguments.                                                                                                                                                                      | `(...args:Arguments<Action>) => string`                                                                   | Mandatory if conflictPolicy is set to ConflictPolicy.PARALLEL |                                           |
+| retryCount           | Number of tentative call to promise function.                                                                                                                                                                                           | `number`                                                                                                  |                                                               | `0`                                       |
+| retryDelaySeed       | Seed of delay between each retry in milliseconds. The applied delay is retryDelaySeed x retry count.                                                                                                                                    | `number`                                                                                                  |                                                               | `1000`                                    |
+| isTriggerRetryError  | Function to test if the error will trigger an action retry or will fail directly.                                                                                                                                                       | `(e:Error) => boolean`                                                                                    |                                                               | A function that tests TypeError instances |
 
 # Examples
 
@@ -879,9 +875,10 @@ Type:
 Synchronous actions, complex state with normalized storage of todo list.
 
 ```typescript
-import React from 'react';
-import StateDecorator, { StateDecoratorActions } from 'state-decorator';
+import React, { useCallback } from 'react';
+import produce from 'immer';
 import { pick } from 'lodash';
+import useStateDecorator, { StateDecoratorActions } from '../../../src';
 
 export enum Filter {
   ALL = 'all',
@@ -921,179 +918,175 @@ export type Actions = {
   onSetFilter: (filter: Filter) => void;
 };
 
-class Header extends React.PureComponent<Pick<State, 'newTitle'> & Pick<Actions, 'onSetNewTitle' | 'onCreate'>> {
-  onChange = (e) => this.props.onSetNewTitle(e.target.value);
-  onSubmit = (e) => {
+const Header = React.memo(function Header(
+  props: Pick<State, 'newTitle'> & Pick<Actions, 'onSetNewTitle' | 'onCreate'>
+) {
+  const onChange = useCallback((e) => props.onSetNewTitle(e.target.value), []);
+  const onSubmit = useCallback((e) => {
     e.preventDefault();
-    this.props.onCreate();
-  };
+    props.onCreate();
+  }, []);
 
-  render() {
-    const { newTitle } = this.props;
-    return (
-      <form onSubmit={this.onSubmit}>
-        <input value={newTitle} onChange={this.onChange} />
-        <button type="submit">Create</button>
-      </form>
-    );
-  }
-}
+  const { newTitle } = props;
+  return (
+    <form onSubmit={onSubmit}>
+      <input value={newTitle} onChange={onChange} />
+      <button type="submit">Create</button>
+    </form>
+  );
+});
 
-class Todo extends React.PureComponent<{ todo: TodoItem } & Actions> {
-  onToggle = (e) => this.props.onToggle(this.props.todo.id);
+const Todo = React.memo(function Todo(props: { todo: TodoItem } & Actions) {
+  const { todo } = props;
 
-  render() {
-    const { todo } = this.props;
-    return (
-      <div>
-        <div>{todo.title}</div>
-        <label>
-          <input type="checkbox" checked={todo.completed} onChange={this.onToggle} />
-          completed
-        </label>
-      </div>
-    );
-  }
-}
+  const onToggle = useCallback((e) => props.onToggle(todo.id), [todo.id]);
 
-class Todos extends React.PureComponent<Pick<State, 'todoIds' | 'todoMap' | 'filter'> & Actions> {
-  filter = (todoId) => {
-    const { filter, todoMap } = this.props;
-    const todo = todoMap[todoId];
+  return (
+    <div>
+      <div>{todo.title}</div>
+      <label>
+        <input type="checkbox" checked={todo.completed} onChange={onToggle} />
+        completed
+      </label>
+    </div>
+  );
+});
 
-    if (filter === Filter.ALL) {
-      return true;
-    }
+const Todos = React.memo(function Todos(props: Pick<State, 'todoIds' | 'todoMap' | 'filter'> & Actions) {
+  const { filter } = props;
 
-    return filter === Filter.COMPLETED ? todo.completed : !todo.completed;
-  };
+  const onFilter = useCallback(
+    (todoId: string) => {
+      const { filter, todoMap } = props;
+      const todo = todoMap[todoId];
 
-  render() {
-    const { todoIds, todoMap } = this.props;
+      if (filter === Filter.ALL) {
+        return true;
+      }
 
-    return (
-      <div>
-        {todoIds.filter(this.filter).map((todoId) => (
-          <Todo key={todoId} todo={todoMap[todoId]} {...this.props} />
-        ))}
-      </div>
-    );
-  }
-}
+      return filter === Filter.COMPLETED ? todo.completed : !todo.completed;
+    },
+    [filter]
+  );
 
-class Footer extends React.PureComponent<Pick<State, 'filter'> & Actions> {
-  onFilterChange = (e) => this.props.onSetFilter(e.target.value);
+  const { todoIds, todoMap } = props;
 
-  render() {
-    const { onClearCompleted, filter } = this.props;
-    return (
-      <div>
-        <label>
-          <input
-            type="radio"
-            name="filter"
-            value={Filter.ALL}
-            checked={filter === Filter.ALL}
-            onChange={this.onFilterChange}
-          />
-          All
-        </label>
-        <label>
-          <input
-            type="radio"
-            name="filter"
-            value={Filter.NON_COMPLETED}
-            checked={filter === Filter.NON_COMPLETED}
-            onChange={this.onFilterChange}
-          />
-          Non Completed
-        </label>
-        <label>
-          <input
-            type="radio"
-            name="filter"
-            value={Filter.COMPLETED}
-            checked={filter === Filter.COMPLETED}
-            onChange={this.onFilterChange}
-          />
-          Completed
-        </label>
-        <button onClick={onClearCompleted}>Clear completed</button>
-      </div>
-    );
-  }
-}
-// Container that is managing the state.
-export default class TodoContainer extends React.Component {
-  static actions: StateDecoratorActions<State, Actions> = {
-    onCreate: (state) =>
-      produce<State>(state, (draftState) => {
-        const newTodo: TodoItem = {
-          title: state.newTitle,
-          id: `${draftState.idCount}`,
-          completed: false,
-        };
-        draftState.idCount++;
-        draftState.todoMap[newTodo.id] = newTodo;
-        draftState.todoIds.push(newTodo.id);
-        draftState.newTitle = '';
-      }),
+  return (
+    <div>
+      {todoIds.filter(onFilter).map((todoId) => (
+        <Todo key={todoId} todo={todoMap[todoId]} {...props} />
+      ))}
+    </div>
+  );
+});
 
-    onEdit: (state, [id, title]) =>
-      produce<State>(state, (draftState) => {
-        draftState.todoMap[id].title = title;
-      }),
+const Footer = React.memo(function Footer(props: Pick<State, 'filter'> & Actions) {
+  const { onClearCompleted, filter } = props;
 
-    onDelete: (state, [id]) =>
-      produce<State>(state, (draftState) => {
-        delete draftState.todoMap[id];
-        draftState.todoIds = draftState.todoIds.filter((todoId) => todoId !== id);
-      }),
+  const onFilterChange = useCallback((e) => props.onSetFilter(e.target.value), []);
 
-    onToggle: (state, [id]) =>
-      produce<State>(state, (draftState) => {
+  return (
+    <div>
+      <label>
+        <input
+          type="radio"
+          name="filter"
+          value={Filter.ALL}
+          checked={filter === Filter.ALL}
+          onChange={onFilterChange}
+        />
+        All
+      </label>
+      <label>
+        <input
+          type="radio"
+          name="filter"
+          value={Filter.NON_COMPLETED}
+          checked={filter === Filter.NON_COMPLETED}
+          onChange={onFilterChange}
+        />
+        Non Completed
+      </label>
+      <label>
+        <input
+          type="radio"
+          name="filter"
+          value={Filter.COMPLETED}
+          checked={filter === Filter.COMPLETED}
+          onChange={onFilterChange}
+        />
+        Completed
+      </label>
+      <button onClick={onClearCompleted}>Clear completed</button>
+    </div>
+  );
+});
+
+export const todoActions: StateDecoratorActions<State, Actions> = {
+  onCreate: (state) =>
+    produce(state, (draftState) => {
+      const newTodo: TodoItem = {
+        title: state.newTitle,
+        id: `${draftState.idCount}`,
+        completed: false,
+      };
+      draftState.idCount++;
+      draftState.todoMap[newTodo.id] = newTodo;
+      draftState.todoIds.push(newTodo.id);
+      draftState.newTitle = '';
+    }),
+
+  onEdit: (state, [id, title]) =>
+    produce(state, (draftState) => {
+      draftState.todoMap[id].title = title;
+    }),
+
+  onDelete: (state, [id]) =>
+    produce(state, (draftState) => {
+      delete draftState.todoMap[id];
+      draftState.todoIds = draftState.todoIds.filter((todoId) => todoId !== id);
+    }),
+
+  onToggle: (state, [id]) =>
+    produce(state, (draftState) => {
+      const todo = draftState.todoMap[id];
+      todo.completed = !todo.completed;
+    }),
+
+  onClearCompleted: (state) =>
+    produce(state, (draftState) => {
+      draftState.todoIds = draftState.todoIds.filter((id) => {
         const todo = draftState.todoMap[id];
-        todo.completed = !todo.completed;
-      }),
-
-    onClearCompleted: (state) =>
-      produce<State>(state, (draftState) => {
-        draftState.todoIds = draftState.todoIds.filter((id) => {
-          const todo = draftState.todoMap[id];
-          if (todo.completed) {
-            delete draftState.todoMap[todo.id];
-          }
-          return !todo.completed;
-        });
-      }),
-
-    onSetNewTitle: (s, [newTitle]) => ({
-      ...s,
-      newTitle,
+        if (todo.completed) {
+          delete draftState.todoMap[todo.id];
+        }
+        return !todo.completed;
+      });
     }),
 
-    onSetFilter: (s, [filter]) => ({
-      ...s,
-      filter,
-    }),
-  };
+  onSetNewTitle: (s, [newTitle]) => ({
+    ...s,
+    newTitle,
+  }),
 
-  render() {
-    return (
-      <StateDecorator<State, Actions> actions={TodoContainer.actions} initialState={getInitialState()}>
-        {(state, actions) => {
-          const todoProps = pick(state, 'todoMap', 'todoIds', 'filter');
-          return (
-            <div>
-              <Header {...actions} newTitle={state.newTitle} />
-              <Todos {...actions} {...todoProps} />
-              <Footer {...actions} filter={state.filter} />
-            </div>
-          );
-        }}
-      </StateDecorator>
-    );
-  }
+  onSetFilter: (s, [filter]) => ({
+    ...s,
+    filter,
+  }),
+};
+
+// Container that is managing the state.
+export default function TodoContainer() {
+  const { state, actions } = useStateDecorator(getInitialState, todoActions);
+  const todoProps = pick(state, 'todoMap', 'todoIds', 'filter');
+
+  return (
+    <div>
+      <Header {...actions} newTitle={state.newTitle} />
+      <Todos {...actions} {...todoProps} />
+      <Footer {...actions} filter={state.filter} />
+    </div>
+  );
 }
 ```
 
@@ -1102,8 +1095,8 @@ export default class TodoContainer extends React.Component {
 Show various ways of handling conflicting actions, ie. asynchronous actions triggered when a previous action of same type is still ongoing.
 
 ```typescript
-import React from 'react';
-import StateDecorator, { StateDecoratorActions } from 'state-decorator';
+import React, { useMemo } from 'react';
+import useStateDecorator, { StateDecoratorActions } from 'state-decorator';
 
 export type State = {
   counter: number;
@@ -1124,33 +1117,37 @@ interface Props {
   conflictPolicy: ConflictPolicy;
 }
 
-class ConflictingActionsContainer extends React.PureComponent<Props> {
-  actions: StateDecoratorActions<State, Actions> = {
-    updateText: {
-      promise: ([text]) => new Promise((res) => setTimeout(res, 1000, text)),
-      reducer: (s, [text]) => ({ ...s, text, counter: s.counter + 1 }),
-      conflictPolicy: this.props.conflictPolicy,
-      debounceTimeout: 250,
-    },
-  };
+function ConflictingActionsContainer(props: Props) {
+  const { title, description } = props;
 
-  render() {
-    const { title } = this.props;
-    return (
-      <StateDecorator<State, Actions> actions={this.actions} initialState={getInitialState()}>
-        {({ counter, text }, actions) => (
-          <div style={{ border: '1px solid grey', marginBottom: 10 }}>
-            <h2>{title}</h2>
-            <div>
-              <input onChange={(e) => actions.updateText(e.target.value)} />
-            </div>
-            <div>Server calls #: {counter}</div>
-            <div>Server state: {text}</div>
-          </div>
-        )}
-      </StateDecorator>
-    );
-  }
+  const actionsImpl = useMemo(
+    () => {
+      const actionsImpl: StateDecoratorActions<State, Actions> = {
+        updateText: {
+          promise: ([text]) => new Promise((res) => setTimeout(res, 1000, text)),
+          reducer: (s, text) => ({ ...s, text, counter: s.counter + 1 }),
+          conflictPolicy: props.conflictPolicy,
+        },
+      };
+      return actionsImpl;
+    },
+    [props.conflictPolicy]
+  );
+
+  const { state, actions } = useStateDecorator(getInitialState, actionsImpl, props);
+  const { counter, text } = state;
+
+  return (
+    <div style={{ border: '1px solid grey', marginBottom: 10 }}>
+      <h3>{title}</h3>
+      <p>{description}</p>
+      <div>
+        <input onChange={(e) => actions.updateText(e.target.value)} />
+      </div>
+      <div>Server calls #: {counter}</div>
+      <div>Server state: {text}</div>
+    </div>
+  );
 }
 
 export default class ConflictApp extends React.Component {
@@ -1173,8 +1170,8 @@ The _onChange_ action calls are executed in parallel. The map of ongoing action 
 
 ```typescript
 import React from 'react';
-import StateDecorator, { StateDecoratorActions, ConflictPolicy } from 'state-decorator';
 import produce from 'immer';
+import useStateDecorator, { StateDecoratorActions, ConflictPolicy, LoadingProps } from '../../../src';
 
 type Item = {
   id: string;
@@ -1186,7 +1183,7 @@ export type State = {
 };
 
 export type Actions = {
-  onChange: (id: string, value: string) => Promise<any>;
+  onChange: (id: string, value: string) => Promise<string>;
 };
 
 export const getInitialState = (): State => ({
@@ -1210,104 +1207,43 @@ export const getInitialState = (): State => ({
   ],
 });
 
-export default class ParallelActions extends React.PureComponent {
-  static actions: StateDecoratorActions<State, Actions> = {
-    onChange: {
-      promise: ([id, value]) => new Promise((res) => setTimeout(res, 3000, value)),
-      conflictPolicy: ConflictPolicy.PARALLEL,
-      getPromiseId: (id) => id,
-      reducer: (s, value, [id]) =>
-        produce(s, ({ items }) => {
-          items.find((i) => i.id === id).value = value;
-        }),
-    },
-  };
-
-  render() {
-    return (
-      <StateDecorator actions={ParallelActions.actions} initialState={getInitialState()}>
-        {({ items }, { onChange }, loading, loadingMap, loadingParallelMap) => (
-          <div style={{ border: '1px solid grey', marginBottom: 10 }}>
-            <h2>Parallel actions</h2>
-            <p>Actions are launched on blur, in parallel for 3s</p>
-            {items.map((item) => {
-              const isItemLoading = loadingParallelMap.onChange[item.id];
-              return (
-                <div key={item.id}>
-                  {item.id}
-                  <input
-                    onBlur={(e) => onChange(item.id, e.target.value)}
-                    disabled={isItemLoading}
-                    style={{ backgroundColor: isItemLoading ? 'grey' : null }}
-                  />
-                </div>
-              );
-            })}
+const ParallelActionsView = (props: State & Actions & LoadingProps<Actions>) => {
+  const { items, loadingParallelMap, onChange } = props;
+  return (
+    <div style={{ border: '1px solid grey', marginBottom: 10 }}>
+      <h2>Parallel actions</h2>
+      <p>Actions are launched on blur, in parallel for 3s</p>
+      {items.map((item) => {
+        const isItemLoading = loadingParallelMap.onChange[item.id];
+        return (
+          <div key={item.id}>
+            {item.id}
+            <input
+              onBlur={(e) => onChange(item.id, e.target.value)}
+              disabled={isItemLoading}
+              style={{ backgroundColor: isItemLoading ? 'grey' : null }}
+            />
           </div>
-        )}
-      </StateDecorator>
-    );
-  }
-}
-```
+        );
+      })}
+    </div>
+  );
+};
 
-# VS Code User snippet
+const actionsImpl: StateDecoratorActions<State, Actions> = {
+  onChange: {
+    promise: ([id, value]) => new Promise((res) => setTimeout(res, 3000, value)),
+    conflictPolicy: ConflictPolicy.PARALLEL,
+    getPromiseId: (id) => id,
+    reducer: (s, value, [id]) =>
+      produce(s, ({ items }) => {
+        items.find((i) => i.id === id).value = value;
+      }),
+  },
+};
 
-A VS Code snippet to create a class that have a state controlled by a StateDecorator.
-
-Add this code to File > Preferences > User snippets > typescriptreact.json
-
-```json
-{
-  "Create StateDecorator class": {
-    "prefix": "createStateDecoratorClass",
-    "body": [
-      "export type $1Props = {",
-      "  $2",
-      "};",
-      "",
-      "type Props = $1Props;",
-      "",
-      "export type $1State = {",
-      "  $3",
-      "};",
-      "",
-      "type State = $1State;",
-      "",
-      "export type $1Actions = {",
-      "  $4",
-      "};",
-      "",
-      "export const getInitialState = ():State => ({",
-      "  $5",
-      "});",
-      "",
-      "type Actions = $1Actions;",
-      "",
-      "export default class $1 extends React.PureComponent<$1Props> {",
-      "  static actions: StateDecoratorActions<State, Actions, Props> = {",
-      "    $6",
-      "  };",
-      "",
-      "  static onMount(actions:Actions, props:Props) {",
-      "    $7",
-      "  }",
-      "",
-      "  render() {",
-      "    return (",
-      "      <StateDecorator<State, Actions, Props>",
-      "        actions={$1.actions}",
-      "        props={this.props}",
-      "        initialState={getInitialState()}",
-      "        onMount={$1.onMount}",
-      "      >",
-      "        {(state, actions) => <div/>$0}",
-      "      </StateDecorator>",
-      "    );",
-      "  }",
-      "}"
-    ],
-    "description": "Create a new State decorated class"
-  }
+export default function ParallelActions() {
+  const { state, actions, ...loadingProps } = useStateDecorator(getInitialState, actionsImpl);
+  return <ParallelActionsView {...state} {...actions} {...loadingProps} />;
 }
 ```

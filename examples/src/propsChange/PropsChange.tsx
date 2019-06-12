@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import StateDecorator, { StateDecoratorActions } from '../../../src/StateDecorator';
-import useStateDecorator from '../../../src/useStateDecorator';
+import useStateDecorator, { StateDecoratorActions } from '../../../src';
 
 export type State = {
   value: string;
@@ -25,12 +24,15 @@ const propChangeActions: StateDecoratorActions<State, Actions, PropsChangeProps>
   },
 };
 
-// State decorator managed class that depends on value from props.
+// State decorator managed functional component that depends on value from props.
 export function PropsChange(props: PropsChangeProps) {
   const { state } = useStateDecorator(getInitialState, propChangeActions, props, {
+    // we will react if the value prop is changed
     getPropsRefValues: (p) => [p.value],
-    onPropsChangeReducer: (s, p) => ({ ...s, value: p.value }),
-    onPropsChange: (s, p, actions) => actions.get('Updated value from onPropsChange'),
+    // inner state is updated using the updated value prop. updateIndices is 0.
+    onPropsChangeReducer: (s, p, updatedIndices) => ({ ...s, value: p.value }),
+    // we can call an action on prop change.
+    onPropsChange: (s, p, actions, updatedIndices) => actions.get('Updated value from onPropsChange'),
   });
   return <div>value: {state.value}</div>;
 }

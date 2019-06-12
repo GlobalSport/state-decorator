@@ -1,5 +1,5 @@
-import React from 'react';
-import StateDecorator, { StateDecoratorActions } from '../../../src/StateDecorator';
+import React, { useContext } from 'react';
+import useStateDecorator, { StateDecoratorActions } from '../../../src/';
 
 export type State = {
   color: string;
@@ -9,45 +9,39 @@ export type Actions = {
   setColor: (color: string) => void;
 };
 
-const initialState = { color: 'blue' };
+const getInitialState = () => ({
+  color: 'blue',
+});
 
 export const Context = React.createContext<State & Actions>(null);
 
-class SubComponent extends React.Component {
-  render() {
-    return (
-      <Context.Consumer>
-        {(context) => (
-          <div>
-            <div className="sub-component">{context.color}</div>
-            <button onClick={() => context.setColor('red')}>Click</button>
-          </div>
-        )}
-      </Context.Consumer>
-    );
-  }
-}
+const SubComponent = () => {
+  const { color, setColor } = useContext(Context);
+
+  return (
+    <div>
+      <div className="sub-component">{color}</div>
+      <button onClick={() => setColor('red')}>Click</button>
+    </div>
+  );
+};
 
 const MainComponent = () => <SubComponent />;
 
-export default class ContextContainer extends React.Component {
-  static actions: StateDecoratorActions<State, Actions> = {
-    setColor: (s, [color]) => ({ ...s, color }),
-  };
-  render() {
-    return (
-      <StateDecorator<State, Actions> actions={ContextContainer.actions} initialState={initialState}>
-        {(state, actions) => (
-          <Context.Provider
-            value={{
-              ...state,
-              ...actions,
-            }}
-          >
-            <MainComponent />
-          </Context.Provider>
-        )}
-      </StateDecorator>
-    );
-  }
+const actionsImpl: StateDecoratorActions<State, Actions> = {
+  setColor: (s, [color]) => ({ ...s, color }),
+};
+
+export default function ContextContainer() {
+  const { state, actions } = useStateDecorator(getInitialState, actionsImpl);
+  return (
+    <Context.Provider
+      value={{
+        ...state,
+        ...actions,
+      }}
+    >
+      <MainComponent />
+    </Context.Provider>
+  );
 }
