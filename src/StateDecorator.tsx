@@ -18,7 +18,7 @@ import {
   ConflictPolicy,
 } from './types';
 import { useOnMount, useOnUnmount, useOnUnload } from './hooks';
-import useStateDecorator from './useStateDecorator';
+import useStateDecorator, { setCloneFunction, setOnAsyncError, SetIsTriggerRetryError } from './useStateDecorator';
 import { testSyncAction, testAsyncAction, testAdvancedSyncAction } from './base';
 
 export {
@@ -32,6 +32,9 @@ export {
   testSyncAction,
   testAsyncAction,
   testAdvancedSyncAction,
+  setCloneFunction,
+  setOnAsyncError,
+  SetIsTriggerRetryError,
 };
 
 export interface StateDecoratorProps<S, A extends DecoratedActions, P = {}> {

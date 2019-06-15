@@ -39,6 +39,54 @@ import {
   areSameArgs,
 } from './base';
 
+type CloneFunction = <C>(obj: C) => C;
+
+let cloneFunc: CloneFunction = fastClone;
+
+function clone(obj) {
+  try {
+    return cloneFunc(obj);
+  } catch (e) {
+    const msg =
+      'useStateDecorator: Cannot clone object. Call setCloneFunction with another implementation like lodash/cloneDeep.';
+    if (process.env.NODE_ENV === 'development') {
+      console.error(msg);
+      console.error(e.toString());
+    }
+    throw new Error(msg);
+  }
+}
+
+/**
+ * Sets the clone functuin. Used when managing optimistic reducer and conflicting actions.
+ */
+export function setCloneFunction(cloneFn: CloneFunction) {
+  cloneFunc = cloneFn;
+}
+
+type GlobalAsyncHook = (error: any, isHandled: boolean) => void;
+
+let onAsyncError: GlobalAsyncHook = (f: GlobalAsyncHook) => {};
+
+/**
+ * Set a global callbakc function to handle asynchronous promise rejection errors.
+ */
+export function setOnAsyncError(f: GlobalAsyncHook) {
+  onAsyncError = f;
+}
+
+type TriggerReryError = (error: any) => boolean;
+
+let isTriggerRetryError: TriggerReryError = (error: Error) => error instanceof TypeError;
+
+/**
+ * Set a function that tests if the error will trigger a retry of the action or will fail directly.
+ * Default implementation is returning true for TypeError instances only.
+ */
+export function SetIsTriggerRetryError(f: TriggerReryError) {
+  isTriggerRetryError = f;
+}
+
 type HookState<S, A> = {
   state: S;
   sideEffectRender: number;
@@ -215,28 +263,6 @@ export function decorateAdvancedSyncAction<S, F extends (...args: any[]) => any,
       );
     }
   };
-}
-
-type CloneFunction = <C>(obj: C) => C;
-
-let cloneFunc: CloneFunction = fastClone;
-
-function clone(obj) {
-  try {
-    return cloneFunc(obj);
-  } catch (e) {
-    const msg =
-      'useStateDecorator: Cannot clone object. Call setCloneFunction with another implementation like lodash/cloneDeep.';
-    if (process.env.NODE_ENV === 'development') {
-      console.error(msg);
-      console.error(e.toString());
-    }
-    throw new Error(msg);
-  }
-}
-
-export function setCloneFunction(cloneFn: CloneFunction) {
-  cloneFunc = cloneFn;
 }
 
 type PromiseMap = { [name: string]: { promise: Promise<any>; refArgs: any[] } };
@@ -445,10 +471,6 @@ export function cleanHistoryAfterOptimistAction<S>(
   return optimisticData;
 }
 
-function isTriggerRetryError(error: Error) {
-  return error instanceof TypeError;
-}
-
 /**
  * Returns a function that decorates the asynchronous action.
  * It will dispatch actions for the useReducer.
@@ -601,6 +623,8 @@ export function decorateAsyncAction<S, F extends (...args: any[]) => any, A exte
             notifyError(msg);
           }
         }
+
+        onAsyncError(error, errorHandled);
 
         const result = !errorHandled || asyncAction.rejectPromiseOnError ? Promise.reject(error) : undefined;
 
