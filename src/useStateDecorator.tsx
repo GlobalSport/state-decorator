@@ -135,6 +135,11 @@ type OnPropsChangeReducer<S, P> = (s: S, newProps: P, updatedIndices: number[]) 
 
 export type StateDecoratorOptions<S, A, P = {}> = {
   /**
+   * The state decorator name. Use in debug traces to identify the useStateDecorator instance.
+   */
+  name?: string;
+
+  /**
    * Show logs in the console in development mode.
    */
   logEnabled?: boolean;
@@ -206,7 +211,7 @@ function processAdvancedSyncAction<S, F extends (...args: any[]) => any, A exten
   dispatch({ actionName, args, props: propsRef.current, type: ReducerActionType.ACTION });
   if (action.onActionDone) {
     addSideEffect(sideEffectsRef, (s: S) => {
-      logSingle(actionName, args, options.logEnabled, 'onActionDone SIDE EFFECT');
+      logSingle(options.name, actionName, args, options.logEnabled, 'onActionDone SIDE EFFECT');
       action.onActionDone(s, args as any, propsRef.current, actionsRef.current);
     });
   }
@@ -268,6 +273,7 @@ export function decorateAdvancedSyncAction<S, F extends (...args: any[]) => any,
 type PromiseMap = { [name: string]: { promise: Promise<any>; refArgs: any[] } };
 
 function handleConflictingAction(
+  sdName: string,
   promises: PromiseMap,
   conflictActions: ConflictActionsMap,
   logEnabled: boolean,
@@ -293,11 +299,11 @@ function handleConflictingAction(
 
     switch (policy) {
       case ConflictPolicy.IGNORE:
-        logSingle(actionName, args, logEnabled, 'Drop request (Conflict policy is IGNORE)');
+        logSingle(sdName, actionName, args, logEnabled, 'Drop request (Conflict policy is IGNORE)');
         resolve();
         break;
       case ConflictPolicy.REJECT:
-        logSingle(actionName, args, logEnabled, 'Reject request (Conflict policy is REJECT)');
+        logSingle(sdName, actionName, args, logEnabled, 'Reject request (Conflict policy is REJECT)');
         reject(new Error(`An asynch action ${actionName} is already ongoing.`));
         break;
       case ConflictPolicy.KEEP_LAST: {
@@ -504,6 +510,7 @@ export function decorateAsyncAction<S, F extends (...args: any[]) => any, A exte
 
     if (!isParallel && promises[actionName]) {
       return handleConflictingAction(
+        options.name,
         promisesRef.current,
         conflictActionsRef.current,
         options.logEnabled,
@@ -523,7 +530,7 @@ export function decorateAsyncAction<S, F extends (...args: any[]) => any, A exte
     );
 
     if (p === null) {
-      logSingle(name, args, options.logEnabled, 'ABORTED');
+      logSingle(options.name, actionName, args, options.logEnabled, 'ABORTED');
       // this.markActionAsLoaded(name, conflictPolicy, promiseId);
 
       return null; // nothing to do
@@ -553,7 +560,7 @@ export function decorateAsyncAction<S, F extends (...args: any[]) => any, A exte
         if (asyncAction.onDone) {
           // delayed job after state update
           addSideEffect(sideEffectsRef, (s: S) => {
-            logSingle(actionName, args, options.logEnabled, 'onDone SIDE EFFECT');
+            logSingle(options.name, actionName, args, options.logEnabled, 'onDone SIDE EFFECT');
             asyncAction.onDone(s, result, args as any, propsRef.current, actionsRef.current);
           });
         }
@@ -725,7 +732,7 @@ function processAsyncReducer<S, A extends DecoratedActions, P>(
       if (action.preReducer) {
         newState = action.preReducer(state, args as any, props);
         newOptimisticData = pushActionToHistory(optimisticData, actionName, 'preReducer', args);
-        logStateChange(actionName as string, options.logEnabled, state, newState, args, 'preReducer');
+        logStateChange(options.name, actionName, options.logEnabled, state, newState, args, 'preReducer');
       }
 
       let loading = true;
@@ -764,7 +771,7 @@ function processAsyncReducer<S, A extends DecoratedActions, P>(
       if (action.reducer) {
         newState = action.reducer(state, result, args as any, props);
         newOptimisticData = pushActionToHistory(optimisticData, actionName, 'reducer', [result, args, props]);
-        logStateChange(actionName as string, options.logEnabled, state, newState, args, 'reducer');
+        logStateChange(options.name, actionName, options.logEnabled, state, newState, args, 'reducer');
       }
 
       if (optimisticData.optimisticActions[actionName]) {
@@ -812,7 +819,7 @@ function processAsyncReducer<S, A extends DecoratedActions, P>(
           props,
         ]);
 
-        logStateChange(actionName as string, options.logEnabled, state, newState, args, 'errorReducer');
+        logStateChange(options.name, actionName, options.logEnabled, state, newState, args, 'errorReducer');
       }
 
       return createNewHookState(
@@ -851,7 +858,7 @@ export function getUseReducer<S, A extends DecoratedActions, P>(
     if (type === ReducerActionType.ON_PROP_CHANGE_REDUCER) {
       const newState = options.onPropsChangeReducer(state, props, args as number[]);
       if (newState !== null) {
-        logStateChange('onPropsChangeReducer', options.logEnabled, state, newState, [], '');
+        logStateChange(options.name, 'onPropsChangeReducer', options.logEnabled, state, newState, [], '');
         const newOptimisticData = pushActionToHistory(hookState.optimisticData, actionName, 'onPropChangeReducer', [
           props,
         ]);
@@ -867,13 +874,13 @@ export function getUseReducer<S, A extends DecoratedActions, P>(
       if (newState !== null) {
         newOptimisticData = pushActionToHistory(optimisticData, actionName, null, [args, props]);
       }
-      logStateChange(actionName as string, options.logEnabled, state, newState, args, null);
+      logStateChange(options.name, actionName, options.logEnabled, state, newState, args, null);
       return newState === null ? hookState : { ...hookState, state: newState, optimisticData: newOptimisticData };
     }
 
     if (isAdvancedSyncAction(action)) {
       const newState = action.action(state, args as any, props);
-      logStateChange(actionName as string, options.logEnabled, state, newState, args, null);
+      logStateChange(options.name, actionName, options.logEnabled, state, newState, args, null);
 
       if (newState !== null) {
         newOptimisticData = pushActionToHistory(optimisticData, actionName, null, [args, props]);
@@ -943,7 +950,7 @@ export function handlePropChange<S, A extends DecoratedActions, P>(
     }
     if (onPropsChange) {
       addNewSideEffect(sideEffectsRef, (s: S) => {
-        logSingle('onPropsChange', [], options.logEnabled);
+        logSingle(options.name, 'onPropsChange', [], options.logEnabled);
         onPropsChange(s, props, actionsRef.current, indices);
       });
     }

@@ -42,7 +42,10 @@ function ConflictingActionsContainer(props: Props) {
     [props.conflictPolicy]
   );
 
-  const { state, actions } = useStateDecorator(getInitialState, actionsImpl, props);
+  const { state, actions } = useStateDecorator(getInitialState, actionsImpl, props, {
+    name: `conflict ${title}`,
+    logEnabled: true,
+  });
   const { counter, text } = state;
 
   return (

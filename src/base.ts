@@ -221,6 +221,7 @@ function buildDiff<S>(oldState: S, newState: S) {
 
 export function logStateChange<S>(
   name: string,
+  actionName: string,
   logEnabled: boolean,
   oldState: S,
   newState: S,
@@ -232,7 +233,9 @@ export function logStateChange<S>(
     if (newState === null) {
       return null;
     }
-    console.group(`[StateDecorator] Action ${name} ${source || ''} ${failed ? 'FAILED' : ''}`);
+    console.group(
+      `[StateDecorator${name ? ' ' : ''}${name || ''}] Action ${actionName} ${source || ''} ${failed ? 'FAILED' : ''}`
+    );
     if (Object.keys(args).length > 0) {
       console.group('Arguments');
       Object.keys(args).forEach((prop) => console.log(prop, ':', args[prop]));
@@ -255,9 +258,9 @@ export function logStateChange<S>(
   }
 }
 
-export function logSingle(name: string, args: any[], logEnabled: boolean, state: string = '') {
+export function logSingle(name: string, actionName: string, args: any[], logEnabled: boolean, state: string = '') {
   if (process.env.NODE_ENV === 'development' && logEnabled) {
-    console.group(`[StateDecorator] Action ${name} ${state}`);
+    console.group(`[StateDecorator${name ? ' ' : ''}${name || ''}] Action ${actionName} ${state}`);
     if (Object.keys(args).length > 0) {
       console.group('Arguments');
       Object.keys(args).forEach((prop) => console.log(prop, ':', args[prop]));

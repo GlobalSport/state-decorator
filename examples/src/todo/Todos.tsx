@@ -201,7 +201,7 @@ export const todoActions: StateDecoratorActions<State, Actions> = {
 
 // Container that is managing the state.
 export default function TodoContainer() {
-  const { state, actions } = useStateDecorator(getInitialState, todoActions);
+  const { state, actions } = useStateDecorator(getInitialState, todoActions, {}, { name: 'TODO', logEnabled: true });
   const todoProps = pick(state, 'todoMap', 'todoIds', 'filter');
 
   return (
