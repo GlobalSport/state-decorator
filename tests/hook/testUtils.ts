@@ -12,7 +12,12 @@ export function getFailedTimeoutPromise<C>(timeout: number, err: C = null): Prom
 
 export function getAsyncContext() {
   const dispatch = jest.fn();
-  const propsRef = {
+  type P = {
+    prop: string;
+    notifySuccess?: (s: string) => void;
+    notifyError?: (s: string) => void;
+  };
+  const propsRef: { current: P } = {
     current: {
       prop: 'prop',
     },

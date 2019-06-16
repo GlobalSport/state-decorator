@@ -19,8 +19,11 @@ describe('decorateAsyncAction', () => {
     const actions = {
       setValue: {
         promise: () => getTimeoutPromise(0, 'result'),
+        getSuccessMessage: (result) => `success message: ${result}`,
       },
     };
+
+    const notifySuccess = jest.fn();
 
     const action = decorateAsyncAction(
       ctx.dispatch,
@@ -32,7 +35,7 @@ describe('decorateAsyncAction', () => {
       ctx.sideEffectRef,
       ctx.promisesRef,
       ctx.conflicActionsRef,
-      {},
+      { notifySuccess },
       addSideEffect
     );
 
@@ -59,6 +62,8 @@ describe('decorateAsyncAction', () => {
       });
 
       expect(addSideEffect).not.toHaveBeenCalled();
+
+      expect(notifySuccess).toHaveBeenCalledWith('success message: result');
     });
   });
 
@@ -66,9 +71,12 @@ describe('decorateAsyncAction', () => {
     const ctx = getAsyncContext();
     const addSideEffect = jest.fn(addNewSideEffect);
 
+    ctx.propsRef.current.notifySuccess = jest.fn();
+
     const actions = {
       setValue: {
         promise: () => getTimeoutPromise(100, 'result'),
+        getSuccessMessage: (result) => `success message: ${result}`,
         onDone: jest.fn(),
       },
     };
@@ -118,6 +126,8 @@ describe('decorateAsyncAction', () => {
         ctx.propsRef.current,
         ctx.actionsRef.current
       );
+
+      expect(ctx.propsRef.current.notifySuccess).toHaveBeenCalledWith('success message: result');
     });
   });
 
@@ -130,7 +140,7 @@ describe('decorateAsyncAction', () => {
       setValue: {
         promise: () => getFailedTimeoutPromise(100, 'error'),
         onDone: jest.fn(),
-        getErrorMessage: () => 'error message',
+        getErrorMessage: (error) => `error message: ${error}`,
       },
     };
 
@@ -173,7 +183,46 @@ describe('decorateAsyncAction', () => {
         rawActionsRef: { current: actions },
         error: 'error',
       });
-      expect(options.notifyError).toHaveBeenCalledWith('error message');
+      expect(options.notifyError).toHaveBeenCalledWith('error message: error');
+      done();
+    });
+  });
+
+  it('dispatches an async action correctly (error, notify from props)', (done) => {
+    const ctx = getAsyncContext();
+
+    const addSideEffect = jest.fn(addNewSideEffect);
+
+    const actions = {
+      setValue: {
+        promise: () => getFailedTimeoutPromise(100, 'error'),
+        onDone: jest.fn(),
+        getErrorMessage: (error) => `error message: ${error}`,
+      },
+    };
+
+    const options = {};
+
+    ctx.propsRef.current.notifyError = jest.fn();
+
+    const action = decorateAsyncAction(
+      ctx.dispatch,
+      'setValue',
+      ctx.stateRef,
+      ctx.propsRef,
+      ctx.actionsRef,
+      { current: actions },
+      ctx.sideEffectRef,
+      ctx.promisesRef,
+      ctx.conflicActionsRef,
+      options,
+      addSideEffect
+    );
+
+    expect(typeof action === 'function').toBeTruthy();
+
+    return action('value').then(() => {
+      expect(ctx.propsRef.current.notifyError).toHaveBeenCalledWith('error message: error');
       done();
     });
   });
