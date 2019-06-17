@@ -917,7 +917,7 @@ export function getInitialHookState<S, A extends DecoratedActions, P>(
   stateInitializer: (props?: P) => S,
   actions: StateDecoratorActions<S, A, P>,
   props: P,
-  initialActionsMarkedLoading: string[]
+  initialActionsMarkedLoading: string[] = []
 ): HookState<S, A> {
   const names = Object.keys(actions);
   const initialActions = toMap(initialActionsMarkedLoading, (i) => i, (_) => true);

@@ -32,6 +32,22 @@ describe('getInitialHookState', () => {
       value: p.prop,
     });
 
+    const hookState = getInitialHookState(getInitialState, actions, { prop: 'propValue' });
+
+    expect(hookState.state).toEqual({ value: 'propValue' });
+
+    expect(hookState.optimisticData).toEqual({
+      shouldRecordHistory: false,
+      optimisticActions: {},
+      history: [],
+    });
+  });
+
+  it('create hook state correctly (with initial action)', () => {
+    const getInitialState = (p: P): S => ({
+      value: p.prop,
+    });
+
     const hookState = getInitialHookState(getInitialState, actions, { prop: 'propValue' }, ['setValue2', 'setValue4']);
 
     expect(hookState.state).toEqual({ value: 'propValue' });
