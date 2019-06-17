@@ -38,7 +38,7 @@ In 'state-decorator/StateDecorator' both the hook and the legacy are contained:
 - no need to import from both `state-decorator/StateDecorator` and `state-decorator/StateDecorator`: you would double the imported code size.
 - you can import the hook from `state-decorator/StateDecorator` during migration:
 
-  - `typescript import { useStateDecorator } from 'state-decorator/StateDecorator';`
+  - `import { useStateDecorator } from 'state-decorator/StateDecorator';`
 
 ## Migrating from the StateDecorator to useStateDecorator
 
