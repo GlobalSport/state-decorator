@@ -69,7 +69,7 @@ type GlobalAsyncHook = (error: any, isHandled: boolean) => void;
 let onAsyncError: GlobalAsyncHook = (f: GlobalAsyncHook) => {};
 
 /**
- * Set a global callbakc function to handle asynchronous promise rejection errors.
+ * Sets a global callbakc function to handle asynchronous promise rejection errors.
  */
 export function setOnAsyncError(f: GlobalAsyncHook) {
   onAsyncError = f;
@@ -80,7 +80,7 @@ type TriggerReryError = (error: any) => boolean;
 let isTriggerRetryError: TriggerReryError = (error: Error) => error instanceof TypeError;
 
 /**
- * Set a function that tests if the error will trigger a retry of the action or will fail directly.
+ * Sets a function that tests if the error will trigger a retry of the action or will fail directly.
  * Default implementation is returning true for TypeError instances only.
  */
 export function SetIsTriggerRetryError(f: TriggerReryError) {
@@ -132,6 +132,8 @@ type OptimisticData<S> = {
 };
 
 type OnPropsChangeReducer<S, P> = (s: S, newProps: P, updatedIndices: number[]) => S;
+
+type PromiseMap = { [name: string]: { promise: Promise<any>; refArgs: any[] } };
 
 export type StateDecoratorOptions<S, A, P = {}> = {
   /**
@@ -195,7 +197,6 @@ export function decorateSyncAction<S, F extends (...args: any[]) => any, A exten
 
 /**
  * Stores in the side effect ref a new array that contains the new side effect.
- * @param sideEffectsRef
  */
 export function addNewSideEffect<S>(
   sideEffectsRef: React.MutableRefObject<SideEffects<S>>,
@@ -277,8 +278,9 @@ export function decorateAdvancedSyncAction<S, F extends (...args: any[]) => any,
   };
 }
 
-type PromiseMap = { [name: string]: { promise: Promise<any>; refArgs: any[] } };
-
+/**
+ * Handles a conflicting action depending on the action conflict policy.
+ */
 function handleConflictingAction(
   sdName: string,
   promises: PromiseMap,
@@ -339,7 +341,7 @@ function handleConflictingAction(
 }
 
 /**
- * Processes next conflicting action (seee Conflict policy) in the queue.
+ * Processes next conflicting action (see ConflictPolicy) in the queue.
  */
 function processNextConflictAction<A>(actionName: string, actions: A, conflictActions: ConflictActionsMap) {
   const futureActions = conflictActions[actionName];
@@ -1096,9 +1098,8 @@ export default function useStateDecorator<S, A extends DecoratedActions, P = {}>
 
   oldPropsRef.current = props;
 
-  const loading = isLoading(hookState.loadingMap);
   return {
-    loading,
+    loading: isLoading(hookState.loadingMap),
     state: hookState.state,
     actions: decoratedActions,
     loadingMap: hookState.loadingMap,
