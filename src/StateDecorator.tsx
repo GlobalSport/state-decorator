@@ -695,6 +695,8 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
       const rawAction = actions[action.name];
       if (isAsyncAction(rawAction)) {
         state = rawAction[action.reducer](state, ...action.args);
+      } else if (isAdvancedSyncAction(rawAction)) {
+        state = (rawAction as any).action(state, ...action.args);
       } else {
         state = (rawAction as any)(state, ...action.args);
       }
