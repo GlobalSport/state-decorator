@@ -86,6 +86,49 @@ describe('StateDecorator', () => {
     wrapper = shallow(<StateDecorator {...props}>{render}</StateDecorator>);
   });
 
+  it('handles initialActionsMarkedLoading correctly', (done) => {
+    let wrapper;
+
+    type State = {
+      value: number;
+    };
+    type Actions = {
+      action: (value: number) => Promise<number>;
+      action2: (value: number) => Promise<number>;
+    };
+    type Props = {
+      onSaveState: (s: State) => void;
+    };
+
+    const actions: StateDecoratorActions<State, Actions, Props> = {
+      action: {
+        promise: ([value]) => new Promise((res) => setTimeout(res, 100, value)),
+      },
+      action2: {
+        promise: ([value]) => new Promise((res) => setTimeout(res, 100, value)),
+      },
+    };
+
+    const render = jestFail(done, (state, actions, loading, loadingMap) => {
+      expect(loading).toBeTruthy();
+      expect(loadingMap.action).toBeTruthy();
+      expect(loadingMap.action2).toBeFalsy();
+      done();
+      return <div />;
+    });
+
+    const props = {
+      actions,
+      initialActionsMarkedLoading: ['action'],
+    };
+
+    wrapper = shallow(
+      <StateDecorator {...props} initialState={{ value: 10 }}>
+        {render}
+      </StateDecorator>
+    );
+  });
+
   it('handles onUnload to save state', (done) => {
     let wrapper;
 
@@ -902,11 +945,11 @@ describe('StateDecorator', () => {
         expect(loading).toBeTruthy();
       }
 
-      if (loading.get === false) {
+      if (loadingMap.get === false) {
         expect(state.get).toEqual('value1');
       }
 
-      if (loading.get2 === false) {
+      if (loadingMap.get2 === false) {
         expect(state.get2).toEqual('value2');
       }
 

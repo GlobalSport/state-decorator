@@ -235,6 +235,13 @@ export interface StateDecoratorProps<S, A extends DecoratedActions, P = {}> {
   actions: StateDecoratorActions<S, A, P>;
 
   /**
+   * List of action names that are marked as loading at initial time.
+   * As a render is done before first actions can be trigerred, some actions can be marked as loading at
+   * initial time.
+   */
+  initialActionsMarkedLoading?: string[];
+
+  /**
    * The initial state. Ie before any reducer is called.
    */
   initialState?: S;
@@ -830,9 +837,11 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
   decorateActions = (actions: StateDecoratorActions<S, A, P>): A => {
     const asynchActionNames = Object.keys(actions).filter((k) => isAsyncAction(actions[k]));
 
+    const initialLoading = this.props.initialActionsMarkedLoading || [];
+
     this.loadingMap = asynchActionNames.reduce(
       (acc, name) => {
-        acc[name as keyof A] = undefined;
+        acc[name as keyof A] = initialLoading.indexOf(name) === -1 ? undefined : true;
         return acc;
       },
       {} as InternalLoadingMap<A>
@@ -1363,7 +1372,11 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
 
   state = {
     data: this.props.initialState === undefined ? undefined : this.props.initialState,
-    loading: false,
+    loading:
+      this.props.initialActionsMarkedLoading &&
+      this.props.initialActionsMarkedLoading.length > 0 &&
+      Object.keys(this.props.actions).find((name) => this.props.initialActionsMarkedLoading.indexOf(name) !== -1) !=
+        null,
     refValues: this.props.getPropsRefValues && this.props.props && this.props.getPropsRefValues(this.props.props),
     actions: this.actions,
   };
