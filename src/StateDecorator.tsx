@@ -49,6 +49,13 @@ export interface StateDecoratorProps<S, A extends DecoratedActions, P = {}> {
   initialState?: S;
 
   /**
+   * List of action names that are marked as loading at initial time.
+   * As a render is done before first actions can be trigerred, some actions can be marked as loading at
+   * initial time.
+   */
+  initialActionsMarkedLoading?: string[];
+
+  /**
    * Optional properties to pass to actions.
    */
   props?: P;
@@ -128,6 +135,7 @@ const StateDecorator = function StateDecorator<S, A extends DecoratedActions, P 
   const {
     initialState,
     actions,
+    initialActionsMarkedLoading,
     logEnabled,
     getPropsRefValues,
     onPropsChange,
@@ -147,6 +155,7 @@ const StateDecorator = function StateDecorator<S, A extends DecoratedActions, P 
     actions,
     props.props,
     {
+      initialActionsMarkedLoading,
       logEnabled,
       getPropsRefValues,
       notifySuccess,

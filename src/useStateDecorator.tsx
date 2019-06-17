@@ -145,6 +145,13 @@ export type StateDecoratorOptions<S, A, P = {}> = {
   logEnabled?: boolean;
 
   /**
+   * List of action names that are marked as loading at initial time.
+   * As a render is done before first actions can be trigerred, some actions can be marked as loading at
+   * initial time.
+   */
+  initialActionsMarkedLoading?: string[];
+
+  /**
    * Get a list of values that will be use as reference values.
    * If they are different (shallow compare), onPropsChangeReducer then onPropsChange will be called.
    */
@@ -909,13 +916,15 @@ export function getUseReducer<S, A extends DecoratedActions, P>(
 export function getInitialHookState<S, A extends DecoratedActions, P>(
   stateInitializer: (props?: P) => S,
   actions: StateDecoratorActions<S, A, P>,
-  props: P
+  props: P,
+  initialActionsMarkedLoading: string[]
 ): HookState<S, A> {
   const names = Object.keys(actions);
+  const initialActions = toMap(initialActionsMarkedLoading, (i) => i, (_) => true);
   return {
     sideEffectRender: 0,
     state: stateInitializer(props),
-    loadingMap: toMap(names, (n) => n, () => undefined) as LoadingMap<A>,
+    loadingMap: toMap(names, (n) => n, (n) => initialActions[n]) as LoadingMap<A>,
     loadingParallelMap: toMap(names, (n) => n, () => ({})) as LoadingMapParallelActions<A>,
     optimisticData: {
       history: [],
@@ -1032,7 +1041,10 @@ export default function useStateDecorator<S, A extends DecoratedActions, P = {}>
 
   const reducer = useMemo(() => getUseReducer(actions, options), []); // actions are static
 
-  const [hookState, dispatch] = useReducer(reducer, getInitialHookState(stateInitializer, actions, props));
+  const [hookState, dispatch] = useReducer(
+    reducer,
+    getInitialHookState(stateInitializer, actions, props, options.initialActionsMarkedLoading)
+  );
   stateRef.current = hookState.state;
 
   const decoratedActions = useMemo(() => {
