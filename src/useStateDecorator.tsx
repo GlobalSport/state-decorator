@@ -540,8 +540,6 @@ export function decorateAsyncAction<S, F extends (...args: any[]) => any, A exte
 
     if (p === null) {
       logSingle(options.name, actionName, args, options.logEnabled, 'ABORTED');
-      // this.markActionAsLoaded(name, conflictPolicy, promiseId);
-
       return null; // nothing to do
     }
 
@@ -644,7 +642,7 @@ export function decorateAsyncAction<S, F extends (...args: any[]) => any, A exte
 
         const result = !errorHandled || asyncAction.rejectPromiseOnError ? Promise.reject(error) : undefined;
 
-        delete promisesRef.current[actionName];
+        delete promises[actionName];
 
         processNextConflictAction(name, actionsRef.current, conflictActionsRef.current);
 
