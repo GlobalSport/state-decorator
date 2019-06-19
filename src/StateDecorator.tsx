@@ -1407,6 +1407,7 @@ type ExtraProps<S, A extends DecoratedActions, P> = Pick<
   | 'notifyError'
   | 'onMount'
   | 'logEnabled'
+  | 'initialActionsMarkedLoading'
 >;
 
 function getDisplayName(WrappedComponent: React.ComponentType<any>) {
