@@ -18,13 +18,15 @@ import {
   ConflictPolicy,
 } from './types';
 import { useOnMount, useOnUnmount, useOnUnload } from './hooks';
-import useStateDecorator, { setCloneFunction, setOnAsyncError, SetIsTriggerRetryError } from './useStateDecorator';
+import useStateDecorator, { setCloneFunction, setOnAsyncError, setIsTriggerRetryError } from './useStateDecorator';
 import { testSyncAction, testAsyncAction, testAdvancedSyncAction } from './base';
 
 export {
   StateDecoratorActions,
   ConflictPolicy,
   LoadingProps,
+  LoadingMap,
+  LoadingMapParallelActions,
   useStateDecorator,
   useOnMount,
   useOnUnmount,
@@ -34,7 +36,7 @@ export {
   testAdvancedSyncAction,
   setCloneFunction,
   setOnAsyncError,
-  SetIsTriggerRetryError,
+  setIsTriggerRetryError as SetIsTriggerRetryError,
 };
 
 export interface StateDecoratorProps<S, A extends DecoratedActions, P = {}> {
@@ -169,6 +171,24 @@ const StateDecorator = function StateDecorator<S, A extends DecoratedActions, P 
     <React.Fragment>{props.children(state, decoratedActions, loading, loadingMap, loadingParallelMap)}</React.Fragment>
   );
 };
+
+Object.defineProperties(StateDecorator, {
+  clone: {
+    set: (f) => {
+      setCloneFunction(f);
+    },
+  },
+  onAsyncError: {
+    set: (f) => {
+      setOnAsyncError(f);
+    },
+  },
+  isTriggerRetryError: {
+    set: (f) => {
+      setIsTriggerRetryError(f);
+    },
+  },
+});
 
 type ExtraProps<S, A extends DecoratedActions, P> = Pick<
   StateDecoratorProps<S, A, P>,

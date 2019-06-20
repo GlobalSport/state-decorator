@@ -83,7 +83,7 @@ let isTriggerRetryError: TriggerReryError = (error: Error) => error instanceof T
  * Sets a function that tests if the error will trigger a retry of the action or will fail directly.
  * Default implementation is returning true for TypeError instances only.
  */
-export function SetIsTriggerRetryError(f: TriggerReryError) {
+export function setIsTriggerRetryError(f: TriggerReryError) {
   isTriggerRetryError = f;
 }
 
@@ -1021,7 +1021,7 @@ function isPropsChanged<P>(
  * The state decorator hook.
  */
 export default function useStateDecorator<S, A extends DecoratedActions, P = {}>(
-  stateInitializer: (props?: P) => S,
+  stateInitializer: (props?: Partial<P>) => S,
   actions: StateDecoratorActions<S, A, P>,
   props: P = {} as P,
   options: StateDecoratorOptions<S, A, P> = {}
@@ -1104,3 +1104,5 @@ export default function useStateDecorator<S, A extends DecoratedActions, P = {}>
     loadingParallelMap: hookState.loadingParallelMap,
   };
 }
+
+export { LoadingMap, LoadingMapParallelActions };
