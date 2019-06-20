@@ -11,7 +11,7 @@
   "license": "MIT",
   "scripts": {
     "test": "jest tests",
-    "bump-version": "yarn test && yarn clean && yarn build && yarn rimraf ./dist/useStateDecorator && bump --prompt --commit --tag --push",
+    "bump-version": "yarn test && yarn clean && yarn build && yarn rimraf ./dist/useStateDecorator && bump --commit 'build: release v%s' --tag --push",
     "clean": "rimraf ./dist",
     "build": "yarn build:hooks && yarn build:render-props",
     "build:hooks": "cross-env NODE_ENV=production rollup -c rollup.config.js",
@@ -54,7 +54,7 @@
     "tslint-config-prettier": "^1.15.0",
     "tslint-react-hooks": "^2.0.0",
     "typescript": "^3.4.5",
-    "version-bump-prompt": "^4.1.0"
+    "version-bump-prompt": "^5.0.3"
   },
   "peerDependencies": {
     "react": "^16.4.0",
