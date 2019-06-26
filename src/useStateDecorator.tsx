@@ -95,8 +95,11 @@ type HookState<S, A> = {
   optimisticData: OptimisticData<S>;
 };
 
-type SideEffect<S> = (s: S) => void;
-type SideEffects<S> = SideEffect<S>[];
+type SideEffect<S, A extends DecoratedActions, P> = (
+  s: S,
+  dispatch?: React.Dispatch<ReducerAction<S, any, A, P>>
+) => void;
+type SideEffects<S, A extends DecoratedActions, P> = SideEffect<S, A, P>[];
 
 type DebounceMap = {
   [name: string]: any;
@@ -198,9 +201,9 @@ export function decorateSyncAction<S, F extends (...args: any[]) => any, A exten
 /**
  * Stores in the side effect ref a new array that contains the new side effect.
  */
-export function addNewSideEffect<S>(
-  sideEffectsRef: React.MutableRefObject<SideEffects<S>>,
-  newSideEffect: SideEffect<S>
+export function addNewSideEffect<S, A extends DecoratedActions, P>(
+  sideEffectsRef: React.MutableRefObject<SideEffects<S, A, P>>,
+  newSideEffect: SideEffect<S, A, P>
 ) {
   sideEffectsRef.current.push(newSideEffect);
 }
@@ -212,7 +215,7 @@ function processAdvancedSyncAction<S, F extends (...args: any[]) => any, A exten
   args: Parameters<F>,
   propsRef: React.MutableRefObject<P>,
   actionsRef: React.MutableRefObject<A>,
-  sideEffectsRef: React.MutableRefObject<SideEffects<S>>,
+  sideEffectsRef: React.MutableRefObject<SideEffects<S, A, P>>,
   options: StateDecoratorOptions<S, A, P>,
   addSideEffect: typeof addNewSideEffect
 ) {
@@ -235,7 +238,7 @@ export function decorateAdvancedSyncAction<S, F extends (...args: any[]) => any,
   action: AdvancedSynchAction<S, F, A, P>,
   propsRef: React.MutableRefObject<P>,
   actionsRef: React.MutableRefObject<A>,
-  sideEffectsRef: React.MutableRefObject<SideEffects<S>>,
+  sideEffectsRef: React.MutableRefObject<SideEffects<S, A, P>>,
   options: StateDecoratorOptions<S, A, P>,
   addSideEffect: typeof addNewSideEffect,
   debounceActionMapRef: React.MutableRefObject<DebounceMap>
@@ -354,7 +357,13 @@ function processNextConflictAction<A>(actionName: string, actions: A, conflictAc
       if (p == null) {
         processNextConflictAction(actionName, actions, conflictActions);
       } else {
-        p.then(futureAction.resolve).catch((e) => futureAction.reject(e));
+        p.then((res) => {
+          if (res === null) {
+            // promise was aborted
+            processNextConflictAction(actionName, actions, conflictActions);
+          }
+          futureAction.resolve(res);
+        }).catch((e) => futureAction.reject(e));
       } // else aborted
     }
   }
@@ -486,6 +495,131 @@ export function cleanHistoryAfterOptimistAction<S>(
   return optimisticData;
 }
 
+export function sendRequest<S, F extends (...args: any[]) => any, A extends DecoratedActions, P>(
+  dispatch: React.Dispatch<ReducerAction<S, F, A, P>>,
+  state: S,
+  actionName: string,
+  asyncAction: AsynchActionPromise<S, F, A, P>,
+  args: Parameters<F>,
+  promiseId: string,
+  propsRef: React.MutableRefObject<P>,
+  actionsRef: React.MutableRefObject<A>,
+  rawActionsRef: React.MutableRefObject<StateDecoratorActions<S, A, P>>,
+  sideEffectsRef: React.MutableRefObject<SideEffects<S, A, P>>,
+  promisesRef: React.MutableRefObject<PromiseMap>,
+  conflictActionsRef: React.MutableRefObject<ConflictActionsMap>,
+  options: StateDecoratorOptions<S, A, P>,
+  addSideEffect: typeof addNewSideEffect
+) {
+  const { current: promises } = promisesRef;
+  const { promise, retryCount, retryDelaySeed } = asyncAction;
+
+  let p = retryDecorator(promise, retryCount ? 1 + retryCount : 1, retryDelaySeed, isTriggerRetryError)(
+    args,
+    state,
+    propsRef.current,
+    actionsRef.current
+  );
+
+  if (p === null) {
+    // remove current promise that was pending in decorated action.
+    delete promises[actionName];
+
+    logSingle(options.name, actionName, args, options.logEnabled, 'ABORTED');
+
+    return null; // nothing to do
+  }
+
+  p = p
+    .then((result: PromiseResult<ReturnType<F>>) => {
+      if (asyncAction.onDone) {
+        // delayed job after state update
+        addSideEffect(sideEffectsRef, (s: S) => {
+          logSingle(options.name, actionName, args, options.logEnabled, 'onDone SIDE EFFECT');
+          asyncAction.onDone(s, result, args as any, propsRef.current, actionsRef.current);
+        });
+      }
+
+      dispatch({
+        actionName,
+        args,
+        result,
+        promiseId,
+        props: propsRef.current,
+        type: ReducerActionType.ACTION,
+        subType: ReducerActionSubType.SUCCESS,
+      });
+
+      delete promisesRef.current[actionName];
+
+      const notifySuccess = options.notifySuccess || propsRef.current['notifySuccess'];
+      if (notifySuccess) {
+        let msg: string;
+
+        if (asyncAction.getSuccessMessage) {
+          msg = asyncAction.getSuccessMessage(result, args, propsRef.current);
+        }
+
+        if (!msg) {
+          msg = asyncAction.successMessage;
+        }
+
+        if (msg) {
+          notifySuccess(msg);
+        }
+      }
+
+      processNextConflictAction(actionName, actionsRef.current, conflictActionsRef.current);
+
+      return result;
+    })
+    .catch((error: any) => {
+      dispatch({
+        actionName,
+        args,
+        error,
+        promiseId,
+        rawActionsRef,
+        props: propsRef.current,
+        type: ReducerActionType.ACTION,
+        subType: ReducerActionSubType.ERROR,
+      });
+
+      const notifyError = options.notifyError || propsRef.current['notifyError'];
+
+      let errorHandled = false;
+
+      if (notifyError && (asyncAction.errorMessage || asyncAction.getErrorMessage)) {
+        let msg: string;
+
+        errorHandled = true;
+
+        if (asyncAction.getErrorMessage) {
+          msg = asyncAction.getErrorMessage(error, args, propsRef.current);
+        }
+
+        if (!msg) {
+          msg = asyncAction.errorMessage;
+        }
+
+        if (msg) {
+          notifyError(msg);
+        }
+      }
+
+      onAsyncError(error, errorHandled);
+
+      const result = !errorHandled || asyncAction.rejectPromiseOnError ? Promise.reject(error) : undefined;
+
+      delete promises[actionName];
+
+      processNextConflictAction(name, actionsRef.current, conflictActionsRef.current);
+
+      return result;
+    });
+  return p;
+}
+
 /**
  * Returns a function that decorates the asynchronous action.
  * It will dispatch actions for the useReducer.
@@ -497,7 +631,7 @@ export function decorateAsyncAction<S, F extends (...args: any[]) => any, A exte
   propsRef: React.MutableRefObject<P>,
   actionsRef: React.MutableRefObject<A>,
   rawActionsRef: React.MutableRefObject<StateDecoratorActions<S, A, P>>,
-  sideEffectsRef: React.MutableRefObject<SideEffects<S>>,
+  sideEffectsRef: React.MutableRefObject<SideEffects<S, A, P>>,
   promisesRef: React.MutableRefObject<PromiseMap>,
   conflictActionsRef: React.MutableRefObject<ConflictActionsMap>,
   options: StateDecoratorOptions<S, A, P>,
@@ -506,6 +640,7 @@ export function decorateAsyncAction<S, F extends (...args: any[]) => any, A exte
   return (...args: Parameters<F>): Promise<any> => {
     const action: StateDecoratorAction<S, any, A, P> = rawActionsRef.current[actionName];
     let asyncAction: AsynchActionPromise<S, any, A, P>;
+
     if (isAsyncAction(action)) {
       asyncAction = computeAsyncActionInput(action);
     } else {
@@ -514,7 +649,6 @@ export function decorateAsyncAction<S, F extends (...args: any[]) => any, A exte
 
     const { conflictPolicy = ConflictPolicy.KEEP_ALL } = asyncAction;
     const { current: promises } = promisesRef;
-
     const isParallel = conflictPolicy === ConflictPolicy.PARALLEL;
 
     if (!isParallel && promises[actionName]) {
@@ -529,20 +663,6 @@ export function decorateAsyncAction<S, F extends (...args: any[]) => any, A exte
       );
     }
 
-    const { promise, retryCount, retryDelaySeed } = asyncAction;
-
-    let p = retryDecorator(promise, retryCount ? 1 + retryCount : 1, retryDelaySeed, isTriggerRetryError)(
-      args,
-      stateRef.current,
-      propsRef.current,
-      actionsRef.current
-    );
-
-    if (p === null) {
-      logSingle(options.name, actionName, args, options.logEnabled, 'ABORTED');
-      return null; // nothing to do
-    }
-
     let promiseId = null;
     if (isParallel) {
       if (!asyncAction.getPromiseId) {
@@ -553,6 +673,41 @@ export function decorateAsyncAction<S, F extends (...args: any[]) => any, A exte
       promiseId = asyncAction.getPromiseId(...args);
     }
 
+    const p = new Promise((res, rej) => {
+      addSideEffect(sideEffectsRef, (s, d) => {
+        // send request when before promise action is done
+
+        const p = sendRequest(
+          d,
+          s,
+          actionName,
+          asyncAction,
+          args,
+          promiseId,
+          propsRef,
+          actionsRef,
+          rawActionsRef,
+          sideEffectsRef,
+          promisesRef,
+          conflictActionsRef,
+          options,
+          addSideEffect
+        );
+
+        if (p === null) {
+          // promise is aborted
+          res(null);
+        } else {
+          p.then(res).catch(rej);
+        }
+      });
+    });
+
+    promises[actionName] = {
+      promise: p,
+      refArgs: conflictPolicy === ConflictPolicy.REUSE && args.length > 0 ? [...args] : [],
+    };
+
     dispatch({
       actionName,
       args,
@@ -561,98 +716,6 @@ export function decorateAsyncAction<S, F extends (...args: any[]) => any, A exte
       type: ReducerActionType.ACTION,
       subType: ReducerActionSubType.BEFORE_PROMISE,
     });
-
-    p = p
-      .then((result: PromiseResult<ReturnType<F>>) => {
-        if (asyncAction.onDone) {
-          // delayed job after state update
-          addSideEffect(sideEffectsRef, (s: S) => {
-            logSingle(options.name, actionName, args, options.logEnabled, 'onDone SIDE EFFECT');
-            asyncAction.onDone(s, result, args as any, propsRef.current, actionsRef.current);
-          });
-        }
-        dispatch({
-          actionName,
-          args,
-          result,
-          promiseId,
-          props: propsRef.current,
-          type: ReducerActionType.ACTION,
-          subType: ReducerActionSubType.SUCCESS,
-        });
-
-        delete promisesRef.current[actionName];
-
-        const notifySuccess = options.notifySuccess || propsRef.current['notifySuccess'];
-        if (notifySuccess) {
-          let msg: string;
-
-          if (asyncAction.getSuccessMessage) {
-            msg = asyncAction.getSuccessMessage(result, args, propsRef.current);
-          }
-
-          if (!msg) {
-            msg = asyncAction.successMessage;
-          }
-
-          if (msg) {
-            notifySuccess(msg);
-          }
-        }
-
-        processNextConflictAction(actionName, actionsRef.current, conflictActionsRef.current);
-
-        return result;
-      })
-      .catch((error: any) => {
-        dispatch({
-          actionName,
-          args,
-          error,
-          promiseId,
-          rawActionsRef,
-          props: propsRef.current,
-          type: ReducerActionType.ACTION,
-          subType: ReducerActionSubType.ERROR,
-        });
-
-        const notifyError = options.notifyError || propsRef.current['notifyError'];
-
-        let errorHandled = false;
-
-        if (notifyError && (asyncAction.errorMessage || asyncAction.getErrorMessage)) {
-          let msg: string;
-
-          errorHandled = true;
-
-          if (asyncAction.getErrorMessage) {
-            msg = asyncAction.getErrorMessage(error, args, propsRef.current);
-          }
-
-          if (!msg) {
-            msg = asyncAction.errorMessage;
-          }
-
-          if (msg) {
-            notifyError(msg);
-          }
-        }
-
-        onAsyncError(error, errorHandled);
-
-        const result = !errorHandled || asyncAction.rejectPromiseOnError ? Promise.reject(error) : undefined;
-
-        delete promises[actionName];
-
-        processNextConflictAction(name, actionsRef.current, conflictActionsRef.current);
-
-        return result;
-      });
-
-    promises[actionName] = {
-      promise: p,
-      refArgs: conflictPolicy === ConflictPolicy.REUSE && args.length > 0 ? [...args] : [],
-    };
 
     return p;
   };
@@ -946,7 +1009,7 @@ export function handlePropChange<S, A extends DecoratedActions, P>(
   props: P,
   options: StateDecoratorOptions<S, A, P>,
   oldPropsRef: React.MutableRefObject<P>,
-  sideEffectsRef: React.MutableRefObject<SideEffects<S>>,
+  sideEffectsRef: React.MutableRefObject<SideEffects<S, A, P>>,
   actionsRef: React.MutableRefObject<A>
 ) {
   const { changed, indices } = isPropsChanged(oldPropsRef.current, props, options.getPropsRefValues);
@@ -970,12 +1033,20 @@ export function handlePropChange<S, A extends DecoratedActions, P>(
  * Registers a new side effect.
  * A side effect is a function that takes the current state and execute some side effects that doesn't change the state directly.
  */
-function processSideEffects<S>(state: S, sideEffectRef: React.MutableRefObject<SideEffects<S>>) {
+export function processSideEffects<S, A extends DecoratedActions, P>(
+  state: S,
+  dispatch: React.Dispatch<ReducerAction<S, any, A, P>>,
+  sideEffectRef: React.MutableRefObject<SideEffects<S, A, P>>
+) {
   if (sideEffectRef.current.length > 0) {
-    sideEffectRef.current.forEach((job) => {
-      job(state);
-    });
+    const jobs = sideEffectRef.current.concat();
+    // jobs will add new side effects to be processed in the future
     sideEffectRef.current = [];
+    try {
+      jobs.forEach((job) => job(state, dispatch));
+    } catch (e) {
+      console.error(e);
+    }
   }
 }
 
@@ -1030,7 +1101,7 @@ export default function useStateDecorator<S, A extends DecoratedActions, P = {}>
   const propsRef = useRef<P>();
   const actionsRef = useRef<A>();
   const rawActionsRef = useRef<StateDecoratorActions<S, A, P>>();
-  const sideEffectsRef = useRef<SideEffects<S>>([]);
+  const sideEffectsRef = useRef<SideEffects<S, A, P>>([]);
   const debounceActionMapRef = useRef<DebounceMap>({});
   const promisesRef = useRef<PromiseMap>({});
   const conflictActionsRef = useRef<ConflictActionsMap>({});
@@ -1089,7 +1160,7 @@ export default function useStateDecorator<S, A extends DecoratedActions, P = {}>
 
   actionsRef.current = decoratedActions;
 
-  processSideEffects(hookState.state, sideEffectsRef);
+  processSideEffects(hookState.state, dispatch, sideEffectsRef);
 
   // Prop change management
   handlePropChange(dispatch, props, options, oldPropsRef, sideEffectsRef, actionsRef);

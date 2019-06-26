@@ -1,4 +1,10 @@
-import { getInitialHookState, createNewHookState, decorateAsyncAction } from '../../src/useStateDecorator';
+import {
+  getInitialHookState,
+  createNewHookState,
+  decorateAsyncAction,
+  processSideEffects,
+  addNewSideEffect,
+} from '../../src/useStateDecorator';
 import { StateDecoratorActions, ConflictPolicy, AsynchActionPromise } from '../../src/types';
 import { getTimeoutPromise, getAsyncContext } from './testUtils';
 
@@ -140,15 +146,18 @@ describe('ConflictPolicy', () => {
       ctx.sideEffectRef,
       ctx.promisesRef,
       ctx.conflicActionsRef,
-      {},
-      jest.fn()
+      { logEnabled: true },
+      ctx.addSideEffect
     );
 
     ctx.actionsRef.current.setValue = action;
 
     action('id1').catch((e) => done.fail(e));
+
     action('id2');
+
     action('id3');
+
     action('id4')
       .then(() => {
         expect(saveRes).toEqual(['id1', 'id3', 'id4']);
@@ -178,8 +187,8 @@ describe('ConflictPolicy', () => {
       ctx.sideEffectRef,
       ctx.promisesRef,
       ctx.conflicActionsRef,
-      {},
-      jest.fn()
+      { logEnabled: true },
+      ctx.addSideEffect
     );
 
     ctx.actionsRef.current.setValue = action;
@@ -213,7 +222,7 @@ describe('ConflictPolicy', () => {
       ctx.promisesRef,
       ctx.conflicActionsRef,
       {},
-      jest.fn()
+      ctx.addSideEffect
     );
 
     ctx.actionsRef.current.setValue = action;
@@ -247,7 +256,7 @@ describe('ConflictPolicy', () => {
       ctx.promisesRef,
       ctx.conflicActionsRef,
       {},
-      jest.fn()
+      ctx.addSideEffect
     );
 
     ctx.actionsRef.current.setValue = action;
@@ -290,7 +299,7 @@ describe('ConflictPolicy', () => {
       ctx.promisesRef,
       ctx.conflicActionsRef,
       {},
-      jest.fn()
+      ctx.addSideEffect
     );
 
     ctx.actionsRef.current.setValue = action;
@@ -335,7 +344,7 @@ describe('ConflictPolicy', () => {
       ctx.promisesRef,
       ctx.conflicActionsRef,
       {},
-      jest.fn()
+      ctx.addSideEffect
     );
 
     ctx.actionsRef.current.setValue = action;
@@ -375,7 +384,7 @@ describe('ConflictPolicy', () => {
       ctx.promisesRef,
       ctx.conflicActionsRef,
       {},
-      jest.fn()
+      ctx.addSideEffect
     );
 
     ctx.actionsRef.current.setValue = action;

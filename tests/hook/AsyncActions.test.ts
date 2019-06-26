@@ -6,6 +6,7 @@ import {
   ReducerAction,
   decorateAsyncAction,
   ReducerActionSubType,
+  processSideEffects,
 } from '../../src/useStateDecorator';
 import { StateDecoratorActions } from '../../src/types';
 import { getTimeoutPromise, getFailedTimeoutPromise, getAsyncContext } from './testUtils';
@@ -41,7 +42,7 @@ describe('decorateAsyncAction', () => {
 
     expect(typeof action === 'function').toBeTruthy();
 
-    return action('value').then(() => {
+    const p = action('value').then(() => {
       expect(ctx.dispatch).toHaveBeenNthCalledWith(1, {
         actionName: 'setValue',
         args: ['value'],
@@ -61,10 +62,14 @@ describe('decorateAsyncAction', () => {
         result: 'result',
       });
 
-      expect(addSideEffect).not.toHaveBeenCalled();
+      expect(addSideEffect).toHaveBeenCalledTimes(1); // sendRequest
 
       expect(notifySuccess).toHaveBeenCalledWith('success message: result');
     });
+
+    processSideEffects(ctx.stateRef.current, ctx.dispatch, ctx.sideEffectRef);
+
+    return p;
   });
 
   it('dispatches an async action correctly (success, with side effect)', () => {
@@ -97,7 +102,7 @@ describe('decorateAsyncAction', () => {
 
     expect(typeof action === 'function').toBeTruthy();
 
-    return action('value').then(() => {
+    const p = action('value').then(() => {
       expect(ctx.dispatch).toHaveBeenNthCalledWith(1, {
         actionName: 'setValue',
         args: ['value'],
@@ -129,6 +134,9 @@ describe('decorateAsyncAction', () => {
 
       expect(ctx.propsRef.current.notifySuccess).toHaveBeenCalledWith('success message: result');
     });
+
+    processSideEffects(ctx.stateRef.current, ctx.dispatch, ctx.sideEffectRef);
+    return p;
   });
 
   it('dispatches an async action correctly (error)', (done) => {
@@ -164,7 +172,7 @@ describe('decorateAsyncAction', () => {
 
     expect(typeof action === 'function').toBeTruthy();
 
-    return action('value').then(() => {
+    const p = action('value').then(() => {
       expect(ctx.dispatch).toHaveBeenNthCalledWith(1, {
         actionName: 'setValue',
         args: ['value'],
@@ -186,6 +194,10 @@ describe('decorateAsyncAction', () => {
       expect(options.notifyError).toHaveBeenCalledWith('error message: error');
       done();
     });
+
+    processSideEffects(ctx.stateRef.current, ctx.dispatch, ctx.sideEffectRef);
+
+    return p;
   });
 
   it('dispatches an async action correctly (error, notify from props)', (done) => {
@@ -221,10 +233,14 @@ describe('decorateAsyncAction', () => {
 
     expect(typeof action === 'function').toBeTruthy();
 
-    return action('value').then(() => {
+    const p = action('value').then(() => {
       expect(ctx.propsRef.current.notifyError).toHaveBeenCalledWith('error message: error');
       done();
     });
+
+    processSideEffects(ctx.stateRef.current, ctx.dispatch, ctx.sideEffectRef);
+
+    return p;
   });
 });
 

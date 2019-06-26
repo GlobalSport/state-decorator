@@ -1,3 +1,5 @@
+import { processSideEffects } from '../../src/useStateDecorator';
+
 export function getTimeoutPromise<C>(timeout: number, result: C = null): Promise<C> {
   return new Promise((res) => {
     setTimeout(res, timeout, result);
@@ -40,6 +42,18 @@ export function getAsyncContext() {
     shouldRecordHistory: false,
   };
 
+  let timer = null;
+  const addSideEffect = (ref, sideEffect) => {
+    ref.current.push(sideEffect);
+
+    if (timer === null) {
+      timer = setTimeout(() => {
+        timer = null;
+        processSideEffects(stateRef.current, dispatch, sideEffectRef);
+      }, 0);
+    }
+  };
+
   return {
     dispatch,
     propsRef,
@@ -49,5 +63,6 @@ export function getAsyncContext() {
     conflicActionsRef,
     stateRef,
     optimisticData,
+    addSideEffect,
   };
 }
