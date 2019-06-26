@@ -41,6 +41,11 @@ export {
 
 export interface StateDecoratorProps<S, A extends DecoratedActions, P = {}> {
   /**
+   * The state decorator name. Use in debug traces to identify the useStateDecorator instance.
+   */
+  name?: string;
+
+  /**
    * The action definitions.
    */
   actions: StateDecoratorActions<S, A, P>;
@@ -157,6 +162,7 @@ const StateDecorator = function StateDecorator<S, A extends DecoratedActions, P 
     actions,
     props.props,
     {
+      name,
       initialActionsMarkedLoading,
       logEnabled,
       getPropsRefValues,
