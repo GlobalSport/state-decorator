@@ -48,7 +48,7 @@
     "tslint-config-airbnb": "^5.11.0",
     "tslint-config-prettier": "^1.15.0",
     "tslint-react-hooks": "^2.0.0",
-    "typescript": "^3.2.2",
+    "typescript": "^3.6.2",
     "version-bump-prompt": "^4.1.0"
   },
   "peerDependencies": {
