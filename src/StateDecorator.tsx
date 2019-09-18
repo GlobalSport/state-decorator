@@ -10,7 +10,6 @@
 
 import React from 'react';
 import isEqual from 'fast-deep-equal';
-import fastClone from 'fast-clone';
 
 type PromiseResult<Type> = Type extends Promise<infer X> ? X : null;
 
@@ -574,6 +573,10 @@ function logSingle(name: string = '', actionName: string, args: any[], logEnable
   }
 }
 
+function cloneImpl(src) {
+  return JSON.parse(JSON.stringify(src));
+}
+
 /**
  * A state container designed to substitute the local state of a component.
  * Types:
@@ -603,9 +606,15 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
    * Clones an object. Used when managing optimistic reducer and conflicting actions.
    * @param obj The object to clone.
    */
-  static clone(obj) {
+  static clone<C>(obj: C): C {
     try {
-      return fastClone(obj);
+      if (obj === undefined) {
+        return undefined;
+      }
+      if (obj === null) {
+        return null;
+      }
+      return cloneImpl(obj) as C;
     } catch (e) {
       const msg =
         'StateDecorator: Cannot clone object. Override StateDecorator.clone with another implementation like lodash/cloneDeep.';

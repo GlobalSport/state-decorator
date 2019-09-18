@@ -110,7 +110,6 @@
     }
   },
   "dependencies": {
-    "fast-clone": "^1.5.3",
     "fast-deep-equal": "^2.0.1"
   }
 }
