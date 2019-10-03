@@ -219,7 +219,7 @@ export type StateDecoratorAction<S, F extends (...args: any[]) => any, A, P> =
  * A: The type of the actions to pass to the children (used to check keys only).
  */
 export type StateDecoratorActions<S, A extends DecoratedActions, P = {}> = {
-  [Prop in keyof A]: StateDecoratorAction<S, A[Prop], A, P>
+  [Prop in keyof A]: StateDecoratorAction<S, A[Prop], A, P>;
 };
 
 export interface StateDecoratorProps<S, A extends DecoratedActions, P = {}> {
@@ -358,17 +358,19 @@ export function retryDecorator<S, F extends (...args: any[]) => Promise<any>, A,
         return null;
       }
 
-      return p.then((res) => resolve(res)).catch((e) => {
-        if (isRetryError(e)) {
-          if (callCount === maxCalls) {
-            reject(e);
+      return p
+        .then((res) => resolve(res))
+        .catch((e) => {
+          if (isRetryError(e)) {
+            if (callCount === maxCalls) {
+              reject(e);
+            } else {
+              setTimeout(call, delay * callCount, callCount + 1, resolve, reject);
+            }
           } else {
-            setTimeout(call, delay * callCount, callCount + 1, resolve, reject);
+            reject(e);
           }
-        } else {
-          reject(e);
-        }
-      });
+        });
     }
 
     return new Promise((resolve, reject) => {
@@ -544,13 +546,17 @@ function logStateChange<S>(
       Object.keys(args).forEach((prop) => console.log(prop, ':', args[prop]));
       console.groupEnd();
     }
-    console.groupCollapsed('Before');
-    Object.keys(oldState).forEach((prop) => console.log(prop, ':', oldState[prop]));
-    console.groupEnd();
+    if (oldState) {
+      console.groupCollapsed('Before');
+      Object.keys(oldState).forEach((prop) => console.log(prop, ':', oldState[prop]));
+      console.groupEnd();
+    }
 
-    console.groupCollapsed('After');
-    Object.keys(newState).forEach((prop) => console.log(prop, ':', newState[prop]));
-    console.groupEnd();
+    if (newState) {
+      console.groupCollapsed('After');
+      Object.keys(newState).forEach((prop) => console.log(prop, ':', newState[prop]));
+      console.groupEnd();
+    }
 
     console.group('Diff');
     const diff = buildDiff(oldState, newState);
