@@ -988,12 +988,13 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
     }
 
     if (process.env.NODE_ENV === 'development' && logEnabled) {
-      console.group(`[StateDecorator] Action ${name}`);
+      console.group(`[StateDecorator ${this.props.name}] Action ${name} ABORTED`);
       console.group('Arguments');
       Object.keys(args).forEach((prop) => console.log(prop, ':', args[prop]));
       console.groupEnd();
       console.groupEnd();
     }
+
     return Promise.resolve();
   };
 
@@ -1019,15 +1020,14 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
           }
         }
       );
-
-      if (process.env.NODE_ENV === 'development' && logEnabled) {
-        console.group(`[StateDecorator] Action ${name}`);
-        console.group('Arguments');
-        Object.keys(args).forEach((prop) => console.log(prop, ':', args[prop]));
-        console.groupEnd();
-        console.groupEnd();
-      }
+    } else if (process.env.NODE_ENV === 'development' && logEnabled) {
+      console.group(`[StateDecorator ${this.props.name}] Action ${name} ABORTED`);
+      console.group('Arguments');
+      Object.keys(args).forEach((prop) => console.log(prop, ':', args[prop]));
+      console.groupEnd();
+      console.groupEnd();
     }
+
     // backward compatible
     return Promise.resolve();
   };
