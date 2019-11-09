@@ -219,7 +219,7 @@ export type StateDecoratorAction<S, F extends (...args: any[]) => any, A, P> =
  * A: The type of the actions to pass to the children (used to check keys only).
  */
 export type StateDecoratorActions<S, A extends DecoratedActions, P = {}> = {
-  [Prop in keyof A]: StateDecoratorAction<S, A[Prop], A, P>;
+  [Prop in keyof A]: StateDecoratorAction<S, A[Prop], A, P>
 };
 
 export interface StateDecoratorProps<S, A extends DecoratedActions, P = {}> {
@@ -358,19 +358,17 @@ export function retryDecorator<S, F extends (...args: any[]) => Promise<any>, A,
         return null;
       }
 
-      return p
-        .then((res) => resolve(res))
-        .catch((e) => {
-          if (isRetryError(e)) {
-            if (callCount === maxCalls) {
-              reject(e);
-            } else {
-              setTimeout(call, delay * callCount, callCount + 1, resolve, reject);
-            }
-          } else {
+      return p.then((res) => resolve(res)).catch((e) => {
+        if (isRetryError(e)) {
+          if (callCount === maxCalls) {
             reject(e);
+          } else {
+            setTimeout(call, delay * callCount, callCount + 1, resolve, reject);
           }
-        });
+        } else {
+          reject(e);
+        }
+      });
     }
 
     return new Promise((resolve, reject) => {
@@ -1252,14 +1250,13 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
 
         this.cleanHistoryAfterOptimistAction(name);
 
-        if (onDone) {
-          onDone(newState.data || dataState, result, args, props, this.actions);
-        }
-
         delete this.promises[name];
-        this.setState(newState);
-
-        this.processNextConflictAction(name);
+        this.setState(newState, () => {
+          if (onDone) {
+            onDone(newState.data || dataState, result, args, props, this.actions);
+          }
+          this.processNextConflictAction(name);
+        });
 
         return Promise.resolve(result);
       })
