@@ -473,54 +473,62 @@ export function areSameArgs(args1: any[], args2: any[]): boolean {
   return args1.find((value, index) => args2[index] !== value) == null;
 }
 
+function computeDiffPropValue(oldValue: any, newValue: any): any {
+  let res: any;
+  if (newValue !== oldValue) {
+    const type = oldValue == null ? typeof oldValue : typeof newValue;
+    if (type === 'number' || type === 'string' || type === 'boolean') {
+      res = `${oldValue} => ${newValue === '' ? '""' : newValue}`;
+    } else if ((oldValue && oldValue.length) || (newValue && newValue.length)) {
+      if (oldValue == null) {
+        res = `was ${oldValue}, now contains ${newValue.length} elements`;
+      } else if (newValue == null) {
+        res = `contained ${oldValue.length} elements, now is ${newValue}`;
+      } else if (oldValue.length === 0) {
+        res = `was empty, now contains ${newValue.length} elements`;
+      } else if (newValue.length === 0) {
+        res = `contained ${oldValue.length} elements, now is empty`;
+      } else {
+        let addedValues = newValue.filter((a) => !oldValue.find((b) => isEqual(a, b)));
+        let removedValues = oldValue.filter((a) => !newValue.find((b) => isEqual(a, b)));
+
+        if (addedValues.length > 10) {
+          addedValues = `${addedValues.length} elements added`;
+        }
+        if (removedValues.length > 10) {
+          removedValues = `${removedValues.length} elements removed`;
+        }
+        res = {
+          added: addedValues,
+          removed: removedValues,
+        };
+      }
+    } else {
+      res = newValue;
+    }
+  }
+  return res;
+}
+
 function buildDiff<S>(oldState: S, newState: S) {
   const res = {};
 
-  Object.keys(oldState).forEach((k) => {
-    if (newState.hasOwnProperty(k)) {
-      const oldValue = oldState[k];
-      const newValue = newState[k];
-
-      if (newValue !== oldValue) {
-        const type = newState[k] == null ? typeof oldState[k] : typeof newState[k];
-        if (type === 'number' || type === 'string' || type === 'boolean') {
-          res[k] = `${oldState[k]} => ${newState[k] === '' ? '""' : newState[k]}`;
-        } else if ((oldValue && oldValue.length) || (newValue && newValue.length)) {
-          if (oldValue == null) {
-            res[k] = `was null, now contains ${newValue.length} elements`;
-          } else if (newValue == null) {
-            res[k] = `contained ${oldValue.length} elements, now is null`;
-          } else if (oldValue.length === 0) {
-            res[k] = `was empty, now contains ${newValue.length} elements`;
-          } else if (newValue.length === 0) {
-            res[k] = `contained ${oldValue.length} elements, now is empty`;
-          } else {
-            let addedValues = newValue.filter((a) => !oldValue.find((b) => isEqual(a, b)));
-            let removedValues = oldValue.filter((a) => !newValue.find((b) => isEqual(a, b)));
-
-            if (addedValues.length > 10) {
-              addedValues = `${addedValues.length} elements added`;
-            }
-            if (removedValues.length > 10) {
-              removedValues = `${removedValues.length} elements removed`;
-            }
-            res[k] = {
-              added: addedValues,
-              removed: removedValues,
-            };
-          }
-        } else {
-          res[k] = newState[k];
-        }
+  oldState &&
+    Object.keys(oldState).forEach((k) => {
+      if (newState.hasOwnProperty(k)) {
+        const oldValue = oldState[k];
+        const newValue = newState[k];
+        res[k] = computeDiffPropValue(oldValue, newValue);
+      } else {
+        res[k] = 'was deleted';
       }
-    } else {
-      res[k] = 'was deleted';
-    }
-  });
+    });
 
   Object.keys(newState).forEach((k) => {
-    if (!oldState.hasOwnProperty(k)) {
-      res[k] = `${newState[k]}`;
+    if (oldState == null || !oldState.hasOwnProperty(k)) {
+      const newValue = newState[k];
+
+      res[k] = computeDiffPropValue(undefined, newValue);
     }
   });
 
