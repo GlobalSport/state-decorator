@@ -246,6 +246,11 @@ export interface StateDecoratorProps<S, A extends DecoratedActions, P = {}> {
   initialState?: S;
 
   /**
+   * A function called to get the initial state used if initial state is not set.
+   */
+  getInitialState?: (p: P) => S;
+
+  /**
    * Optional properties to pass to actions.
    */
   props?: P;
@@ -657,7 +662,10 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
   private history: ActionHistory<S>[] = [];
   private optimisticActions: OptimisticActionsMap = {};
   private shouldRecordHistory: boolean = false;
-  private dataState: S = this.props.initialState === undefined ? undefined : this.props.initialState;
+  private dataState: S =
+    this.props.initialState ||
+    (this.props.getInitialState && this.props.getInitialState(this.props.props)) ||
+    undefined;
   private promises: { [name: string]: { promise: Promise<any>; refArgs: any[] } } = {};
   private conflictActions: ConflictActionsMap = {};
   private hasParallelActions = false;
@@ -1393,7 +1401,10 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
   private actions: A = this.decorateActions(this.props.actions);
 
   state = {
-    data: this.props.initialState === undefined ? undefined : this.props.initialState,
+    data:
+      this.props.initialState ||
+      (this.props.getInitialState && this.props.getInitialState(this.props.props)) ||
+      undefined,
     loading:
       this.props.initialActionsMarkedLoading &&
       this.props.initialActionsMarkedLoading.length > 0 &&
@@ -1453,7 +1464,7 @@ export function injectState<S, A extends DecoratedActions, P = {}>(
       static displayName = `injectState(${getDisplayName(WrappedComponent)})`;
       render() {
         return (
-          <StateDecorator {...options} initialState={getInitialState(this.props)} actions={actions} props={this.props}>
+          <StateDecorator {...options} getInitialState={getInitialState} actions={actions} props={this.props}>
             {(state, actions, loading, loadingMap, loadingParallel) => (
               <WrappedComponent
                 {...state}

@@ -40,6 +40,45 @@ describe('StateDecorator', () => {
     expect(newAction.conflictPolicy).toEqual(ConflictPolicy.REUSE);
   });
 
+  it('getInitialState is working as expected', (done) => {
+    type S = {
+      employeeId: string;
+    };
+
+    type P = {
+      id: string;
+    };
+
+    type A = {
+      action: () => any;
+    };
+
+    const actions: StateDecoratorActions<S, A, P> = {
+      action: (s) => s,
+    };
+
+    const getInitialState = (p: P): S => {
+      expect(p).toEqual({ id: '10' });
+      return { employeeId: p.id };
+    };
+
+    const props: StateDecoratorProps<S, A, P> = {
+      actions,
+      getInitialState,
+      props: {
+        id: '10',
+      },
+    };
+
+    const renderFunc = (s: S, a: A) => {
+      expect(s).toEqual({ employeeId: '10' });
+      done();
+      return <div />;
+    };
+
+    const wrapper = shallow(<StateDecorator {...props}>{renderFunc}</StateDecorator>);
+  });
+
   it('handles synchronous action on mount', (done) => {
     let wrapper;
 
