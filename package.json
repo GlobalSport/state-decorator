@@ -84,6 +84,7 @@
     "testPathIgnorePatterns": [
       "/__snapshots__/",
       "/.history/",
+      "/examples/",
       "/node_modules/",
       "/jest/"
     ],

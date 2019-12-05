@@ -139,7 +139,7 @@ const Footer = React.memo(function(props: Pick<TodoView, 'filter' | 'onSetFilter
   );
 });
 
-const actions: StateDecoratorActions<State, Actions> = {
+export const actions: StateDecoratorActions<State, Actions> = {
   onCreate: (state) =>
     produce<State>(state, (draftState) => {
       const newTodo: TodoItem = {
