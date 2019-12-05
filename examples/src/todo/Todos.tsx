@@ -80,15 +80,10 @@ const Todos = React.memo(function(props: Pick<TodoView, 'todoIds' | 'todoMap' | 
 
   const filteredTodos = useMemo(
     () => {
-      const ids =
-        filter === Filter.ALL
-          ? todoIds
-          : todoIds.filter((todoId) => {
-              const todo = todoMap[todoId];
-              return filter === Filter.COMPLETED ? todo.completed : !todo.completed;
-            });
-
-      return ids.map((id) => todoMap[id]);
+      const todos = todoIds.map((id) => todoMap[id]);
+      return filter === Filter.ALL
+        ? todos
+        : todos.filter((todo) => (filter === Filter.COMPLETED ? todo.completed : !todo.completed));
     },
     [filter, todoIds, todoMap]
   );

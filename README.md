@@ -95,12 +95,14 @@ The StateDecorator is a generic React component class that needs two interfaces:
 
 # Initial state
 
-The initial state is passed in the or _getInitialState_ property of the StateDecorator.
+The initial state is passed in the _getInitialState_ property of the StateDecorator.
 
 ```typescript
-<StateDecorator<State, Actions> actions={MyContainer.actions} initialState={{ text: 'Hello' }}>
+const getInitialState = () => ({ text: 'Hello' });
+
+<StateDecorator<State, Actions> actions={MyContainer.actions} getInitialState={getInitialState}>
   {(actions, state) => <MyView {...state} {...actions} />}
-</StateDecorator>
+</StateDecorator>;
 ```
 
 Note: _initialState_ is deprecated in favor of _getInitialState_.
