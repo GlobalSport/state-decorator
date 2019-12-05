@@ -9,7 +9,7 @@ export type Actions = {
   setColor: (color: string) => void;
 };
 
-const initialState = { color: 'blue' };
+const getInitialState = () => ({ color: 'blue' });
 
 export const Context = React.createContext<State & Actions>(null);
 
@@ -30,24 +30,23 @@ class SubComponent extends React.Component {
 
 const MainComponent = () => <SubComponent />;
 
-export default class ContextContainer extends React.Component {
-  static actions: StateDecoratorActions<State, Actions> = {
-    setColor: (s, [color]) => ({ ...s, color }),
-  };
-  render() {
-    return (
-      <StateDecorator<State, Actions> actions={ContextContainer.actions} initialState={initialState}>
-        {(state, actions) => (
-          <Context.Provider
-            value={{
-              ...state,
-              ...actions,
-            }}
-          >
-            <MainComponent />
-          </Context.Provider>
-        )}
-      </StateDecorator>
-    );
-  }
+const actions: StateDecoratorActions<State, Actions> = {
+  setColor: (s, [color]) => ({ ...s, color }),
+};
+
+export default function ContextContainer() {
+  return (
+    <StateDecorator<State, Actions> actions={actions} getInitialState={getInitialState}>
+      {(state, actions) => (
+        <Context.Provider
+          value={{
+            ...state,
+            ...actions,
+          }}
+        >
+          <MainComponent />
+        </Context.Provider>
+      )}
+    </StateDecorator>
+  );
 }

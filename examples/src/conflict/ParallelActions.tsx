@@ -36,42 +36,40 @@ export const getInitialState = (): State => ({
   ],
 });
 
-export default class ParallelActions extends React.PureComponent {
-  static actions: StateDecoratorActions<State, Actions> = {
-    onChange: {
-      promise: ([id, value]) => new Promise((res) => setTimeout(res, 3000, value)),
-      conflictPolicy: ConflictPolicy.PARALLEL,
-      getPromiseId: (id) => id,
-      reducer: (s, value, [id]) =>
-        produce(s, ({ items }) => {
-          items.find((i) => i.id === id).value = value;
-        }),
-    },
-  };
+const actions: StateDecoratorActions<State, Actions> = {
+  onChange: {
+    promise: ([id, value]) => new Promise((res) => setTimeout(res, 3000, value)),
+    conflictPolicy: ConflictPolicy.PARALLEL,
+    getPromiseId: (id) => id,
+    reducer: (s, value, [id]) =>
+      produce(s, ({ items }) => {
+        items.find((i) => i.id === id).value = value;
+      }),
+  },
+};
 
-  render() {
-    return (
-      <StateDecorator actions={ParallelActions.actions} initialState={getInitialState()}>
-        {({ items }, { onChange }, loading, loadingMap, loadingParallelMap) => (
-          <div style={{ border: '1px solid grey', marginBottom: 10 }}>
-            <h2>Parallel actions</h2>
-            <p>Actions are launched on blur, in parallel for 3s</p>
-            {items.map((item) => {
-              const isItemLoading = loadingParallelMap.onChange[item.id];
-              return (
-                <div key={item.id}>
-                  {item.id}
-                  <input
-                    onBlur={(e) => onChange(item.id, e.target.value)}
-                    disabled={isItemLoading}
-                    style={{ backgroundColor: isItemLoading ? 'grey' : null }}
-                  />
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </StateDecorator>
-    );
-  }
+export default function ParallelActions() {
+  return (
+    <StateDecorator actions={actions} getInitialState={getInitialState}>
+      {({ items }, { onChange }, loading, loadingMap, loadingParallelMap) => (
+        <div style={{ border: '1px solid grey', marginBottom: 10 }}>
+          <h2>Parallel actions</h2>
+          <p>Actions are launched on blur, in parallel for 3s</p>
+          {items.map((item) => {
+            const isItemLoading = loadingParallelMap.onChange[item.id];
+            return (
+              <div key={item.id}>
+                {item.id}
+                <input
+                  onBlur={(e) => onChange(item.id, e.target.value)}
+                  disabled={isItemLoading}
+                  style={{ backgroundColor: isItemLoading ? 'grey' : null }}
+                />
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </StateDecorator>
+  );
 }

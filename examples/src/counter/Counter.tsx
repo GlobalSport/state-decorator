@@ -19,19 +19,16 @@ export const actions: StateDecoratorActions<State, Actions> = {
   increment: (s, [incr]) => ({ counter: s.counter + incr }),
 };
 
-// Stateless component, in real life use React.memo()
-class CounterView extends React.PureComponent<State & Actions> {
-  render() {
-    const { counter, increment, decrement } = this.props;
-    return (
-      <div>
-        {counter}
-        <button onClick={() => decrement(10)}>Substracts 10</button>
-        <button onClick={() => increment(10)}>Adds 10</button>
-      </div>
-    );
-  }
-}
+const CounterView = React.memo(function CounterView(p: State & Actions) {
+  const { counter, increment, decrement } = p;
+  return (
+    <div>
+      {counter}
+      <button onClick={() => decrement(10)}>Substracts 10</button>
+      <button onClick={() => increment(10)}>Adds 10</button>
+    </div>
+  );
+});
 
 // Container that is managing the state.
 export const CounterContainer = () => (

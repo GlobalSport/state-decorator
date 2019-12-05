@@ -56,19 +56,16 @@ export const actions: StateDecoratorActions<State, Actions> = {
   increment: (s, [incr]) => ({ counter: s.counter + incr }),
 };
 
-// Stateless component, in real life use React.memo()
-class CounterView extends React.PureComponent<State & Actions> {
-  render() {
-    const { counter, increment, decrement } = this.props;
-    return (
-      <div>
-        {counter}
-        <button onClick={() => decrement(10)}>Substracts 10</button>
-        <button onClick={() => increment(10)}>Adds 10</button>
-      </div>
-    );
-  }
-}
+const CounterView = React.memo(function CounterView(p: State & Actions) {
+  const { counter, increment, decrement } = p;
+  return (
+    <div>
+      {counter}
+      <button onClick={() => decrement(10)}>Substracts 10</button>
+      <button onClick={() => increment(10)}>Adds 10</button>
+    </div>
+  );
+});
 ```
 
 Finally inject the state and actions using the **StateDecorator** component that is using the [render props pattern](https://reactjs.org/docs/render-props.html).
@@ -76,7 +73,7 @@ Finally inject the state and actions using the **StateDecorator** component that
 ```typescript
 // Container that is managing the state using StateDecorator component
 export const CounterContainer = () => (
-  <StateDecorator initialState={getInitialState()} actions={actions}>
+  <StateDecorator getInitialState={getInitialState} actions={actions}>
     {(state, actions) => <CounterView {...state} {...actions} />}
   </StateDecorator>
 );
@@ -98,13 +95,18 @@ The StateDecorator is a generic React component class that needs two interfaces:
 
 # Initial state
 
-The initial state is passed in the _initialState_ property of the StateDecorator.
+The initial state is passed in the or _getInitialState_ property of the StateDecorator.
 
 ```typescript
 <StateDecorator<State, Actions> actions={MyContainer.actions} initialState={{ text: 'Hello' }}>
   {(actions, state) => <MyView {...state} {...actions} />}
 </StateDecorator>
 ```
+
+Note: _initialState_ is deprecated in favor of _getInitialState_.
+
+- Each time the component containing the StateDecorator is rendered, the initial state is recomputed when using _initialState_,
+- In real life use cases, a function is used to compute the initial state from props and to be reused in unit tests.
 
 # Actions
 
@@ -115,24 +117,20 @@ The StateDecorator is taking a list of actions and decorate them to inject state
 When the StateDecorator is mounted, the **onMount** property is called with the decorated actions as parameter.
 
 ```typescript
-export default class CounterContainer extends React.Component {
-  static actions: StateDecoratorActions<State, Actions, Props> = {
-    initialAction: () => 100,
-  };
+const actions: StateDecoratorActions<State, Actions, Props> = {
+  initialAction: () => 100,
+};
 
-  // initial action
-  static onMount(actions: Actions) {
-    actions.initialAction();
-  }
-
-  render() {
-    return (
-      <StateDecorator<State, Actions> actions={CounterContainer.actions} onMount={CounterContainer.onMount}>
-        {(counter, actions) => <CounterView counter={counter} {...actions} />}
-      </StateDecorator>
-    );
-  }
+// initial action
+function onMount(actions: Actions) {
+  actions.initialAction();
 }
+
+export const CounterContainer = () => (
+  <StateDecorator getInitialState={getInitialState} actions={actions} onMount={onMount}>
+    {(state, actions) => <CounterView {...state} {...actions} />}
+  </StateDecorator>
+);
 ```
 
 This is usually used to load asynchronous data to populate the state.
@@ -144,8 +142,8 @@ This is usually used to load asynchronous data to populate the state.
 A simple synchronous action is a function that takes the current state and an optional list of parameters and returns a new state or _null_ if there's no change.
 
 ```typescript
-static actions: StateDecoratorActions<State, Actions> = {
-  setText: (s, [text], props) => ({ ...s, text })
+const actions: StateDecoratorActions<State, Actions> = {
+  setText: (s, [text], props) => ({ ...s, text }),
 };
 ```
 
@@ -156,11 +154,13 @@ An advanced synchronous action is a made of, at least, an **action**. It's funct
 The advanced form allows to add some additional properties for this action.
 
 ```typescript
-static actions: StateDecoratorActions<State, Actions> = {
+const actions: StateDecoratorActions<State, Actions> = {
   setText: {
     action: (s, [text], props) => ({ ...s, text }),
-    onDone: (s, args, props, actions) => { /* insert code here but beware of infinite loop!! */ }
-  }
+    onDone: (s, args, props, actions) => {
+      /* insert code here but beware of infinite loop!! */
+    },
+  },
 };
 ```
 
@@ -175,31 +175,30 @@ and
 - a reducer (to use redux terminology), ie. a function that takes as parameter the old state, the result of the request, the list of call arguments and returns a new state or _null_ if there's no change.
 
 ```typescript
-export default class MyContainer extends React.Component {
-  static actions: StateDecoratorActions<State, Actions, Props> = {
-    loadList: {
-      promise: ([arg1, arg2], state, props, actions) =>
-        new Promise((resolve) => setTimeout(resolve, 500, ['hello', 'world'])),
-      reducer: (state, result, args, props) => ({ ...state, list: result }),
-    },
+function getInitialState(): State {
+  return {
+    list: [],
   };
+}
 
-  // initial action on mount
-  static onMount(actions: Actions) {
-    actions.loadList();
-  }
+const actions: StateDecoratorActions<State, Actions, Props> = {
+  loadList: {
+    promise: ([arg1, arg2], state, props, actions) =>
+      new Promise((resolve) => setTimeout(resolve, 500, ['hello', 'world'])),
+    reducer: (state, result, args, props) => ({ ...state, list: result }),
+  },
+};
 
-  render() {
-    return (
-      <StateDecorator<State, Actions>
-        actions={MyContainer.actions}
-        onMount={MyContainer.onMount}
-        initialState={{ list: [] }}
-      >
-        {(state, actions, loading) => <MyView {...state} {...actions} loading={loading} />}
-      </StateDecorator>
-    );
-  }
+function onMount(actions: Actions) {
+  actions.loadList('arg1', 'arg2');
+}
+
+export default function MyContainer() {
+  return (
+    <StateDecorator actions={actions} onMount={onMount} getInitialState={getInitialState}>
+      {(state, actions, loading) => <MyView {...state} {...actions} loading={loading} />}
+    </StateDecorator>
+  );
 }
 ```
 
@@ -233,7 +232,7 @@ If **null** is returned by **promise**, the action is aborted. It allows to canc
 The loading state of asynchronous actions are automatically computed and injected to the render property.
 
 ```typescript
-<StateDecorator actions={MyContainer.actions}>
+<StateDecorator actions={actions}>
   {(state, actions, loading, loadingMap) => (
     <MyView {...state} {...actions} loading={loading} loadingMap={loadingMap} />
   )}
@@ -265,12 +264,12 @@ A notification function can be called when the asynchronous action succeeded or 
 When an asynchronous action fails, if the state needs to be updated, set the _errorReducer_ property of the asynchronous action.
 
 ```typescript
-static actions: StateDecoratorActions<State, Actions> = {
+const actions: StateDecoratorActions<State, Actions> = {
   loadList: {
     promise: () => new Promise((_, reject) => setTimeout(reject, 500, new Error('Too bad'))),
     reducer: (state, list) => ({ ...state, list, error: undefined }),
-    errorReducer: (state, error: Error) => ({ ...state, error: error.message, list: [] })
-  }
+    errorReducer: (state, error: Error) => ({ ...state, error: error.message, list: [] }),
+  },
 };
 ```
 
@@ -305,12 +304,12 @@ The undo strategy is the following:
 Example:
 
 ```typescript
-static actions: StateDecoratorActions<State, Actions> = {
+const actions: StateDecoratorActions<State, Actions> = {
   deleteItem: {
     promise: ([id]) => new Promise((resolve) => setTimeout(resolve, 500)),
-    optimisticReducer: (state, args) => ({ ...state, list: list.filter(item => item.id === args[0]) }),
-    errorReducer: (state, error: Error) => ({ ...state, error: error.message })
-  }
+    optimisticReducer: (state, args) => ({ ...state, list: list.filter((item) => item.id === args[0]) }),
+    errorReducer: (state, error: Error) => ({ ...state, error: error.message }),
+  },
 };
 ```
 
@@ -349,18 +348,16 @@ _Note_: In conjunction to this parameter, you can use [lodash debounce](https://
 When the StateDecorator is unmounted, the **onUnmount** property is called with the current state and props as parameter.
 
 ```typescript
-export default class Container extends React.Component {
-  static onUnmount(s: State, p: Props) {
-    localStorage.setItem('state', JSON.stringify(s));
-  }
+function onUnmount(s: State) {
+  localStorage.setItem('state', JSON.stringify(s));
+}
 
-  render() {
-    return (
-      <StateDecorator actions={Container.actions} onUnmount={Container.onUnmount}>
-        {(s, actions) => <View {...s} {...actions} />}
-      </StateDecorator>
-    );
-  }
+export default function MyContainer() {
+  return (
+    <StateDecorator actions={actions} onUnmount={onUnmount} getInitialState={getInitialState}>
+      {(state, actions, loading) => <MyView {...state} {...actions} loading={loading} />}
+    </StateDecorator>
+  );
 }
 ```
 
@@ -370,18 +367,16 @@ For cases where the state is needed to be saved when the window is unloaded (the
 The StateDecorator listens to the 'beforeunload' window event and call the **onUnload** property with the current state and props as parameter.
 
 ```typescript
-export default class Container extends React.Component {
-  static onUnload(s: State, p: Props) {
-    localStorage.setItem('state', JSON.stringify(s));
-  }
+function onUnload(s: State) {
+  localStorage.setItem('state', JSON.stringify(s));
+}
 
-  render() {
-    return (
-      <StateDecorator actions={Container.actions} onUnload={Container.onUnload}>
-        {(s, actions) => <View {...s} {...actions} />}
-      </StateDecorator>
-    );
-  }
+export default function MyContainer() {
+  return (
+    <StateDecorator actions={actions} onUnload={onUnload} getInitialState={getInitialState}>
+      {(state, actions, loading) => <MyView {...state} {...actions} loading={loading} />}
+    </StateDecorator>
+  );
 }
 ```
 
@@ -429,26 +424,28 @@ class APIClient {
   }
 }
 
-export default class ChainContainer extends React.PureComponent<{}> {
-  static actions: StateDecoratorActions<State, Actions> = {
-    getItems: {
-      promise: () => APIClient.getItems(),
-      reducer: (s, list) => ({ ...s, list }),
+const actions: StateDecoratorActions<State, Actions> = {
+  getItems: {
+    promise: () => APIClient.getItems(),
+    reducer: (s, list) => ({ ...s, list }),
+  },
+  addItem: {
+    // As addItem is silly, we must reload the list after having added the item...
+    promise: ([item], state, props, actions) => APIClient.addItem(item),
+    // No reducer needed, the decorated action will call its reducer
+    // onDone gathers side effects of the action
+    onDone: (s, result, args, props, actions) => {
+      actions.getItems();
     },
-    addItem: {
-      // As addItem is silly, we must reload the list after having added the item...
-      promise: ([item], state, props, actions) => APIClient.addItem(item).then(() => actions.getItems()),
-      // No reducer needed, the decorated action will call its reducer
-    },
-  };
+  },
+};
 
-  render() {
-    return (
-      <StateDecorator<State, Actions> actions={ChainContainer.actions} initialState={getInitialState()}>
-        {(state, actions) => <div />}
-      </StateDecorator>
-    );
-  }
+export default function ChainContainer() {
+  return (
+    <StateDecorator actions={actions} getInitialState={getInitialState}>
+      {(state, actions) => <div />}
+    </StateDecorator>
+  );
 }
 ```
 
@@ -510,29 +507,33 @@ Use _testSyncAction_ and _testAsyncAction_ utility function that allows to easil
 ### Class
 
 ```typescript
-export class MyContainer extends React.Component {
-  static actions: StateDecoratorActions<State, Actions> = {
-    loadList: {
-      promise: () => new Promise((_, reject) => setTimeout(reject, 500, new Error('Too bad'))),
-      reducer: (state, list: Item[]): State => ({ ...state, list }),
-    },
-    addItem: {
-      promise: ([item]) => Promise.resolve(),
-      optimisticReducer: (s, [item]: Item[]): State => ({ ...s, list: [...s.list, item] }),
-    },
-    removeItem: {
-      promise: ([id]) => Promise.resolve(),
-      optimisticReducer: (s, [id]): State => ({ ...s, list: s.list.filter((i) => i.id !== id) }),
-    },
+function getInitialState(): State {
+  return {
+    list: [],
   };
+}
 
-  render() {
-    return (
-      <StateDecorator<State, Actions> actions={MyContainer.actions} initialState={{ list: [] }}>
-        {(state, actions, loading) => <MyView {...state} {...actions} loading={loading} />}
-      </StateDecorator>
-    );
-  }
+const actions: StateDecoratorActions<State, Actions, Props> = {
+  loadList: {
+    promise: () => new Promise((_, reject) => setTimeout(reject, 500, new Error('Too bad'))),
+    reducer: (state, list: Item[]): State => ({ ...state, list }),
+  },
+  addItem: {
+    promise: ([item]) => Promise.resolve(),
+    optimisticReducer: (s, [item]: Item[]): State => ({ ...s, list: [...s.list, item] }),
+  },
+  removeItem: {
+    promise: ([id]) => Promise.resolve(),
+    optimisticReducer: (s, [id]): State => ({ ...s, list: s.list.filter((i) => i.id !== id) }),
+  },
+};
+
+export function MyContainer() {
+  return (
+    <StateDecorator<State, Actions> actions={actions} getInitialState={getInitialState}>
+      {(state, actions, loading) => <MyView {...state} {...actions} loading={loading} />}
+    </StateDecorator>
+  );
 }
 ```
 
@@ -657,19 +658,17 @@ const actions: StateDecoratorActions<State, Actions, Props> = {
   }),
 };
 
-export class WrappedComponentView extends React.PureComponent<State & Actions & Props> {
-  increment = () => this.props.increment(10);
+export const WrappedComponentView = React.memo((props: State & Actions & Props) {
+  const increment = useCallback(() => props.increment(10), [props.incremen]);
 
-  render() {
-    const { count } = this.props;
-    return (
-      <div>
-        {count}
-        <button onClick={this.increment}>Increment</button>
-      </div>
-    );
-  }
-}
+  const { count } = props;
+  return (
+    <div>
+      {count}
+      <button onClick={increment}>Increment</button>
+    </div>
+  );
+})
 
 export default injectState(
   (props) => ({
@@ -696,11 +695,10 @@ export type Actions = {
   setColor: (color: string) => void;
 };
 
-const initialState = { color: 'blue' };
+const getInitialState = () => ({ color: 'blue' });
 
 export const Context = React.createContext<State & Actions>(null);
 
-// SubComponent will retrieve the color from the context.
 class SubComponent extends React.Component {
   render() {
     return (
@@ -716,29 +714,27 @@ class SubComponent extends React.Component {
   }
 }
 
-// Main component does not have the color property.
 const MainComponent = () => <SubComponent />;
 
-export default class ContextContainer extends React.Component {
-  static actions: StateDecoratorActions<State, Actions> = {
-    setColor: (s, [color]) => ({ ...s, color }),
-  };
-  render() {
-    return (
-      <StateDecorator<State, Actions> actions={ContextContainer.actions} initialState={initialState}>
-        {(state, actions) => (
-          <Context.Provider
-            value={{
-              ...state,
-              ...actions,
-            }}
-          >
-            <MainComponent />
-          </Context.Provider>
-        )}
-      </StateDecorator>
-    );
-  }
+const actions: StateDecoratorActions<State, Actions> = {
+  setColor: (s, [color]) => ({ ...s, color }),
+};
+
+export default function ContextContainer() {
+  return (
+    <StateDecorator<State, Actions> actions={actions} getInitialState={getInitialState}>
+      {(state, actions) => (
+        <Context.Provider
+          value={{
+            ...state,
+            ...actions,
+          }}
+        >
+          <MainComponent />
+        </Context.Provider>
+      )}
+    </StateDecorator>
+  );
 }
 ```
 
@@ -869,8 +865,9 @@ Type:
 Synchronous actions, complex state with normalized storage of todo list.
 
 ```typescript
-import React from 'react';
-import StateDecorator, { StateDecoratorActions } from 'state-decorator';
+import React, { useMemo } from 'react';
+import StateDecorator, { StateDecoratorActions } from '../../../src/StateDecorator';
+import produce from 'immer';
 import { pick } from 'lodash';
 
 export enum Filter {
@@ -911,179 +908,178 @@ export type Actions = {
   onSetFilter: (filter: Filter) => void;
 };
 
-class Header extends React.PureComponent<Pick<State, 'newTitle'> & Pick<Actions, 'onSetNewTitle' | 'onCreate'>> {
-  onChange = (e) => this.props.onSetNewTitle(e.target.value);
-  onSubmit = (e) => {
+type TodoView = State & Actions;
+
+const Header = React.memo(function(props: Pick<TodoView, 'newTitle' | 'onSetNewTitle' | 'onCreate'>) {
+  const onChange = (e) => props.onSetNewTitle(e.target.value);
+  const onSubmit = (e) => {
     e.preventDefault();
-    this.props.onCreate();
+    props.onCreate();
   };
 
-  render() {
-    const { newTitle } = this.props;
-    return (
-      <form onSubmit={this.onSubmit}>
-        <input value={newTitle} onChange={this.onChange} />
-        <button type="submit">Create</button>
-      </form>
-    );
-  }
-}
+  const { newTitle } = props;
+  return (
+    <form onSubmit={onSubmit}>
+      <input value={newTitle} onChange={onChange} />
+      <button type="submit">Create</button>
+    </form>
+  );
+});
 
-class Todo extends React.PureComponent<{ todo: TodoItem } & Actions> {
-  onToggle = (e) => this.props.onToggle(this.props.todo.id);
+// class Todo extends React.PureComponent<{ todo: TodoItem } & Actions> {
+const Todo = React.memo(function(props: { todo: TodoItem } & Pick<TodoView, 'onToggle'>) {
+  const onToggle = (e) => props.onToggle(props.todo.id);
 
-  render() {
-    const { todo } = this.props;
-    return (
-      <div>
-        <div>{todo.title}</div>
-        <label>
-          <input type="checkbox" checked={todo.completed} onChange={this.onToggle} />
-          completed
-        </label>
-      </div>
-    );
-  }
-}
+  const { todo } = props;
+  return (
+    <div>
+      <div>{todo.title}</div>
+      <label>
+        <input type="checkbox" checked={todo.completed} onChange={onToggle} />
+        completed
+      </label>
+    </div>
+  );
+});
 
-class Todos extends React.PureComponent<Pick<State, 'todoIds' | 'todoMap' | 'filter'> & Actions> {
-  filter = (todoId) => {
-    const { filter, todoMap } = this.props;
-    const todo = todoMap[todoId];
+const Todos = React.memo(function(props: Pick<TodoView, 'todoIds' | 'todoMap' | 'filter' | 'onToggle'>) {
+  const { filter, todoIds, todoMap } = props;
 
-    if (filter === Filter.ALL) {
-      return true;
-    }
+  const filteredTodos = useMemo(
+    () => {
+      const ids =
+        filter === Filter.ALL
+          ? todoIds
+          : todoIds.filter((todoId) => {
+              const todo = todoMap[todoId];
+              return filter === Filter.COMPLETED ? todo.completed : !todo.completed;
+            });
 
-    return filter === Filter.COMPLETED ? todo.completed : !todo.completed;
-  };
+      return ids.map((id) => todoMap[id]);
+    },
+    [filter, todoIds, todoMap]
+  );
 
-  render() {
-    const { todoIds, todoMap } = this.props;
+  return (
+    <div>
+      {filteredTodos.map((todo) => (
+        <Todo key={todo.id} todo={todo} {...props} />
+      ))}
+    </div>
+  );
+});
 
-    return (
-      <div>
-        {todoIds.filter(this.filter).map((todoId) => (
-          <Todo key={todoId} todo={todoMap[todoId]} {...this.props} />
-        ))}
-      </div>
-    );
-  }
-}
+const Footer = React.memo(function(props: Pick<TodoView, 'filter' | 'onSetFilter' | 'onClearCompleted'>) {
+  const { onClearCompleted, filter } = props;
 
-class Footer extends React.PureComponent<Pick<State, 'filter'> & Actions> {
-  onFilterChange = (e) => this.props.onSetFilter(e.target.value);
+  const onFilterChange = (e) => props.onSetFilter(e.target.value);
 
-  render() {
-    const { onClearCompleted, filter } = this.props;
-    return (
-      <div>
-        <label>
-          <input
-            type="radio"
-            name="filter"
-            value={Filter.ALL}
-            checked={filter === Filter.ALL}
-            onChange={this.onFilterChange}
-          />
-          All
-        </label>
-        <label>
-          <input
-            type="radio"
-            name="filter"
-            value={Filter.NON_COMPLETED}
-            checked={filter === Filter.NON_COMPLETED}
-            onChange={this.onFilterChange}
-          />
-          Non Completed
-        </label>
-        <label>
-          <input
-            type="radio"
-            name="filter"
-            value={Filter.COMPLETED}
-            checked={filter === Filter.COMPLETED}
-            onChange={this.onFilterChange}
-          />
-          Completed
-        </label>
-        <button onClick={onClearCompleted}>Clear completed</button>
-      </div>
-    );
-  }
-}
-// Container that is managing the state.
-export default class TodoContainer extends React.Component {
-  static actions: StateDecoratorActions<State, Actions> = {
-    onCreate: (state) =>
-      produce<State>(state, (draftState) => {
-        const newTodo: TodoItem = {
-          title: state.newTitle,
-          id: `${draftState.idCount}`,
-          completed: false,
-        };
-        draftState.idCount++;
-        draftState.todoMap[newTodo.id] = newTodo;
-        draftState.todoIds.push(newTodo.id);
-        draftState.newTitle = '';
-      }),
+  return (
+    <div>
+      <label>
+        <input
+          type="radio"
+          name="filter"
+          value={Filter.ALL}
+          checked={filter === Filter.ALL}
+          onChange={onFilterChange}
+        />
+        All
+      </label>
+      <label>
+        <input
+          type="radio"
+          name="filter"
+          value={Filter.NON_COMPLETED}
+          checked={filter === Filter.NON_COMPLETED}
+          onChange={onFilterChange}
+        />
+        Non Completed
+      </label>
+      <label>
+        <input
+          type="radio"
+          name="filter"
+          value={Filter.COMPLETED}
+          checked={filter === Filter.COMPLETED}
+          onChange={onFilterChange}
+        />
+        Completed
+      </label>
+      <button onClick={onClearCompleted}>Clear completed</button>
+    </div>
+  );
+});
 
-    onEdit: (state, [id, title]) =>
-      produce<State>(state, (draftState) => {
-        draftState.todoMap[id].title = title;
-      }),
+const actions: StateDecoratorActions<State, Actions> = {
+  onCreate: (state) =>
+    produce<State>(state, (draftState) => {
+      const newTodo: TodoItem = {
+        title: state.newTitle,
+        id: `${draftState.idCount}`,
+        completed: false,
+      };
+      draftState.idCount++;
+      draftState.todoMap[newTodo.id] = newTodo;
+      draftState.todoIds.push(newTodo.id);
+      draftState.newTitle = '';
+    }),
 
-    onDelete: (state, [id]) =>
-      produce<State>(state, (draftState) => {
-        delete draftState.todoMap[id];
-        draftState.todoIds = draftState.todoIds.filter((todoId) => todoId !== id);
-      }),
+  onEdit: (state, [id, title]) =>
+    produce<State>(state, (draftState) => {
+      draftState.todoMap[id].title = title;
+    }),
 
-    onToggle: (state, [id]) =>
-      produce<State>(state, (draftState) => {
+  onDelete: (state, [id]) =>
+    produce<State>(state, (draftState) => {
+      delete draftState.todoMap[id];
+      draftState.todoIds = draftState.todoIds.filter((todoId) => todoId !== id);
+    }),
+
+  onToggle: (state, [id]) =>
+    produce<State>(state, (draftState) => {
+      const todo = draftState.todoMap[id];
+      todo.completed = !todo.completed;
+    }),
+
+  onClearCompleted: (state) =>
+    produce<State>(state, (draftState) => {
+      draftState.todoIds = draftState.todoIds.filter((id) => {
         const todo = draftState.todoMap[id];
-        todo.completed = !todo.completed;
-      }),
-
-    onClearCompleted: (state) =>
-      produce<State>(state, (draftState) => {
-        draftState.todoIds = draftState.todoIds.filter((id) => {
-          const todo = draftState.todoMap[id];
-          if (todo.completed) {
-            delete draftState.todoMap[todo.id];
-          }
-          return !todo.completed;
-        });
-      }),
-
-    onSetNewTitle: (s, [newTitle]) => ({
-      ...s,
-      newTitle,
+        if (todo.completed) {
+          delete draftState.todoMap[todo.id];
+        }
+        return !todo.completed;
+      });
     }),
 
-    onSetFilter: (s, [filter]) => ({
-      ...s,
-      filter,
-    }),
-  };
+  onSetNewTitle: (s, [newTitle]) => ({
+    ...s,
+    newTitle,
+  }),
 
-  render() {
-    return (
-      <StateDecorator<State, Actions> actions={TodoContainer.actions} initialState={getInitialState()}>
-        {(state, actions) => {
-          const todoProps = pick(state, 'todoMap', 'todoIds', 'filter');
-          return (
-            <div>
-              <Header {...actions} newTitle={state.newTitle} />
-              <Todos {...actions} {...todoProps} />
-              <Footer {...actions} filter={state.filter} />
-            </div>
-          );
-        }}
-      </StateDecorator>
-    );
-  }
+  onSetFilter: (s, [filter]) => ({
+    ...s,
+    filter,
+  }),
+};
+
+// Container that is managing the state.
+export default function TodoContainer() {
+  return (
+    <StateDecorator<State, Actions> actions={actions} getInitialState={getInitialState}>
+      {(state, actions) => {
+        const todoProps = pick(state, 'todoMap', 'todoIds', 'filter');
+        return (
+          <div>
+            <Header {...actions} newTitle={state.newTitle} />
+            <Todos {...actions} {...todoProps} />
+            <Footer {...actions} filter={state.filter} />
+          </div>
+        );
+      }}
+    </StateDecorator>
+  );
 }
 ```
 
@@ -1092,8 +1088,10 @@ export default class TodoContainer extends React.Component {
 Show various ways of handling conflicting actions, ie. asynchronous actions triggered when a previous action of same type is still ongoing.
 
 ```typescript
-import React from 'react';
-import StateDecorator, { StateDecoratorActions } from 'state-decorator';
+import React, { useMemo } from 'react';
+import StateDecorator, { StateDecoratorActions, ConflictPolicy } from '../../../src/StateDecorator';
+import ParallelActions from './ParallelActions';
+import ReuseConflictPolicy from './ReuseConflictPolicy';
 
 export type State = {
   counter: number;
@@ -1109,51 +1107,70 @@ export const getInitialState = (): State => ({
   text: '',
 });
 
-interface Props {
+export interface Props {
   title: string;
+  description: string;
   conflictPolicy: ConflictPolicy;
 }
 
-class ConflictingActionsContainer extends React.PureComponent<Props> {
-  actions: StateDecoratorActions<State, Actions> = {
-    updateText: {
-      promise: ([text]) => new Promise((res) => setTimeout(res, 1000, text)),
-      reducer: (s, [text]) => ({ ...s, text, counter: s.counter + 1 }),
-      conflictPolicy: this.props.conflictPolicy,
-      debounceTimeout: 250,
-    },
-  };
+const getActions: (conflictPolicy: ConflictPolicy) => StateDecoratorActions<State, Actions> = (
+  conflictPolicy: ConflictPolicy
+) => ({
+  updateText: {
+    promise: ([text]) => new Promise((res) => setTimeout(res, 1000, text)),
+    reducer: (s, text) => ({ ...s, text, counter: s.counter + 1 }),
+    conflictPolicy: conflictPolicy,
+  },
+});
 
-  render() {
-    const { title } = this.props;
-    return (
-      <StateDecorator<State, Actions> actions={this.actions} initialState={getInitialState()}>
-        {({ counter, text }, actions) => (
-          <div style={{ border: '1px solid grey', marginBottom: 10 }}>
-            <h2>{title}</h2>
-            <div>
-              <input onChange={(e) => actions.updateText(e.target.value)} />
-            </div>
-            <div>Server calls #: {counter}</div>
-            <div>Server state: {text}</div>
+function ConflictingActionsContainer(props: Props) {
+  const { title, description, conflictPolicy } = props;
+  const actions = useMemo(() => getActions(conflictPolicy), [conflictPolicy]);
+
+  return (
+    <StateDecorator<State, Actions> actions={actions} getInitialState={getInitialState}>
+      {({ counter, text }, actions) => (
+        <div style={{ border: '1px solid grey', marginBottom: 10 }}>
+          <h3>{title}</h3>
+          <p>{description}</p>
+          <div>
+            <input onChange={(e) => actions.updateText(e.target.value)} />
           </div>
-        )}
-      </StateDecorator>
-    );
-  }
+          <div>Server calls #: {counter}</div>
+          <div>Server state: {text}</div>
+        </div>
+      )}
+    </StateDecorator>
+  );
 }
 
-export default class ConflictApp extends React.Component {
-  render() {
-    return (
-      <div>
-        <ConflictingActionsContainer title="Keep All" conflictPolicy={ConflictPolicy.KEEP_ALL} />
-        <ConflictingActionsContainer title="Keep Last" conflictPolicy={ConflictPolicy.KEEP_LAST} />
-        <ConflictingActionsContainer title="Ignore" conflictPolicy={ConflictPolicy.IGNORE} />
-        <ConflictingActionsContainer title="Reject" conflictPolicy={ConflictPolicy.REJECT} />
-      </div>
-    );
-  }
+export default function ConflictApp() {
+  return (
+    <div>
+      <ReuseConflictPolicy />
+      <ConflictingActionsContainer
+        title="Keep All"
+        conflictPolicy={ConflictPolicy.KEEP_ALL}
+        description="Chain all action calls"
+      />
+      <ConflictingActionsContainer
+        title="Keep Last"
+        conflictPolicy={ConflictPolicy.KEEP_LAST}
+        description="Keep only last (more recent) call to be executed when the previous call is resolved"
+      />
+      <ConflictingActionsContainer
+        title="Ignore"
+        conflictPolicy={ConflictPolicy.IGNORE}
+        description="Ignore conflicting action calls"
+      />
+      <ConflictingActionsContainer
+        title="Reject"
+        conflictPolicy={ConflictPolicy.REJECT}
+        description="Return a rejected promise on a conflicting action call."
+      />
+      <ParallelActions />
+    </div>
+  );
 }
 ```
 
@@ -1163,7 +1180,7 @@ The _onChange_ action calls are executed in parallel. The map of ongoing action 
 
 ```typescript
 import React from 'react';
-import StateDecorator, { StateDecoratorActions, ConflictPolicy } from 'state-decorator';
+import StateDecorator, { StateDecoratorActions, ConflictPolicy } from '../../../src/StateDecorator';
 import produce from 'immer';
 
 type Item = {
@@ -1176,7 +1193,7 @@ export type State = {
 };
 
 export type Actions = {
-  onChange: (id: string, value: string) => Promise<any>;
+  onChange: (id: string, value: string) => Promise<string>;
 };
 
 export const getInitialState = (): State => ({
@@ -1200,44 +1217,42 @@ export const getInitialState = (): State => ({
   ],
 });
 
-export default class ParallelActions extends React.PureComponent {
-  static actions: StateDecoratorActions<State, Actions> = {
-    onChange: {
-      promise: ([id, value]) => new Promise((res) => setTimeout(res, 3000, value)),
-      conflictPolicy: ConflictPolicy.PARALLEL,
-      getPromiseId: (id) => id,
-      reducer: (s, value, [id]) =>
-        produce(s, ({ items }) => {
-          items.find((i) => i.id === id).value = value;
-        }),
-    },
-  };
+const actions: StateDecoratorActions<State, Actions> = {
+  onChange: {
+    promise: ([id, value]) => new Promise((res) => setTimeout(res, 3000, value)),
+    conflictPolicy: ConflictPolicy.PARALLEL,
+    getPromiseId: (id) => id,
+    reducer: (s, value, [id]) =>
+      produce(s, ({ items }) => {
+        items.find((i) => i.id === id).value = value;
+      }),
+  },
+};
 
-  render() {
-    return (
-      <StateDecorator actions={ParallelActions.actions} initialState={getInitialState()}>
-        {({ items }, { onChange }, loading, loadingMap, loadingParallelMap) => (
-          <div style={{ border: '1px solid grey', marginBottom: 10 }}>
-            <h2>Parallel actions</h2>
-            <p>Actions are launched on blur, in parallel for 3s</p>
-            {items.map((item) => {
-              const isItemLoading = loadingParallelMap.onChange[item.id];
-              return (
-                <div key={item.id}>
-                  {item.id}
-                  <input
-                    onBlur={(e) => onChange(item.id, e.target.value)}
-                    disabled={isItemLoading}
-                    style={{ backgroundColor: isItemLoading ? 'grey' : null }}
-                  />
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </StateDecorator>
-    );
-  }
+export default function ParallelActions() {
+  return (
+    <StateDecorator actions={actions} getInitialState={getInitialState}>
+      {({ items }, { onChange }, loading, loadingMap, loadingParallelMap) => (
+        <div style={{ border: '1px solid grey', marginBottom: 10 }}>
+          <h2>Parallel actions</h2>
+          <p>Actions are launched on blur, in parallel for 3s</p>
+          {items.map((item) => {
+            const isItemLoading = loadingParallelMap.onChange[item.id];
+            return (
+              <div key={item.id}>
+                {item.id}
+                <input
+                  onBlur={(e) => onChange(item.id, e.target.value)}
+                  disabled={isItemLoading}
+                  style={{ backgroundColor: isItemLoading ? 'grey' : null }}
+                />
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </StateDecorator>
+  );
 }
 ```
 
@@ -1249,55 +1264,49 @@ Add this code to File > Preferences > User snippets > typescriptreact.json
 
 ```json
 {
-  "Create StateDecorator class": {
-    "prefix": "createStateDecoratorClass",
+  "Create StateDecorator component": {
+    "prefix": "createStateDecoratorComponent",
     "body": [
-      "export type $1Props = {",
-      "  $2",
-      "};",
+      "import React from 'react';",
+      "import StateDecorator, { StateDecoratorActions } from 'state-decorator';",
+      "",
+      "export type $1Props = {};",
+      "",
+      "export type $1State = {};",
+      "",
+      "export type $1Actions = {};",
       "",
       "type Props = $1Props;",
-      "",
-      "export type $1State = {",
-      "  $3",
-      "};",
-      "",
       "type State = $1State;",
-      "",
-      "export type $1Actions = {",
-      "  $4",
-      "};",
-      "",
-      "export const getInitialState = ():State => ({",
-      "  $5",
-      "});",
-      "",
       "type Actions = $1Actions;",
       "",
-      "export default class $1 extends React.PureComponent<$1Props> {",
-      "  static actions: StateDecoratorActions<State, Actions, Props> = {",
-      "    $6",
-      "  };",
+      "type ViewProps = Props & Actions & State & {loading?:boolean};",
       "",
-      "  static onMount(actions:Actions, props:Props) {",
-      "    $7",
-      "  }",
+      "export function getInitialState(): State {",
+      "return {};",
+      "};",
       "",
-      "  render() {",
-      "    return (",
-      "      <StateDecorator<State, Actions, Props>",
-      "        actions={$1.actions}",
-      "        props={this.props}",
-      "        initialState={getInitialState()}",
-      "        onMount={$1.onMount}",
-      "      >",
-      "        {(state, actions) => <div/>$0}",
-      "      </StateDecorator>",
-      "    );",
-      "  }",
-      "}"
+      "export const $1View = React.memo(function $1View(p: ViewProps) {",
+      "    return (<div>[$1View]</div>);",
+      "});",
+      "",
+      "export const actions: StateDecoratorActions<State, Actions, Props> = {};",
+      "",
+      "export function onMount(actions:$1Actions) {}",
+      "",
+      "export default React.memo(function $1(p: $1Props) {",
+      "  return (",
+      "    <StateDecorator<State, Actions, Props>",
+      "      props={p}",
+      "      actions={actions}",
+      "      getInitialState={getInitialState}",
+      "      onMount={onMount}>",
+      "      {(s, a, loading) => <$1View {...p} {...s} {...a} loading={loading} />}",
+      "    </StateDecorator>",
+      "  );",
+      "});"
     ],
-    "description": "Create a new State decorated class"
+    "description": "Create a new State decorated component"
   }
 }
 ```

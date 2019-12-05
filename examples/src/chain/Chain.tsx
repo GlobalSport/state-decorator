@@ -30,24 +30,26 @@ class APIClient {
   }
 }
 
-export default class ChainContainer extends React.PureComponent<{}> {
-  static actions: StateDecoratorActions<State, Actions> = {
-    getItems: {
-      promise: () => APIClient.getItems(),
-      reducer: (s, list) => ({ ...s, list }),
+const actions: StateDecoratorActions<State, Actions> = {
+  getItems: {
+    promise: () => APIClient.getItems(),
+    reducer: (s, list) => ({ ...s, list }),
+  },
+  addItem: {
+    // As addItem is silly, we must reload the list after having added the item...
+    promise: ([item], state, props, actions) => APIClient.addItem(item),
+    // No reducer needed, the decorated action will call its reducer
+    // onDone gathers side effects of the action
+    onDone: (s, result, args, props, actions) => {
+      actions.getItems();
     },
-    addItem: {
-      // As addItem is silly, we must reload the list after having added the item...
-      promise: ([item], state, props, actions) => APIClient.addItem(item).then(() => actions.getItems()),
-      // No reducer needed, the decorated action will call its reducer
-    },
-  };
+  },
+};
 
-  render() {
-    return (
-      <StateDecorator<State, Actions> actions={ChainContainer.actions} initialState={getInitialState()}>
-        {(state, actions) => <div />}
-      </StateDecorator>
-    );
-  }
+export default function ChainContainer() {
+  return (
+    <StateDecorator actions={actions} getInitialState={getInitialState}>
+      {(state, actions) => <div />}
+    </StateDecorator>
+  );
 }
