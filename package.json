@@ -1,6 +1,6 @@
 {
   "name": "state-decorator",
-  "version": "4.0.0-beta.4",
+  "version": "5.0.0-beta.1",
   "description": "React state management component",
   "main": "dist/index.js",
   "module": "dist/index.es.js",
@@ -22,15 +22,24 @@
     "dist/"
   ],
   "devDependencies": {
-    "@babel/core": "^7.4.5",
-    "@babel/preset-env": "^7.4.5",
-    "@commitlint/cli": "^8.0.0",
-    "@commitlint/config-conventional": "^8.0.0",
-    "@types/jest": "^23.3.2",
-    "@types/react": "^16.8.0",
+    "@babel/cli": "^7.7.0",
+    "@babel/core": "^7.7.0",
+    "@babel/node": "^7.7.0",
+    "@babel/plugin-external-helpers": "^7.2.0",
+    "@babel/plugin-proposal-class-properties": "^7.7.0",
+    "@babel/plugin-proposal-nullish-coalescing-operator": "^7.4.4",
+    "@babel/plugin-proposal-object-rest-spread": "^7.6.2",
+    "@babel/plugin-proposal-optional-chaining": "^7.6.0",
+    "@babel/plugin-transform-modules-commonjs": "^7.7.5",
+    "@babel/plugin-transform-runtime": "^7.6.2",
+    "@babel/polyfill": "^7.7.0",
+    "@babel/preset-env": "^7.7.1",
+    "@babel/preset-react": "^7.7.0",
+    "@babel/preset-typescript": "^7.7.2",
+    "@types/jest": "^24.0.17",
+    "@types/react": "^16.4.14",
     "babel-core": "^7.0.0-0",
     "babel-jest": "^23.0.1",
-    "babel-plugin-transform-es2015-modules-commonjs": "^6.26.2",
     "cross-env": "^5.2.0",
     "enzyme": "^3.6.0",
     "enzyme-adapter-react-16": "^1.5.0",
@@ -60,44 +69,6 @@
     "react": "^16.4.0",
     "react-dom": "^16.4.0"
   },
-  "jest": {
-    "globals": {
-      "ts-jest": {
-        "tsConfig": "tsconfig.test.json"
-      }
-    },
-    "collectCoverage": false,
-    "coverageDirectory": "tests/reports",
-    "coveragePathIgnorePatterns": [
-      "/node_modules/",
-      "/tests/",
-      "/jest",
-      "/.history/"
-    ],
-    "moduleFileExtensions": [
-      "js",
-      "jsx",
-      "ts",
-      "tsx"
-    ],
-    "setupFiles": [
-      "<rootDir>/jest/shims.js"
-    ],
-    "setupFilesAfterEnv": [
-      "<rootDir>/jest/setup.js"
-    ],
-    "testPathIgnorePatterns": [
-      "/__snapshots__/",
-      "/.history/",
-      "/node_modules/",
-      "/jest/"
-    ],
-    "testRegex": "/tests/.*/*.test.(j|t)sx?$",
-    "transform": {
-      "\\.js$": "babel-jest",
-      ".(ts|tsx)": "ts-jest"
-    }
-  },
   "lint-staged": {
     "src/*.{ts,tsx}": [
       "tslint -p ./tsconfig.json -e 'tests/**' -e 'dist/**'",
@@ -113,12 +84,13 @@
   ],
   "husky": {
     "hooks": {
-      "commit-msg": "commitlint -E HUSKY_GIT_PARAMS",
       "pre-commit": "lint-staged"
     }
   },
   "dependencies": {
-    "fast-clone": "^1.5.3",
     "fast-deep-equal": "^2.0.1"
+  },
+  "resolutions": {
+    "@babel/helpers": "^7.6.0"
   }
 }
