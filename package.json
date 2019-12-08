@@ -20,8 +20,19 @@
     "dist/"
   ],
   "devDependencies": {
-    "@babel/core": "^7.5.5",
-    "@babel/preset-env": "^7.5.5",
+    "@babel/cli": "^7.7.0",
+    "@babel/core": "^7.7.0",
+    "@babel/node": "^7.7.0",
+    "@babel/plugin-external-helpers": "^7.2.0",
+    "@babel/plugin-proposal-class-properties": "^7.7.0",
+    "@babel/plugin-proposal-nullish-coalescing-operator": "^7.4.4",
+    "@babel/plugin-proposal-object-rest-spread": "^7.6.2",
+    "@babel/plugin-proposal-optional-chaining": "^7.6.0",
+    "@babel/plugin-transform-runtime": "^7.6.2",
+    "@babel/polyfill": "^7.7.0",
+    "@babel/preset-env": "^7.7.1",
+    "@babel/preset-react": "^7.7.0",
+    "@babel/preset-typescript": "^7.7.2",
     "@types/jest": "^24.0.17",
     "@types/react": "^16.4.14",
     "babel-core": "^7.0.0-0",
@@ -54,45 +65,6 @@
   "peerDependencies": {
     "react": "^16.4.0",
     "react-dom": "^16.4.0"
-  },
-  "jest": {
-    "globals": {
-      "ts-jest": {
-        "tsConfig": "tsconfig.test.json"
-      }
-    },
-    "collectCoverage": false,
-    "coverageDirectory": "tests/reports",
-    "coveragePathIgnorePatterns": [
-      "/node_modules/",
-      "/tests/",
-      "/jest",
-      "/.history/"
-    ],
-    "moduleFileExtensions": [
-      "js",
-      "jsx",
-      "ts",
-      "tsx"
-    ],
-    "setupFiles": [
-      "<rootDir>/jest/shims.js"
-    ],
-    "setupFilesAfterEnv": [
-      "<rootDir>/jest/setup.js"
-    ],
-    "testPathIgnorePatterns": [
-      "/__snapshots__/",
-      "/.history/",
-      "/examples/",
-      "/node_modules/",
-      "/jest/"
-    ],
-    "testRegex": "/tests/.*/*.test.(j|t)sx?$",
-    "transform": {
-      "\\.js$": "babel-jest",
-      ".(ts|tsx)": "ts-jest"
-    }
   },
   "lint-staged": {
     "src/*.{ts,tsx}": [
