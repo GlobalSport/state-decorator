@@ -480,36 +480,38 @@ export function areSameArgs(args1: any[], args2: any[]): boolean {
 
 function computeDiffPropValue(oldValue: any, newValue: any): any {
   let res: any;
-  if (newValue !== oldValue) {
-    const type = oldValue == null ? typeof oldValue : typeof newValue;
-    if (type === 'number' || type === 'string' || type === 'boolean') {
-      res = `${oldValue} => ${newValue === '' ? '""' : newValue}`;
-    } else if ((oldValue && oldValue.length) || (newValue && newValue.length)) {
-      if (oldValue == null) {
-        res = `was ${oldValue}, now contains ${newValue.length} elements`;
-      } else if (newValue == null) {
-        res = `contained ${oldValue.length} elements, now is ${newValue}`;
-      } else if (oldValue.length === 0) {
-        res = `was empty, now contains ${newValue.length} elements`;
-      } else if (newValue.length === 0) {
-        res = `contained ${oldValue.length} elements, now is empty`;
-      } else {
-        let addedValues = newValue.filter((a) => !oldValue.find((b) => isEqual(a, b)));
-        let removedValues = oldValue.filter((a) => !newValue.find((b) => isEqual(a, b)));
+  if (process.env.NODE_ENV === 'development') {
+    if (newValue !== oldValue) {
+      const type = oldValue != null ? typeof oldValue : typeof newValue;
+      if (type === 'number' || type === 'string' || type === 'boolean') {
+        res = `${oldValue} => ${newValue === '' ? '""' : newValue}`;
+      } else if ((oldValue && oldValue.length) || (newValue && newValue.length)) {
+        if (oldValue == null) {
+          res = `was ${oldValue}, now contains ${newValue.length} element(s)`;
+        } else if (newValue == null) {
+          res = `contained ${oldValue.length} element(s), now is ${newValue}`;
+        } else if (oldValue.length === 0) {
+          res = `was empty, now contains ${newValue.length} elements`;
+        } else if (newValue.length === 0) {
+          res = `contained ${oldValue.length} elements, now is empty`;
+        } else {
+          let addedValues = newValue.filter((a) => !oldValue.find((b) => isEqual(a, b)));
+          let removedValues = oldValue.filter((a) => !newValue.find((b) => isEqual(a, b)));
 
-        if (addedValues.length > 10) {
-          addedValues = `${addedValues.length} elements added`;
+          if (addedValues.length > 10) {
+            addedValues = `${addedValues.length} element(s) added`;
+          }
+          if (removedValues.length > 10) {
+            removedValues = `${removedValues.length} element(s) removed`;
+          }
+          res = {
+            added: addedValues,
+            removed: removedValues,
+          };
         }
-        if (removedValues.length > 10) {
-          removedValues = `${removedValues.length} elements removed`;
-        }
-        res = {
-          added: addedValues,
-          removed: removedValues,
-        };
+      } else {
+        res = newValue;
       }
-    } else {
-      res = newValue;
     }
   }
   return res;
@@ -518,24 +520,29 @@ function computeDiffPropValue(oldValue: any, newValue: any): any {
 function buildDiff<S>(oldState: S, newState: S) {
   const res = {};
 
-  oldState &&
-    Object.keys(oldState).forEach((k) => {
-      if (newState.hasOwnProperty(k)) {
-        const oldValue = oldState[k];
+  if (process.env.NODE_ENV === 'development') {
+    oldState &&
+      Object.keys(oldState).forEach((k) => {
+        if (newState.hasOwnProperty(k)) {
+          const oldValue = oldState[k];
+          const newValue = newState[k];
+          const diff = computeDiffPropValue(oldValue, newValue);
+          if (diff) {
+            res[k] = diff;
+          }
+        } else {
+          res[k] = 'was deleted';
+        }
+      });
+
+    Object.keys(newState).forEach((k) => {
+      if (oldState == null || !oldState.hasOwnProperty(k)) {
         const newValue = newState[k];
-        res[k] = computeDiffPropValue(oldValue, newValue);
-      } else {
-        res[k] = 'was deleted';
+
+        res[k] = computeDiffPropValue(undefined, newValue);
       }
     });
-
-  Object.keys(newState).forEach((k) => {
-    if (oldState == null || !oldState.hasOwnProperty(k)) {
-      const newValue = newState[k];
-
-      res[k] = computeDiffPropValue(undefined, newValue);
-    }
-  });
+  }
 
   return res;
 }
