@@ -95,7 +95,7 @@ The StateDecorator is a generic React component class that needs two interfaces:
 
 # Initial state
 
-The initial state is passed in the _getInitialState_ property of the StateDecorator.
+The initial state is passed in the **getInitialState** property of the StateDecorator.
 
 ```typescript
 const getInitialState = () => ({ text: 'Hello' });
@@ -105,9 +105,9 @@ const getInitialState = () => ({ text: 'Hello' });
 </StateDecorator>;
 ```
 
-Note: _initialState_ is deprecated in favor of _getInitialState_.
+Note: **initialState** is deprecated in favor of **getInitialState**.
 
-- Each time the component containing the StateDecorator is rendered, the initial state is recomputed when using _initialState_,
+- Each time the component containing the StateDecorator is rendered, the initial state is recomputed when using **initialState**,
 - In real life use cases, a function is used to compute the initial state from props and to be reused in unit tests.
 
 # Actions
@@ -141,7 +141,7 @@ This is usually used to load asynchronous data to populate the state.
 
 ### Simple form
 
-A simple synchronous action is a function that takes the current state and an optional list of parameters and returns a new state or _null_ if there's no change.
+A simple synchronous action is a function that takes the current state and an optional list of parameters and returns a new state or **null** if there's no change.
 
 ```typescript
 const actions: StateDecoratorActions<State, Actions> = {
@@ -151,7 +151,7 @@ const actions: StateDecoratorActions<State, Actions> = {
 
 ### Advanced form
 
-An advanced synchronous action is a made of, at least, an **action**. It's function that takes the current state and an optional list of parameters and returns a new state or _null_ if there's no change like the simple form.
+An advanced synchronous action is a made of, at least, an **action**. It's function that takes the current state and an optional list of parameters and returns a new state or **null** if there's no change like the simple form.
 
 The advanced form allows to add some additional properties for this action.
 
@@ -174,7 +174,7 @@ An asynchronous action is made of, at least:
 
 and
 
-- a reducer (to use redux terminology), ie. a function that takes as parameter the old state, the result of the request, the list of call arguments and returns a new state or _null_ if there's no change.
+- a reducer (to use redux terminology), ie. a function that takes as parameter the old state, the result of the request, the list of call arguments and returns a new state or **null** if there's no change.
 
 ```typescript
 function getInitialState(): State {
@@ -255,15 +255,15 @@ There are two properties:
 
 A notification function can be called when the asynchronous action succeeded or failed.
 
-1. Pass a function to _notifySuccess_ and/or _notifyError_ properties of the StateDecorator.
+1. Pass a function to **notifySuccess** and/or **notifyError** properties of the StateDecorator or override **StateDecorator.notifySuccess** and/or **StateDecoratir.notifyError**.
 2. In each asynchronous action, set
 
-- _errorMessage_ (static message) or _getErrorMessage_ (message built from the error and action parameters)
-- _successMessage_ (static message) or _getSuccessMessage_ (message built from the action result and parameters)
+- **errorMessage** (static message) or **getErrorMessage** (message built from the error and action parameters)
+- **successMessage** (static message) or **getSuccessMessage** (message built from the action result and parameters)
 
 ### <a name="ErrorManagement"></a>Error management
 
-When an asynchronous action fails, if the state needs to be updated, set the _errorReducer_ property of the asynchronous action.
+When an asynchronous action fails, if the state needs to be updated, set the **errorReducer** property of the asynchronous action.
 
 ```typescript
 const actions: StateDecoratorActions<State, Actions> = {
@@ -275,7 +275,7 @@ const actions: StateDecoratorActions<State, Actions> = {
 };
 ```
 
-**Note:** If an error message or an error reducer is defined, the error will be trapped to prevent other error management (console traces...). If, for any reason, you need to have the promise to be rejected, set _rejectPromiseOnError_ to _true_.
+**Note:** If an error message or an error reducer is defined, the error will be trapped to prevent other error management (console traces...). If, for any reason, you need to have the promise to be rejected, set **rejectPromiseOnError** to **true**.
 
 ### Retry
 
@@ -285,9 +285,9 @@ The following properties of an asynchronous action are used:
 
 - **retryCount**: Number of retries in case of "retry error".
 - **retryDelaySeed**: Seed of delay between each retry in milliseconds. The applied delay is retryDelaySeed \* retry count. Default is 1000ms.
-- **isTriggerRetryError**: A function that returns if the passed error will trigger a retry or if the action fails directly. Default function is returning _true_ for _TypeError_ instances.
+- **isTriggerRetryError**: A function that returns if the passed error will trigger a retry or if the action fails directly. Default function is returning **true** for **TypeError** instances.
 
-Note: _StateDecorator.isTriggerRetryError_ static function can be overridden to determine which error will trigger a retry globally.
+Note: **StateDecorator.isTriggerRetryError** static function can be overridden to determine which error will trigger a retry globally.
 
 ### Optimistic action
 
@@ -315,13 +315,13 @@ const actions: StateDecoratorActions<State, Actions> = {
 };
 ```
 
-**Note**: To update the state _before_ the action, prefer _preReducer_. _optimisticReducer_ purpose is optimistic actions only. Optimistic actions are not changing the global loading state and are a bit more expensive because the subsequent actions are saved in order to be able to revert the optimistic action in case of failure.
+**Note**: To update the state **before** the action, prefer **preReducer**. **optimisticReducer** purpose is optimistic actions only. Optimistic actions are not changing the global loading state and are a bit more expensive because the subsequent actions are saved in order to be able to revert the optimistic action in case of failure.
 
 ### <a name="ConflictingActions"></a>Conflicting actions
 
 The StateDecorator is managing the asynchronous action calls one at a time or in parallel
 
-In lots of situations, the UI is disabled using the _loading_ or _loadingMap_ parameters, but in other situation one may want to manage such use case (a search bar, autosave feature of an editor etc.).
+In lots of situations, the UI is disabled using the **loading** or **loadingMap** parameters, but in other situation one may want to manage such use case (a search bar, autosave feature of an editor etc.).
 
 When a action call occurs while another call of the same action is ongoing, we call such actions calls _conflicting actions_.
 
@@ -338,8 +338,8 @@ It can takes the following values (use ConflictPolicy enum), choose the one the 
 - **ConflictPolicy.REUSE**: If an action is already ongoing, the promise is reused, if the arguments are the same (shallow comparison). Otherwise fallback to **ConflictPolicy.KEEP_ALL**. Useful for GET requests.
 - **ConflictPolicy.PARALLEL**: Actions are executed in parallel.
   - Use case: several calls with different parameters.
-  - A _getPromiseId_ function must be provided to assign an identifier to each call from call arguments.
-  - The _loadingParallelMap_ of the render prop function contains for each parallel action the promise identifiers that are ongoing.
+  - A **getPromiseId** function must be provided to assign an identifier to each call from call arguments.
+  - The **loadingParallelMap** of the render prop function contains for each parallel action the promise identifiers that are ongoing.
 
 Run the "Conflicting actions" example.
 
@@ -453,15 +453,15 @@ export default function ChainContainer() {
 
 # Update the state after a prop change
 
-The _props_ property of the StateDecorator is passed to nearly all action callbacks. It's usually used to pass some context data.
+The **props** property of the StateDecorator is passed to nearly all action callbacks. It's usually used to pass some context data.
 
-Sometimes the state is built from one of several _props_. If one of these props change the state must be recomputed.
+Sometimes the state is built from one of several **props**. If one of these props change the state must be recomputed.
 
 3 props of the StateDecorator are used for this.
 
 - **getPropsRefValues**: a function that computes from the props the reference values that will be used to detect a prop change. For example: `(p) => [p.item.id, p.otherProps];`
 - **onPropsChangeReducer**: a reducer function to update the state from new props. For example: `(state, newProps, updatedIndices) => ({...state, item: {...newProps.item})`
-- **onPropsChange**: a callback to trigger an action. The reducer of the _loadData_ action will then update the state.
+- **onPropsChange**: a callback to trigger an action. The reducer of the **loadData** action will then update the state.
   For example:
 
 ```
@@ -475,7 +475,7 @@ Sometimes the state is built from one of several _props_. If one of these props 
 
 # Debug actions
 
-The StateDecorator has a _logEnabled_ property that logs in the Browser console the actions and related state changes.
+The StateDecorator has a **logEnabled** property that logs in the Browser console the actions and related state changes.
 
 ```
 [StateDecorator] Action onCalendarTimeRangeChange
@@ -502,7 +502,7 @@ If the asynchronous action is processing the result before passing it to the red
 
 The synchronous actions and the asynchronous reducers are all pure functions, ie. all the data you need is provided by the user (arguments) or injected (state & props).
 
-Use _testSyncAction_ and _testAsyncAction_ utility function that allows to easily test actions in a typed manner.
+Use **testSyncAction** and **testAsyncAction** utility function that allows to easily test actions in a typed manner.
 
 ## Example
 
@@ -1178,7 +1178,7 @@ export default function ConflictApp() {
 
 ## Parallel actions
 
-The _onChange_ action calls are executed in parallel. The map of ongoing action calls is available on _loadingParallelMap_.
+The **onChange** action calls are executed in parallel. The map of ongoing action calls is available on **loadingParallelMap**.
 
 ```typescript
 import React from 'react';
