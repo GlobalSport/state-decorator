@@ -644,6 +644,16 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
   }
 
   /**
+   * Global notify error handler.
+   */
+  static notifyError: (s: string) => void;
+
+  /**
+   * Global notify error handler.
+   */
+  static notifySuccess: (s: string) => void;
+
+  /**
    * Tests if the error will trigger a retry of the action or will fail directly.
    * Default implementation is returning true for TypeError instances only.
    * @param error an error
@@ -1143,8 +1153,8 @@ export default class StateDecorator<S, A extends DecoratedActions, P = {}> exten
 
     const { logEnabled, notifySuccess: _notifySuccess, notifyError: _notifyError, props } = this.props;
 
-    const notifyError = _notifyError || (props && props['notifyError']);
-    const notifySuccess = _notifySuccess || (props && props['notifySuccess']);
+    const notifyError = _notifyError || (props && props['notifyError']) || StateDecorator.notifyError;
+    const notifySuccess = _notifySuccess || (props && props['notifySuccess']) || StateDecorator.notifySuccess;
 
     if (conflictPolicy !== ConflictPolicy.PARALLEL && this.promises[name]) {
       return this.handleConflictingAction(name, conflictPolicy, args);

@@ -641,6 +641,35 @@ describe('StateDecorator', () => {
     const wrapper = shallow(<StateDecorator {...props}>{() => <div />}</StateDecorator>);
   });
 
+  it('calls global notify success function correctly', (done) => {
+    const notifySuccess = jest.fn();
+
+    StateDecorator.notifySuccess = notifySuccess;
+
+    const actions: StateDecoratorActions<any, any, any> = {
+      get: {
+        promise: () => Promise.resolve('text'),
+        successMessage: 'success',
+      },
+    };
+
+    const onMount = (actions) => {
+      actions.get().then(() => {
+        StateDecorator.notifySuccess = undefined;
+        expect(notifySuccess).toHaveBeenCalled();
+        done();
+      });
+    };
+
+    const props = {
+      actions,
+      onMount,
+      initialState: 'default',
+    };
+
+    const wrapper = shallow(<StateDecorator {...props}>{() => <div />}</StateDecorator>);
+  });
+
   it('calls in props notify success function correctly', (done) => {
     const notifySuccess = jest.fn();
 
@@ -736,6 +765,36 @@ describe('StateDecorator', () => {
       actions,
       onMount,
       notifyError,
+      initialState: 'default',
+    };
+
+    const wrapper = shallow(<StateDecorator {...props}>{() => <div />}</StateDecorator>);
+  });
+
+  it('calls global notify error function correctly', (done) => {
+    const notifyError = jest.fn();
+    StateDecorator.notifyError = notifyError;
+
+    const actions: StateDecoratorActions<any, any, any> = {
+      get: {
+        promise: (param) => new Promise((_, reject) => setTimeout(reject, 100, 'text')),
+        errorMessage: 'error message',
+        rejectPromiseOnError: true,
+      },
+    };
+
+    const onMount = jestFail(done, (actions) => {
+      actions.get('param').catch((e) => {
+        StateDecorator.notifyError = undefined;
+
+        expect(notifyError).toHaveBeenCalled();
+        done();
+      });
+    });
+
+    const props = {
+      actions,
+      onMount,
       initialState: 'default',
     };
 
