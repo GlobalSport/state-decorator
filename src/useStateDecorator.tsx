@@ -9,7 +9,6 @@
  */
 
 import React, { useReducer, useMemo, useRef } from 'react';
-import fastClone from 'fast-clone';
 
 import {
   DecoratedActions,
@@ -26,7 +25,12 @@ import {
   ReducerName,
   AsynchAction,
   StateDecoratorAction,
+  GlobalAsyncHook,
+  CloneFunction,
+  NotifyFunc,
+  TriggerReryError,
 } from './types';
+
 import {
   logStateChange,
   isSyncAction,
@@ -37,13 +41,13 @@ import {
   logSingle,
   retryDecorator,
   areSameArgs,
+  defaultCloneFunc,
 } from './base';
+import { useOnMount } from './hooks';
 
-type CloneFunction = <C>(obj: C) => C;
+let cloneFunc: CloneFunction = defaultCloneFunc;
 
-let cloneFunc: CloneFunction = fastClone;
-
-function clone(obj) {
+function clone(obj: any) {
   try {
     return cloneFunc(obj);
   } catch (e) {
@@ -64,8 +68,6 @@ export function setCloneFunction(cloneFn: CloneFunction) {
   cloneFunc = cloneFn;
 }
 
-type GlobalAsyncHook = (error: any, isHandled: boolean) => void;
-
 let onAsyncError: GlobalAsyncHook = (f: GlobalAsyncHook) => {};
 
 /**
@@ -75,8 +77,6 @@ export function setOnAsyncError(f: GlobalAsyncHook) {
   onAsyncError = f;
 }
 
-type TriggerReryError = (error: any) => boolean;
-
 let isTriggerRetryError: TriggerReryError = (error: Error) => error instanceof TypeError;
 
 /**
@@ -85,6 +85,17 @@ let isTriggerRetryError: TriggerReryError = (error: Error) => error instanceof T
  */
 export function setIsTriggerRetryError(f: TriggerReryError) {
   isTriggerRetryError = f;
+}
+
+let globalNotifyError = null;
+let globalNotifySuccess = null;
+
+export function setNotifyErrorFunction(notifyErrorIn: NotifyFunc) {
+  globalNotifyError = notifyErrorIn;
+}
+
+export function setNotifySuccessFunction(notifySuccessIn: NotifyFunc) {
+  globalNotifySuccess = notifySuccessIn;
 }
 
 type HookState<S, A> = {
@@ -99,6 +110,7 @@ type SideEffect<S, A extends DecoratedActions, P> = (
   s: S,
   dispatch?: React.Dispatch<ReducerAction<S, any, A, P>>
 ) => void;
+
 type SideEffects<S, A extends DecoratedActions, P> = SideEffect<S, A, P>[];
 
 type DebounceMap = {
@@ -182,6 +194,11 @@ export type StateDecoratorOptions<S, A, P = {}> = {
    * The callback function called if an asynchronous function fails and an error messsage is defined.
    */
   notifyError?: (message: string) => void;
+
+  /**
+   * Initial actions
+   */
+  onMount?: (actions: A, props: P) => void;
 };
 
 /**
@@ -552,7 +569,8 @@ export function sendRequest<S, F extends (...args: any[]) => any, A extends Deco
 
       delete promisesRef.current[actionName];
 
-      const notifySuccess = options.notifySuccess || propsRef.current['notifySuccess'];
+      const notifySuccess = options.notifySuccess || propsRef.current['notifySuccess'] || globalNotifySuccess;
+
       if (notifySuccess) {
         let msg: string;
 
@@ -585,7 +603,7 @@ export function sendRequest<S, F extends (...args: any[]) => any, A extends Deco
         subType: ReducerActionSubType.ERROR,
       });
 
-      const notifyError = options.notifyError || propsRef.current['notifyError'];
+      const notifyError = options.notifyError || propsRef.current['notifyError'] || globalNotifyError;
 
       let errorHandled = false;
 
@@ -983,12 +1001,24 @@ export function getInitialHookState<S, A extends DecoratedActions, P>(
   initialActionsMarkedLoading: string[] = []
 ): HookState<S, A> {
   const names = Object.keys(actions);
-  const initialActions = toMap(initialActionsMarkedLoading, (i) => i, (_) => true);
+  const initialActions = toMap(
+    initialActionsMarkedLoading,
+    (i) => i,
+    (_) => true
+  );
   return {
     sideEffectRender: 0,
     state: stateInitializer(props),
-    loadingMap: toMap(names, (n) => n, (n) => initialActions[n]) as LoadingMap<A>,
-    loadingParallelMap: toMap(names, (n) => n, () => ({})) as LoadingMapParallelActions<A>,
+    loadingMap: toMap(
+      names,
+      (n) => n,
+      (n) => initialActions[n]
+    ) as LoadingMap<A>,
+    loadingParallelMap: toMap(
+      names,
+      (n) => n,
+      () => ({})
+    ) as LoadingMapParallelActions<A>,
     optimisticData: {
       history: [],
       optimisticActions: {},
@@ -1092,7 +1122,7 @@ function isPropsChanged<P>(
  * The state decorator hook.
  */
 export default function useStateDecorator<S, A extends DecoratedActions, P = {}>(
-  stateInitializer: (props?: Partial<P>) => S,
+  stateInitializer: (props: P) => S,
   actions: StateDecoratorActions<S, A, P>,
   props: P = {} as P,
   options: StateDecoratorOptions<S, A, P> = {}
@@ -1166,6 +1196,11 @@ export default function useStateDecorator<S, A extends DecoratedActions, P = {}>
   handlePropChange(dispatch, props, options, oldPropsRef, sideEffectsRef, actionsRef);
 
   oldPropsRef.current = props;
+
+  // initial actions
+  useOnMount(() => {
+    options?.onMount?.(decoratedActions, props);
+  });
 
   return {
     loading: isLoading(hookState.loadingMap),

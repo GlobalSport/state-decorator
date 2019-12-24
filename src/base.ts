@@ -19,16 +19,13 @@ export function toMap<In, Out = In>(
 ): {
   [key: string]: Out;
 } {
-  return arr.reduce(
-    (acc, item, index) => {
-      const key = keyFunc(item);
-      if (key !== null) {
-        acc[key] = mapFunc(item, index);
-      }
-      return acc;
-    },
-    {} as { [key: string]: Out }
-  );
+  return arr.reduce((acc, item, index) => {
+    const key = keyFunc(item);
+    if (key !== null) {
+      acc[key] = mapFunc(item, index);
+    }
+    return acc;
+  }, {} as { [key: string]: Out });
 }
 
 export function retryDecorator<S, F extends (...args: any[]) => Promise<any>, A, P>(
@@ -48,17 +45,19 @@ export function retryDecorator<S, F extends (...args: any[]) => Promise<any>, A,
         return null;
       }
 
-      return p.then((res) => resolve(res)).catch((e) => {
-        if (isRetryError(e)) {
-          if (callCount === maxCalls) {
-            reject(e);
+      return p
+        .then((res) => resolve(res))
+        .catch((e) => {
+          if (isRetryError(e)) {
+            if (callCount === maxCalls) {
+              reject(e);
+            } else {
+              setTimeout(call, delay * callCount, callCount + 1, resolve, reject);
+            }
           } else {
-            setTimeout(call, delay * callCount, callCount + 1, resolve, reject);
+            reject(e);
           }
-        } else {
-          reject(e);
-        }
-      });
+        });
     }
 
     return new Promise((resolve, reject) => {
@@ -163,55 +162,68 @@ export function areSameArgs(args1: any[], args2: any[]): boolean {
   return args1.find((value, index) => args2[index] !== value) == null;
 }
 
+function computeDiffPropValue(oldValue: any, newValue: any): any {
+  let res: any;
+  if (process.env.NODE_ENV === 'development') {
+    if (newValue !== oldValue) {
+      const type = oldValue != null ? typeof oldValue : typeof newValue;
+      if (type === 'number' || type === 'string' || type === 'boolean') {
+        res = `${oldValue} => ${newValue === '' ? '""' : newValue}`;
+      } else if ((oldValue && oldValue.length) || (newValue && newValue.length)) {
+        if (oldValue == null) {
+          res = `was ${oldValue}, now contains ${newValue.length} element(s)`;
+        } else if (newValue == null) {
+          res = `contained ${oldValue.length} element(s), now is ${newValue}`;
+        } else if (oldValue.length === 0) {
+          res = `was empty, now contains ${newValue.length} elements`;
+        } else if (newValue.length === 0) {
+          res = `contained ${oldValue.length} elements, now is empty`;
+        } else {
+          let addedValues = newValue.filter((a) => !oldValue.find((b) => isEqual(a, b)));
+          let removedValues = oldValue.filter((a) => !newValue.find((b) => isEqual(a, b)));
+
+          if (addedValues.length > 10) {
+            addedValues = `${addedValues.length} element(s) added`;
+          }
+          if (removedValues.length > 10) {
+            removedValues = `${removedValues.length} element(s) removed`;
+          }
+          res = {
+            added: addedValues,
+            removed: removedValues,
+          };
+        }
+      } else {
+        res = newValue;
+      }
+    }
+  }
+  return res;
+}
+
 function buildDiff<S>(oldState: S, newState: S) {
   const res = {};
 
   if (process.env.NODE_ENV === 'development') {
-    Object.keys(oldState).forEach((k) => {
-      if (newState.hasOwnProperty(k)) {
-        const oldValue = oldState[k];
-        const newValue = newState[k];
-
-        if (newValue !== oldValue) {
-          const type = newState[k] == null ? typeof oldState[k] : typeof newState[k];
-          if (type === 'number' || type === 'string' || type === 'boolean') {
-            res[k] = `${oldState[k]} => ${newState[k] === '' ? '""' : newState[k]}`;
-          } else if ((oldValue && oldValue.length) || (newValue && newValue.length)) {
-            if (oldValue == null) {
-              res[k] = `was null, now contains ${newValue.length} elements`;
-            } else if (newValue == null) {
-              res[k] = `contained ${oldValue.length} elements, now is null`;
-            } else if (oldValue.length === 0) {
-              res[k] = `was empty, now contains ${newValue.length} elements`;
-            } else if (newValue.length === 0) {
-              res[k] = `contained ${oldValue.length} elements, now is empty`;
-            } else {
-              let addedValues = newValue.filter((a: any) => !oldValue.find((b: any) => isEqual(a, b)));
-              let removedValues = oldValue.filter((a: any) => !newValue.find((b: any) => isEqual(a, b)));
-
-              if (addedValues.length > 10) {
-                addedValues = `${addedValues.length} elements added`;
-              }
-              if (removedValues.length > 10) {
-                removedValues = `${removedValues.length} elements removed`;
-              }
-              res[k] = {
-                added: addedValues,
-                removed: removedValues,
-              };
-            }
-          } else {
-            res[k] = newState[k];
+    oldState &&
+      Object.keys(oldState).forEach((k) => {
+        if (newState.hasOwnProperty(k)) {
+          const oldValue = oldState[k];
+          const newValue = newState[k];
+          const diff = computeDiffPropValue(oldValue, newValue);
+          if (diff) {
+            res[k] = diff;
           }
+        } else {
+          res[k] = 'was deleted';
         }
-      } else {
-        res[k] = 'was deleted';
-      }
-    });
+      });
 
     Object.keys(newState).forEach((k) => {
-      if (!oldState.hasOwnProperty(k)) {
-        res[k] = `${newState[k]}`;
+      if (oldState == null || !oldState.hasOwnProperty(k)) {
+        const newValue = newState[k];
+
+        res[k] = computeDiffPropValue(undefined, newValue);
       }
     });
   }
@@ -233,9 +245,7 @@ export function logStateChange<S>(
     if (newState === null) {
       return null;
     }
-    console.group(
-      `[StateDecorator${name ? ' ' : ''}${name || ''}] Action ${actionName} ${source || ''} ${failed ? 'FAILED' : ''}`
-    );
+    console.group(`[${name ?? 'StateDecorator'}] ${actionName} ${source || ''} ${failed ? 'FAILED' : ''}`);
     if (Object.keys(args).length > 0) {
       console.group('Arguments');
       Object.keys(args).forEach((prop) => console.log(prop, ':', args[prop]));
@@ -260,7 +270,7 @@ export function logStateChange<S>(
 
 export function logSingle(name: string, actionName: string, args: any[], logEnabled: boolean, state: string = '') {
   if (process.env.NODE_ENV === 'development' && logEnabled) {
-    console.group(`[StateDecorator${name ? ' ' : ''}${name || ''}] Action ${actionName} ${state}`);
+    console.group(`[${name ?? 'StateDecorator'}${name || ''}] ${actionName} ${state}`);
     if (Object.keys(args).length > 0) {
       console.group('Arguments');
       Object.keys(args).forEach((prop) => console.log(prop, ':', args[prop]));
@@ -268,4 +278,8 @@ export function logSingle(name: string, actionName: string, args: any[], logEnab
     }
     console.groupEnd();
   }
+}
+
+export function defaultCloneFunc(src: any) {
+  return JSON.parse(JSON.stringify(src));
 }

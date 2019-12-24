@@ -207,7 +207,7 @@ export type StateDecoratorAction<S, F extends (...args: any[]) => any, A, P> =
  * A: The type of the actions to pass to the children (used to check keys only).
  */
 export type StateDecoratorActions<S, A extends DecoratedActions, P = {}> = {
-  [Prop in keyof A]: StateDecoratorAction<S, A[Prop], A, P>
+  [Prop in keyof A]: StateDecoratorAction<S, A[Prop], A, P>;
 };
 
 export interface ActionHistory<S> {
@@ -233,3 +233,8 @@ export type ReducerName = 'onPropChangeReducer' | 'preReducer' | 'optimisticRedu
 export interface ConflictActionsMap {
   [name: string]: FutureActions[];
 }
+
+export type GlobalAsyncHook = (error: any, isHandled: boolean) => void;
+export type CloneFunction = <C>(obj: C) => C;
+export type NotifyFunc = (msg: string) => void;
+export type TriggerReryError = (error: any) => boolean;

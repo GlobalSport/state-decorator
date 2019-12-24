@@ -16,9 +16,19 @@ import {
   LoadingProps,
   StateDecoratorActions,
   ConflictPolicy,
+  CloneFunction,
+  GlobalAsyncHook,
+  TriggerReryError as TriggerReryErrorFunction,
+  NotifyFunc,
 } from './types';
 import { useOnMount, useOnUnmount, useOnUnload } from './hooks';
-import useStateDecorator, { setCloneFunction, setOnAsyncError, setIsTriggerRetryError } from './useStateDecorator';
+import useStateDecorator, {
+  setCloneFunction,
+  setOnAsyncError,
+  setIsTriggerRetryError,
+  setNotifyErrorFunction,
+  setNotifySuccessFunction,
+} from './useStateDecorator';
 import { testSyncAction, testAsyncAction, testAdvancedSyncAction } from './base';
 
 export {
@@ -54,6 +64,11 @@ export interface StateDecoratorProps<S, A extends DecoratedActions, P = {}> {
    * The initial state. Ie before any reducer is called.
    */
   initialState?: S;
+
+  /**
+   * A function called to get the initial state used if initial state is not set.
+   */
+  getInitialState?: (p: P) => S;
 
   /**
    * List of action names that are marked as loading at initial time.
@@ -135,10 +150,9 @@ export interface StateDecoratorProps<S, A extends DecoratedActions, P = {}> {
  * Input: an object that contains synchronous action and/or asynchronous actions
  *
  * The child of this component is a function with the action, current state and aynchronous action related properties.
+ * @deprecated
  */
-const StateDecorator = function StateDecorator<S, A extends DecoratedActions, P = {}>(
-  props: StateDecoratorProps<S, A, P>
-) {
+function StateDecorator<S, A extends DecoratedActions, P = {}>(props: StateDecoratorProps<S, A, P>) {
   const {
     initialState,
     actions,
@@ -158,7 +172,7 @@ const StateDecorator = function StateDecorator<S, A extends DecoratedActions, P 
   useOnUnload(() => props.onUnload && props.onUnload(state, props.props));
 
   const { state, actions: decoratedActions, loading, loadingMap, loadingParallelMap } = useStateDecorator(
-    () => initialState,
+    props.getInitialState ? props.getInitialState : () => initialState,
     actions,
     props.props,
     {
@@ -176,7 +190,7 @@ const StateDecorator = function StateDecorator<S, A extends DecoratedActions, P 
   return (
     <React.Fragment>{props.children(state, decoratedActions, loading, loadingMap, loadingParallelMap)}</React.Fragment>
   );
-};
+}
 
 Object.defineProperties(StateDecorator, {
   clone: {
@@ -194,8 +208,29 @@ Object.defineProperties(StateDecorator, {
       setIsTriggerRetryError(f);
     },
   },
+  notifyError: {
+    set: (f) => {
+      setNotifyErrorFunction(f);
+    },
+  },
+  notifySuccess: {
+    set: (f) => {
+      setNotifySuccessFunction(f);
+    },
+  },
 });
 
+type StaticProps = {
+  clone: CloneFunction;
+  onAsyncError: GlobalAsyncHook;
+  isTriggerRetryError: TriggerReryErrorFunction;
+  notifyError: NotifyFunc;
+  notifySuccess: NotifyFunc;
+};
+
+type ExportedType = typeof StateDecorator & StaticProps;
+
+// prettier-ignore
 type ExtraProps<S, A extends DecoratedActions, P> = Pick<
   StateDecoratorProps<S, A, P>,
   | 'getPropsRefValues'
@@ -222,18 +257,20 @@ function getDisplayName(WrappedComponent: React.ComponentType<any>) {
  * @param getInitialState A function that provides the initial
  * @param actions The map of actions
  * @param options Options to configure the state decorator
+ * @deprecated
  */
 export function injectState<S, A extends DecoratedActions, P = {}>(
-  getInitialState: (p: P) => S,
+  getInitialState: (props: P) => S,
   actions: StateDecoratorActions<S, A, P>,
   options: ExtraProps<S, A, P> = {}
 ) {
   return (WrappedComponent: React.ComponentType<P & S & A & Partial<LoadingProps<A>>>) =>
     class HOC extends React.PureComponent<P> {
       static displayName = `injectState(${getDisplayName(WrappedComponent)})`;
+
       render() {
         return (
-          <StateDecorator {...options} initialState={getInitialState(this.props)} actions={actions} props={this.props}>
+          <StateDecorator {...options} getInitialState={getInitialState} actions={actions} props={this.props}>
             {(state, actions, loading, loadingMap, loadingParallel) => (
               <WrappedComponent
                 {...state}
@@ -251,4 +288,4 @@ export function injectState<S, A extends DecoratedActions, P = {}>(
 }
 
 // `React.memo return type is meddling with generic types
-export default React.memo(StateDecorator) as typeof StateDecorator;
+export default (React.memo(StateDecorator) as unknown) as ExportedType;
