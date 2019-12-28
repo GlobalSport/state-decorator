@@ -8,7 +8,7 @@
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import React, { useReducer, useMemo, useRef, useEffect } from 'react';
+import React, { useReducer, useRef, useEffect } from 'react';
 
 import {
   DecoratedActions,
@@ -940,6 +940,11 @@ function processAsyncReducer<S, A extends DecoratedActions, P>(
   return hookState;
 }
 
+type GetUseReducerResult<S, A extends DecoratedActions, P> = (
+  hookState: HookState<S, A>,
+  reducerAction: ReducerAction<S, any, A, P>
+) => HookState<S, A>;
+
 /**
  * Returns the reducer to be executed by the internal useReducer.
  * actions & options are captured: this function is still pure.
@@ -947,7 +952,7 @@ function processAsyncReducer<S, A extends DecoratedActions, P>(
 export function getUseReducer<S, A extends DecoratedActions, P>(
   actions: StateDecoratorActions<S, A, P>,
   options: StateDecoratorOptions<S, A, P>
-) {
+): GetUseReducerResult<S, A, P> {
   return (hookState: HookState<S, A>, reducerAction: ReducerAction<S, any, A, P>): HookState<S, A> => {
     const { type, actionName, args, props } = reducerAction;
     const { state, optimisticData } = hookState;
@@ -1073,6 +1078,7 @@ export function handlePropChange<S, A extends DecoratedActions, P>(
 /**
  * Registers a new side effect.
  * A side effect is a function that takes the current state and execute some side effects that doesn't change the state directly.
+ * ex: onDone, onActionDone,onPropChange, sendRequest are side effects
  */
 export function processSideEffects<S, A extends DecoratedActions, P>(
   state: S,
@@ -1141,6 +1147,7 @@ export default function useStateDecorator<S, A extends DecoratedActions, P = {}>
   const stateRef = useRef<S>();
   const propsRef = useRef<P>();
   const actionsRef = useRef<A>();
+  const reducerRef = useRef<GetUseReducerResult<S, A, P>>();
   const rawActionsRef = useRef<StateDecoratorActions<S, A, P>>();
   const sideEffectsRef = useRef<SideEffects<S, A, P>>([]);
   const debounceActionMapRef = useRef<DebounceMap>({});
@@ -1152,18 +1159,20 @@ export default function useStateDecorator<S, A extends DecoratedActions, P = {}>
   rawActionsRef.current = actions;
   propsRef.current = props;
 
-  const reducer = useMemo(() => getUseReducer(actions, options), []); // actions are static
+  if (reducerRef.current == null) {
+    reducerRef.current = getUseReducer(actions, options);
+  }
 
   const [hookState, dispatch] = useReducer(
-    reducer,
+    reducerRef.current,
     stateRef.current == null
       ? getInitialHookState(stateInitializer, actions, props, options.initialActionsMarkedLoading)
       : null
   );
   stateRef.current = hookState.state;
 
-  const decoratedActions = useMemo(() => {
-    const res = Object.keys(actions).reduce((acc, actionName) => {
+  if (actionsRef.current == null) {
+    actionsRef.current = Object.keys(actions).reduce((acc, actionName) => {
       const action = actions[actionName];
 
       if (isSyncAction(action)) {
@@ -1199,16 +1208,14 @@ export default function useStateDecorator<S, A extends DecoratedActions, P = {}>
 
       return acc;
     }, {}) as A;
+  }
 
-    return res;
-  }, []); // decorated actions are static
+  const decoratedActions = actionsRef.current;
 
-  actionsRef.current = decoratedActions;
-
-  // Prop change management
   if (!unmountedRef.current) {
     handlePropChange(dispatch, props, options, oldPropsRef, sideEffectsRef, actionsRef);
 
+    // onDone, onActionDone,onPropChange, sendRequest are side effects
     processSideEffects(hookState.state, dispatch, sideEffectsRef);
 
     oldPropsRef.current = props;
