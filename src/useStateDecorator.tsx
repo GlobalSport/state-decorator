@@ -8,7 +8,7 @@
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import React, { useReducer, useMemo, useRef } from 'react';
+import React, { useReducer, useMemo, useRef, useEffect } from 'react';
 
 import {
   DecoratedActions,
@@ -520,6 +520,7 @@ export function sendRequest<S, F extends (...args: any[]) => any, A extends Deco
   args: Parameters<F>,
   promiseId: string,
   propsRef: React.MutableRefObject<P>,
+  unmountedRef: React.MutableRefObject<boolean>,
   actionsRef: React.MutableRefObject<A>,
   rawActionsRef: React.MutableRefObject<StateDecoratorActions<S, A, P>>,
   sideEffectsRef: React.MutableRefObject<SideEffects<S, A, P>>,
@@ -549,6 +550,10 @@ export function sendRequest<S, F extends (...args: any[]) => any, A extends Deco
 
   p = p
     .then((result: PromiseResult<ReturnType<F>>) => {
+      if (unmountedRef.current) {
+        return null;
+      }
+
       if (asyncAction.onDone) {
         // delayed job after state update
         addSideEffect(sideEffectsRef, (s: S) => {
@@ -592,6 +597,10 @@ export function sendRequest<S, F extends (...args: any[]) => any, A extends Deco
       return result;
     })
     .catch((error: any) => {
+      if (unmountedRef.current) {
+        return null;
+      }
+
       dispatch({
         actionName,
         args,
@@ -647,6 +656,7 @@ export function decorateAsyncAction<S, F extends (...args: any[]) => any, A exte
   actionName: string,
   stateRef: React.MutableRefObject<S>,
   propsRef: React.MutableRefObject<P>,
+  unmountedRef: React.MutableRefObject<boolean>,
   actionsRef: React.MutableRefObject<A>,
   rawActionsRef: React.MutableRefObject<StateDecoratorActions<S, A, P>>,
   sideEffectsRef: React.MutableRefObject<SideEffects<S, A, P>>,
@@ -703,6 +713,7 @@ export function decorateAsyncAction<S, F extends (...args: any[]) => any, A exte
           args,
           promiseId,
           propsRef,
+          unmountedRef,
           actionsRef,
           rawActionsRef,
           sideEffectsRef,
@@ -1136,6 +1147,7 @@ export default function useStateDecorator<S, A extends DecoratedActions, P = {}>
   const promisesRef = useRef<PromiseMap>({});
   const conflictActionsRef = useRef<ConflictActionsMap>({});
   const oldPropsRef = useRef<P>(null);
+  const unmountedRef = useRef(false);
 
   rawActionsRef.current = actions;
   propsRef.current = props;
@@ -1144,7 +1156,9 @@ export default function useStateDecorator<S, A extends DecoratedActions, P = {}>
 
   const [hookState, dispatch] = useReducer(
     reducer,
-    getInitialHookState(stateInitializer, actions, props, options.initialActionsMarkedLoading)
+    stateRef.current == null
+      ? getInitialHookState(stateInitializer, actions, props, options.initialActionsMarkedLoading)
+      : null
   );
   stateRef.current = hookState.state;
 
@@ -1172,6 +1186,7 @@ export default function useStateDecorator<S, A extends DecoratedActions, P = {}>
           actionName,
           stateRef,
           propsRef,
+          unmountedRef,
           actionsRef,
           rawActionsRef,
           sideEffectsRef,
@@ -1190,17 +1205,26 @@ export default function useStateDecorator<S, A extends DecoratedActions, P = {}>
 
   actionsRef.current = decoratedActions;
 
-  processSideEffects(hookState.state, dispatch, sideEffectsRef);
-
   // Prop change management
-  handlePropChange(dispatch, props, options, oldPropsRef, sideEffectsRef, actionsRef);
+  if (!unmountedRef.current) {
+    handlePropChange(dispatch, props, options, oldPropsRef, sideEffectsRef, actionsRef);
 
-  oldPropsRef.current = props;
+    processSideEffects(hookState.state, dispatch, sideEffectsRef);
+
+    oldPropsRef.current = props;
+  }
 
   // initial actions
   useOnMount(() => {
     options?.onMount?.(decoratedActions, props);
   });
+
+  useEffect(() => {
+    return () => {
+      sideEffectsRef.current = [];
+      unmountedRef.current = true;
+    };
+  }, []);
 
   return {
     loading: isLoading(hookState.loadingMap),

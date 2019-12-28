@@ -31,6 +31,7 @@ export function getAsyncContext() {
     current: [],
   };
   const promisesRef = { current: {} };
+  const unmountedRef = { current: false };
   const conflicActionsRef = { current: {} };
   const stateRef = {
     current: { value: 'initial' },
@@ -57,6 +58,7 @@ export function getAsyncContext() {
   return {
     dispatch,
     propsRef,
+    unmountedRef,
     actionsRef,
     sideEffectRef,
     promisesRef,

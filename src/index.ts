@@ -1,4 +1,10 @@
-import useStateDecorator from './useStateDecorator';
+import useStateDecorator, {
+  setCloneFunction,
+  setOnAsyncError,
+  setIsTriggerRetryError,
+  setNotifyErrorFunction,
+  setNotifySuccessFunction,
+} from './useStateDecorator';
 import { StateDecoratorActions, ConflictPolicy, LoadingProps, LoadingMap } from './types';
 import { useOnMount, useOnUnmount, useOnUnload } from './hooks';
 import {
@@ -24,6 +30,11 @@ export {
   isSyncAction,
   isAdvancedSyncAction,
   isAsyncAction,
+  setCloneFunction,
+  setOnAsyncError,
+  setIsTriggerRetryError,
+  setNotifyErrorFunction,
+  setNotifySuccessFunction,
 };
 
 export default useStateDecorator;
