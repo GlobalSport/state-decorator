@@ -1,3 +1,3 @@
 import config from './rollup/base.config';
 
-export default config('./src/StateDecorator.tsx', './dist/StateDecorator');
+export default config('./src/compat.tsx', './dist/compat');
