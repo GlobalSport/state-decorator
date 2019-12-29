@@ -1,6 +1,6 @@
 {
   "name": "state-decorator",
-  "version": "5.0.0-beta.1",
+  "version": "5.0.0-beta.2",
   "description": "React state management component",
   "main": "dist/compat.js",
   "module": "dist/compat.es.js",
