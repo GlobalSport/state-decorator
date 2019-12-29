@@ -62,7 +62,9 @@ function clone(obj: any) {
 }
 
 /**
- * Sets the clone functuin. Used when managing optimistic reducer and conflicting actions.
+ * Sets the clone function. Used to clone state and props when managing optimistic reducer and conflicting actions.
+ * Default implementation is a very basic algorithm using JSON.stringify. To clone complex stats,
+ * use a custom implementation like lodash/cloneDeep.
  */
 export function setCloneFunction(cloneFn: CloneFunction) {
   cloneFunc = cloneFn;
@@ -71,7 +73,7 @@ export function setCloneFunction(cloneFn: CloneFunction) {
 let onAsyncError: GlobalAsyncHook = (f: GlobalAsyncHook) => {};
 
 /**
- * Sets a global callbakc function to handle asynchronous promise rejection errors.
+ * Sets a global callback function to handle asynchronous promise rejection errors.
  */
 export function setOnAsyncError(f: GlobalAsyncHook) {
   onAsyncError = f;
@@ -82,6 +84,7 @@ let isTriggerRetryError: TriggerReryError = (error: Error) => error instanceof T
 /**
  * Sets a function that tests if the error will trigger a retry of the action or will fail directly.
  * Default implementation is returning true for TypeError instances only.
+ * @see AsynchActionBase#retryCount
  */
 export function setIsTriggerRetryError(f: TriggerReryError) {
   isTriggerRetryError = f;
@@ -90,10 +93,24 @@ export function setIsTriggerRetryError(f: TriggerReryError) {
 let globalNotifyError = null;
 let globalNotifySuccess = null;
 
+/**
+ * Sets a global notification function that will called when an asynchronous action fails,
+ * if and only if, an error message is specified for this action using <code>errorMessage</code> or
+ * <code>getErrorMessage</code>.
+ * If another function is set in the useStateDecorator options, the function from the options will be used.
+ * It allows to locally use another notification function.
+ */
 export function setNotifyErrorFunction(notifyErrorIn: NotifyFunc) {
   globalNotifyError = notifyErrorIn;
 }
 
+/**
+ * Sets a global notification function that will called when an asynchronous action succeeded,
+ * if and only if, an success message is specified for this action using <code>successMessage</code> or
+ * <code>getSuccessMessage</code>.
+ * If another function is set in the useStateDecorator options, the function from the options will be used.
+ * It allows to locally use another notification function.
+ */
 export function setNotifySuccessFunction(notifySuccessIn: NotifyFunc) {
   globalNotifySuccess = notifySuccessIn;
 }
@@ -812,6 +829,9 @@ export function createNewHookState<S, A>(
   };
 }
 
+/**
+ * Handle an asynchronous action dispatched in the internal useReducer reducer function.
+ */
 function processAsyncReducer<S, A extends DecoratedActions, P>(
   hookState: HookState<S, A>,
   reducerAction: ReducerAction<S, any, A, P>,
@@ -947,7 +967,7 @@ type GetUseReducerResult<S, A extends DecoratedActions, P> = (
 
 /**
  * Returns the reducer to be executed by the internal useReducer.
- * actions & options are captured: this function is still pure.
+ * actions & options are captured and static: this function is still pure.
  */
 export function getUseReducer<S, A extends DecoratedActions, P>(
   actions: StateDecoratorActions<S, A, P>,
@@ -1010,6 +1030,9 @@ export function getUseReducer<S, A extends DecoratedActions, P>(
   };
 }
 
+/**
+ * Computes the initial state of the useStateDecorator hook.
+ */
 export function getInitialHookState<S, A extends DecoratedActions, P>(
   stateInitializer: (props?: P) => S,
   actions: StateDecoratorActions<S, A, P>,
@@ -1137,6 +1160,11 @@ function isPropsChanged<P>(
 
 /**
  * The state decorator hook.
+ * @param stateInitializer A function that creates the initial state from the props.
+ * @param actions The actions implementation.
+ * @param props The inbound props.
+ * @param options The options for advanced configuration.
+ * @returns An object containing: state, actions, loading, loadingMap, loadingParallelMap properties.
  */
 export default function useStateDecorator<S, A extends DecoratedActions, P = {}>(
   stateInitializer: (props: P) => S,

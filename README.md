@@ -274,11 +274,12 @@ There are two properties:
 
 A notification function can be called when the asynchronous action succeeded or failed.
 
-1. Pass a function to _notifySuccess_ and/or _notifyError_ properties of the StateDecorator.
-2. In each asynchronous action, set
-
-- _errorMessage_ (static message) or _getErrorMessage_ (message built from the error and action parameters)
-- _successMessage_ (static message) or _getSuccessMessage_ (message built from the action result and parameters)
+1. Set notification function on success/error:
+   1. Set global _notifyError_ and/or _notifySuccess_ using _setNotifyErrorFunction_ and/or setNotifySuccessFunction at application initialization time _OR_
+   2. specify a function to _notifySuccess_ and/or _notifyError_ options or properties of the useStateDecorator.
+1. In each asynchronous action, set:
+   1. _errorMessage_ (static message) or _getErrorMessage_ (message built from the error and action parameters) _OR_
+   2. _successMessage_ (static message) or _getSuccessMessage_ (message built from the action result and parameters)
 
 ### <a name="ErrorManagement"></a>Error management
 
@@ -306,7 +307,7 @@ The following properties of an asynchronous action are used:
 - **retryDelaySeed**: Seed of delay between each retry in milliseconds. The applied delay is retryDelaySeed \* retry count. Default is 1000ms.
 - **isTriggerRetryError**: A function that returns if the passed error will trigger a retry or if the action fails directly. Default function is returning _true_ for _TypeError_ instances.
 
-Note: _StateDecorator.isTriggerRetryError_ static function can be overridden to determine which error will trigger a retry globally.
+Note: _setIsTriggerRetryError_ function can be used to set a function to determine which error will trigger a retry.
 
 ### Optimistic action
 
