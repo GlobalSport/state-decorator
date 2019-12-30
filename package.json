@@ -1,6 +1,6 @@
 {
   "name": "state-decorator",
-  "version": "5.0.0-beta.3",
+  "version": "5.0.0-beta.4",
   "description": "React state management component",
   "main": "index.js",
   "module": "index.es.js",
@@ -11,7 +11,6 @@
   "author": "Damien Garbarino <d.garbarino@mycoachsport.com>",
   "license": "MIT",
   "scripts": {
-    "publish": "cd dist && npm publish && cd ..",
     "test": "jest tests",
     "bump-version": "yarn test && yarn clean && yarn build && yarn rimraf ./dist/useStateDecorator && bump --commit 'build: release v%s' --tag --push",
     "clean": "rimraf ./dist",
@@ -20,9 +19,6 @@
     "rollup": "cross-env NODE_ENV=production rollup -c rollup.config.js",
     "tslint": "tslint -p ./tsconfig.json --fix"
   },
-  "files": [
-    "dist/"
-  ],
   "devDependencies": {
     "@babel/cli": "^7.7.0",
     "@babel/core": "^7.7.0",
