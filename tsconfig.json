@@ -16,7 +16,11 @@
     "noUnusedLocals": true,
     "noImplicitReturns": true,
     "noImplicitThis": true,
-    "lib": ["es2017", "dom"]
+    "lib": ["es2017", "dom"],
+    "baseUrl": "src",
+    "paths": {
+      "state-decorator": ["state-decorator/compat.d.ts"]
+    }
   },
   "exclude": ["node_modules", "dist", "tests", "examples"]
 }
