@@ -25,9 +25,21 @@ The StateDecorator is a React component that manages a local or global state.
 - Actions implememtation is 100% compatible (same type).
 - The **useStateDecorator** hook is now the default way to go but to ease transition, the **StateDecorator** was rewritten using the hook.
 
+Change the import from
+
+`import StateDecorator from 'state-decorator';`
+
+to
+
+`import StateDecorator from 'state-decorator/compat';`
+
+In 'state-decorator/compat' both the hook and the legacy are contained:
+
+- no need to import from both `state-decorator/compat` and `state-decorator`: you would double the imported code size.
+
 - you can import the hook from `state-decorator` during migration:
 
-  - `import { useStateDecorator } from 'state-decorator';`
+  - `import { useStateDecorator } from 'state-decorator/compat';`
 
 ## Migrating from the StateDecorator to useStateDecorator
 
@@ -41,12 +53,11 @@ const { state, actions, loading, loadingMap, loadingParallelMap } = useStateDeco
 ```
 
 - First parameter of the hook is the function that returns the initial state from the props.
-  - Advice: export it, you will need it in your unit tests. This can also be used in _onPropsChangeReducer_.
 - Second parameter is the actions. You can reuse as-is the actions from previous version.
 - Third parameter is the props.
 - Last parameter are the options.
 
-The onMount, onUnmount, onUnload that were in the props are now other hooks you can import from the StateDecorator.
+The onUnmount, onUnload that were in the props are now other hooks you can import from the StateDecorator.
 
 # Getting started
 
@@ -71,7 +82,7 @@ The simpler example: the state is a literal value and two synchronous actions to
 
 ```typescript
 import React from 'react';
-import { useStateDecorator, StateDecoratorActions } from 'state-decorator';
+import useStateDecorator, { StateDecoratorActions } from 'state-decorator';
 
 type State = {
   counter: number;
@@ -86,13 +97,13 @@ export const getInitialState = (): State => ({
   counter: 0,
 });
 
-export const actionsImpl: StateDecoratorActions<State, Actions> = {
+export const counterActions: StateDecoratorActions<State, Actions> = {
   decrement: (s, [incr]) => ({ counter: s.counter - incr }),
   increment: (s, [incr]) => ({ counter: s.counter + incr }),
 };
 
 // Stateless component
-// Separate container from view to test more easily the view.
+// Separate container from view for easier view unit testing.
 const CounterView = React.memo(function CounterView(props: State & Actions) {
   const { counter, increment, decrement } = props;
   return (
@@ -106,7 +117,7 @@ const CounterView = React.memo(function CounterView(props: State & Actions) {
 
 // Container that is managing the state using usetateDecorator hook
 export const CounterContainer = () => {
-  const { state, actions } = useStateDecorator(getInitialState, actionsImpl);
+  const { state, actions } = useStateDecorator(getInitialState, counterActions);
   return <CounterView {...state} {...actions} />;
 };
 ```
@@ -139,17 +150,13 @@ The StateDecorator is taking a list of actions and decorate them to inject state
 
 ## Initial action
 
-To execute an action when the hook is mounted, you can use a _useEffect_ hook or the **useOnMount** hook.
-When the StateDecorator is mounted, the **onMount** property is called with the decorated actions as parameter.
+When the useStateDecorator is mounted, the **onMount** option is called with the decorated actions and props as parameters.
 
 ```typescript
-import { useStateDecorator, useOnMount } from 'state-decorator';
+import useStateDecorator from 'state-decorator';
 
 export const CounterContainer = () => {
-  const { state, actions } = useStateDecorator(getInitialState, actionsImpl);
-  useOnMount(() => {
-    actions.increment(10);
-  });
+  const { state, actions } = useStateDecorator(getInitialState, counterActions, { onMount });
   return <CounterView {...state} {...actions} />;
 };
 ```
@@ -178,7 +185,8 @@ The advanced form allows to add some additional properties for this action.
 const actions: StateDecoratorActions<State, Actions> = {
   setText: {
     action: (s, [text], props) => ({ ...s, text }),
-    onDone: (s, args, props, actions) => {
+    debounceTimeout: 300,
+    onActionDone: (s, args, props, actions) => {
       /* insert code here but beware of infinite loop!! */
     },
   },
@@ -197,7 +205,7 @@ and
 
 ```typescript
 import React from 'react';
-import { useStateDecorator, StateDecoratorActions, LoadingProps } from 'state-decorator';
+import useStateDecorator, { StateDecoratorActions, LoadingProps } from 'state-decorator';
 
 type State = {
   list: string[];
@@ -254,13 +262,11 @@ If **null** is returned by **promise**, the action is aborted. It allows to canc
 
 ### Loading state
 
-The loading state of asynchronous actions are automatically computed and injected to the render property.
+The loading state of asynchronous actions are automatically computed and returned by the hook.
 
 ```typescript
 const { state, actions, loading, loadingMap, loadingParallelMap } = useStateDecorator(getInitialState, actionsImpl);
 ```
-
-There are two properties:
 
 - **loading**: the global loading state, ie. true if at least one asynchronous action is ongoing.
   - Note that optimistic actions are not taken into account.
@@ -335,11 +341,14 @@ const actions: StateDecoratorActions<State, Actions> = {
 };
 ```
 
-**Note**: To update the state _before_ the action, prefer _preReducer_. _optimisticReducer_ purpose is optimistic actions only. Optimistic actions are not changing the global loading state and are a bit more expensive because the subsequent actions are saved in order to be able to revert the optimistic action in case of failure.
+**Notes**:
+
+- As optimistic actions can be expensive (clone state, save all actions), make sure to use optimistic reducer for a promise that will, most of the time, returns in a short amount of time.
+- To update the state _before_ the action, prefer **_preReducer_**. **_optimisticReducer_** purpose is optimistic actions only. Optimistic actions are not changing the global loading state and are more expensive because the subsequent actions are saved in order to be able to revert the optimistic action in case of failure.
 
 ### <a name="ConflictingActions"></a>Conflicting actions
 
-The StateDecorator is managing the asynchronous action calls one at a time or in parallel
+The StateDecorator is managing the asynchronous action calls one at a time (default) or in parallel.
 
 In lots of situations, the UI is disabled using the _loading_ or _loadingMap_ parameters, but in other situation one may want to manage such use case (a search bar, autosave feature of an editor etc.).
 
@@ -370,7 +379,7 @@ _Note_: In conjunction to this parameter, you can use [lodash debounce](https://
 To persist the state when the container hook is unmounted, use the **onUnmount** hook.
 
 ```typescript
-import { useStateDecorator, StateDecoratorActions, useOnUnmount } from 'state-decorator';
+import useStateDecorator, { StateDecoratorActions, useOnUnmount } from 'state-decorator';
 
 export default function Container(props: Props) {
   const { state, actions } = useStateDecorator(getInitialState, actions, props);
@@ -389,7 +398,7 @@ For cases where the state is needed to be saved when the window is unloaded (the
 The StateDecorator listens to the 'beforeunload' window event and call the **onUnload** property with the current state and props as parameter.
 
 ```typescript
-import { useStateDecorator, StateDecoratorActions, useOnUnload } from 'state-decorator';
+import useStateDecorator, { StateDecoratorActions, useOnUnload } from 'state-decorator';
 
 export default function Container(props: Props) {
   const { state, actions } = useStateDecorator(getInitialState, actions, props);
@@ -415,7 +424,7 @@ Synchronous and asynchronous actions can be chained.
 
 ```typescript
 import React from 'react';
-import { useStateDecorator, StateDecoratorActions } from 'state-decorator';
+import useStateDecorator, { StateDecoratorActions } from 'state-decorator';
 
 interface Item {
   id?: string;
@@ -453,7 +462,11 @@ const actionsImpl: StateDecoratorActions<State, Actions> = {
   },
   addItem: {
     // As addItem is silly, we must reload the list after having added the item...
-    promise: ([item], state, props, actions) => APIClient.addItem(item).then(() => actions.getItems()),
+    promise: ([item], state, props, actions) => APIClient.addItem(item),
+    // action side effect: reload the list
+    onDone: (state, result, args, props, actions) => {
+      actions.getItems();
+    },
     // No reducer needed, the decorated action will call its reducer
   },
 };
@@ -507,14 +520,22 @@ const propChangeActions: StateDecoratorActions<State, Actions, PropsChangeProps>
   },
 };
 
+// we will react if the value prop is changed
+const getPropsRefValues = (p: PropsChangeProps) => [p.value];
+
+// inner state is updated using the updated value prop. updateIndices is 0.
+const onPropsChangeReducer = (s: State, p: PropsChangeProps, updatedIndices) => ({ ...s, value: p.value });
+
+// we can call an action on prop change.
+const onPropsChange = (s, p, actions, updatedIndices) => {
+  actions.get('Updated value from onPropsChange');
+};
+
 export function PropsChange(props: PropsChangeProps) {
   const { state } = useStateDecorator(getInitialState, propChangeActions, props, {
-    // we will react if the value prop is changed
-    getPropsRefValues: (p) => [p.value],
-    // inner state is updated using the updated value prop. updateIndices is 0.
-    onPropsChangeReducer: (s, p, updatedIndices) => ({ ...s, value: p.value }),
-    // we can call an action on prop change.
-    onPropsChange: (s, p, actions, updatedIndices) => actions.get('Updated value from onPropsChange'),
+    getPropsRefValues,
+    onPropsChangeReducer,
+    onPropsChange,
   });
   return <div>value: {state.value}</div>;
 }
@@ -522,7 +543,7 @@ export function PropsChange(props: PropsChangeProps) {
 
 # Debug actions
 
-The StateDecorator has a _logEnabled_ option property that logs in the Browser console the actions and related state changes.
+The StateDecorator has a **_logEnabled_** option property that logs in the Browser console the actions and related state changes.
 
 ```typescript
 function Comp(props: Props) {
@@ -708,7 +729,7 @@ The [React 16 context API](https://reactjs.org/docs/context.html) can be used to
 
 ```typescript
 import React, { useContext } from 'react';
-import { useStateDecorator, StateDecoratorActions } from 'state-decorator';
+import useStateDecorator, { StateDecoratorActions } from 'state-decorator';
 
 export type State = {
   color: string;
@@ -879,7 +900,7 @@ Synchronous actions, complex state with normalized storage of todo list.
 import React, { useCallback } from 'react';
 import produce from 'immer';
 import { pick } from 'lodash';
-import { useStateDecorator, StateDecoratorActions } from 'state-decorator';
+import useStateDecorator, { StateDecoratorActions } from 'state-decorator';
 
 export enum Filter {
   ALL = 'all',
@@ -1097,7 +1118,7 @@ Show various ways of handling conflicting actions, ie. asynchronous actions trig
 
 ```typescript
 import React, { useMemo } from 'react';
-import { useStateDecorator, StateDecoratorActions } from 'state-decorator';
+import useStateDecorator, { StateDecoratorActions } from 'state-decorator';
 
 export type State = {
   counter: number;
@@ -1169,7 +1190,7 @@ The _onChange_ action calls are executed in parallel. The map of ongoing action 
 ```typescript
 import React from 'react';
 import produce from 'immer';
-import { useStateDecorator, StateDecoratorActions, ConflictPolicy, LoadingProps } from 'state-decorator';
+import useStateDecorator, { StateDecoratorActions, ConflictPolicy, LoadingProps } from 'state-decorator';
 
 type Item = {
   id: string;
@@ -1244,4 +1265,48 @@ export default function ParallelActions() {
   const { state, actions, ...loadingProps } = useStateDecorator(getInitialState, actionsImpl);
   return <ParallelActionsView {...state} {...actions} {...loadingProps} />;
 }
+```
+
+# Visual Studio Code user snippet
+
+You can add this snippet to quickly create a stateful functional component using the useStateDecorator hook. Click on menu File > Preferences > User Snippets, select typescriptreact.json and add this snippet:
+
+```json
+"Create useStateDecoratorComplete types": {
+	"prefix": "rUseStateDecorator",
+	"body": [
+		"import React from 'react';",
+		"import useStateDecorator, { StateDecoratorActions, LoadingProps } from 'state-decorator';",
+		"",
+		"export type $1Props = {};",
+		"",
+		"export type $1State = {};",
+		"",
+		"export type $1Actions = {};",
+		"",
+		"type Props = $1Props;",
+		"type State = $1State;",
+		"type Actions = $1Actions;",
+		"",
+		"type ViewProps = Props & Actions & State & Pick<LoadingProps<Actions>, 'loadingMap'>;",
+		"",
+		"export function getInitialState(p:$1Props): State {",
+		"return {};",
+		"};",
+		"",
+		"export const $1View = React.memo(function $1View(p: ViewProps) {",
+		"  return (<div>[$1View]</div>);",
+		"});",
+		"",
+		"export const actions$1: StateDecoratorActions<State, Actions, Props> = {};",
+		"",
+		"export function onMount(actions:$1Actions) {}",
+		"",
+		"export default React.memo(function $1(p: $1Props) {",
+		"  const { state:s, actions:a, loadingMap } = useStateDecorator(getInitialState, actions$1, p, { onMount });",
+		"  return <$1View {...p} {...s} {...a} loadingMap={loadingMap} />;",
+		"});"
+	],
+	"description": "Create a new functional component with the useStateDecorator hook"
+},
 ```
