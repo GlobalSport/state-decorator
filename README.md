@@ -43,19 +43,31 @@ In 'state-decorator/compat' both the hook and the legacy are contained:
 
 ## Migrating from the StateDecorator to useStateDecorator
 
+The basic use case can migrated like this:
+
 ```typescript
-const { state, actions, loading, loadingMap, loadingParallelMap } = useStateDecorator(
-  getInitialState,
-  actions,
-  props,
-  options
-);
+const CounterContainer = () => {
+  return (
+    <StateDecorator getInitialState={getInitialState} actions={counterActions} props={props}>
+      {(state, actions) => <CounterView {...state} {...actions} />}
+    </StateDecorator>
+  );
+};
+```
+
+becomes
+
+```typescript
+const CounterContainer = () => {
+  const { state, actions } = useStateDecorator(getInitialState, actions, props);
+  return <CounterView {...state} {...actions} />;
+};
 ```
 
 - First parameter of the hook is the function that returns the initial state from the props.
 - Second parameter is the actions. You can reuse as-is the actions from previous version.
 - Third parameter is the props.
-- Last parameter are the options.
+- An optional Last parameter contains the options (see documentation).
 
 The onUnmount, onUnload that were in the props are now other hooks you can import from the StateDecorator.
 
@@ -385,7 +397,7 @@ export default function Container(props: Props) {
   const { state, actions } = useStateDecorator(getInitialState, actions, props);
 
   useOnUnmount(() => {
-    localStorage.setItem('state', JSON.stringify(s));
+    localStorage.setItem('state', JSON.stringify(state));
   });
 
   return <View {...state} {...actions} />;
@@ -404,7 +416,7 @@ export default function Container(props: Props) {
   const { state, actions } = useStateDecorator(getInitialState, actions, props);
 
   useOnUnload(() => {
-    localStorage.setItem('state', JSON.stringify(s));
+    localStorage.setItem('state', JSON.stringify(state));
   });
 
   return <View {...state} {...actions} />;
