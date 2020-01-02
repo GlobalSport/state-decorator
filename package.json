@@ -12,7 +12,7 @@
   "license": "MIT",
   "scripts": {
     "test": "jest tests",
-    "bump-version": "yarn test && yarn clean && yarn build && yarn rimraf ./dist/useStateDecorator && bump --commit 'build: release v%s' --tag --push",
+    "bump-version": "yarn test && yarn clean && yarn rollup && bump --commit 'build: release v%s' --tag --push && yarn copy",
     "clean": "rimraf ./dist",
     "copy": "copyfiles -f package.json README.md LICENSE dist && json -I -f dist/package.json -e \"this.private=false; this.devDependencies=undefined; this.optionalDependencies=undefined; this.scripts=undefined; this.husky=undefined; this['lint-staged']=undefined; \"",
     "build": "yarn rollup && yarn copy",
