@@ -42,6 +42,7 @@ import {
   retryDecorator,
   areSameArgs,
   defaultCloneFunc,
+  hasPropsChanged,
 } from './base';
 import { useOnMount } from './hooks';
 
@@ -1081,7 +1082,7 @@ export function handlePropChange<S, A extends DecoratedActions, P>(
   sideEffectsRef: React.MutableRefObject<SideEffects<S, A, P>>,
   actionsRef: React.MutableRefObject<A>
 ) {
-  const { changed, indices } = isPropsChanged(oldPropsRef.current, props, options.getPropsRefValues);
+  const { changed, indices } = hasPropsChanged(oldPropsRef.current, props, options.getPropsRefValues);
 
   if (changed) {
     const { onPropsChangeReducer, onPropsChange } = options;
@@ -1118,44 +1119,6 @@ export function processSideEffects<S, A extends DecoratedActions, P>(
       console.error(e);
     }
   }
-}
-
-function isPropsChanged<P>(
-  oldProps: P,
-  newProps: P,
-  getPropsRefValues: StateDecoratorOptions<any, any, P>['getPropsRefValues']
-): {
-  changed: boolean;
-  indices: number[];
-} {
-  if (oldProps == null || getPropsRefValues == null) {
-    return {
-      changed: false,
-      indices: null,
-    };
-  }
-
-  const oldValues = getPropsRefValues(oldProps);
-  const newValues = getPropsRefValues(newProps);
-
-  if (oldValues.length !== newValues.length) {
-    return {
-      changed: true,
-      indices: [],
-    };
-  }
-
-  return oldValues.reduce(
-    (res, oldValue, index) => {
-      const newValue = newValues[index];
-      if (oldValue !== newValue) {
-        res.changed = true;
-        res.indices.push(index);
-      }
-      return res;
-    },
-    { changed: false, indices: [] }
-  );
 }
 
 /**

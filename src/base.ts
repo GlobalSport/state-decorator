@@ -9,6 +9,7 @@ import {
   SynchAction,
   PromiseProvider,
 } from './types';
+import { StateDecoratorOptions } from 'useStateDecorator';
 
 export const IS_JEST_ENV = typeof process !== 'undefined' && process && !(process as any).browser;
 
@@ -136,6 +137,44 @@ export function testAdvancedSyncAction<S, F extends (...args: any[]) => any, A, 
     return test(action);
   }
   return Promise.reject(new Error('This action is not a synchronous advanced action'));
+}
+
+export function hasPropsChanged<P>(
+  oldProps: P,
+  newProps: P,
+  getPropsRefValues: StateDecoratorOptions<any, any, P>['getPropsRefValues']
+): {
+  changed: boolean;
+  indices: number[];
+} {
+  if (oldProps == null || getPropsRefValues == null) {
+    return {
+      changed: false,
+      indices: null,
+    };
+  }
+
+  const oldValues = getPropsRefValues(oldProps);
+  const newValues = getPropsRefValues(newProps);
+
+  if (oldValues.length !== newValues.length) {
+    return {
+      changed: true,
+      indices: [],
+    };
+  }
+
+  return oldValues.reduce(
+    (res, oldValue, index) => {
+      const newValue = newValues[index];
+      if (oldValue !== newValue) {
+        res.changed = true;
+        res.indices.push(index);
+      }
+      return res;
+    },
+    { changed: false, indices: [] }
+  );
 }
 
 /**

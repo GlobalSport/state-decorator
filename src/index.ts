@@ -14,6 +14,7 @@ import {
   isSyncAction,
   isAdvancedSyncAction,
   isAsyncAction,
+  hasPropsChanged,
 } from './base';
 
 export {
@@ -27,6 +28,7 @@ export {
   testSyncAction,
   testAsyncAction,
   testAdvancedSyncAction,
+  hasPropsChanged,
   isSyncAction,
   isAdvancedSyncAction,
   isAsyncAction,

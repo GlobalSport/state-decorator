@@ -1,5 +1,11 @@
 import { StateDecoratorActions } from '../src/StateDecorator';
-import { testSyncAction, testAsyncAction, testAdvancedSyncAction, computeAsyncActionInput } from '../src/base';
+import {
+  testSyncAction,
+  testAsyncAction,
+  testAdvancedSyncAction,
+  computeAsyncActionInput,
+  hasPropsChanged,
+} from '../src/base';
 import { ConflictPolicy } from '../src/types';
 
 describe('Testing utilities', () => {
@@ -134,5 +140,55 @@ describe('Testing utilities', () => {
     expect(newAction.promise).toBeDefined();
     expect(newAction.retryCount).toEqual(3);
     expect(newAction.conflictPolicy).toEqual(ConflictPolicy.REUSE);
+  });
+
+  describe.only('hasPropsChanged', () => {
+    it('is same if no value changes', () => {
+      let res;
+      res = hasPropsChanged({ value: 1 }, { value: 1 }, (p) => [p.value]);
+      expect(res.changed).toBeFalsy();
+
+      res = hasPropsChanged({ value: 'value' }, { value: 'value' }, (p) => [p.value]);
+      expect(res.changed).toBeFalsy();
+
+      const f = () => {};
+      res = hasPropsChanged({ value: f }, { value: f }, (p) => [p.value]);
+      expect(res.changed).toBeFalsy();
+
+      const arr = [];
+      res = hasPropsChanged({ value: arr }, { value: arr }, (p) => [p.value]);
+      expect(res.changed).toBeFalsy();
+    });
+
+    it('is not same if length changes (do not do this...)', () => {
+      let res;
+      res = hasPropsChanged({ value: 1 }, { value: 1, value2: 'value2' }, (p) =>
+        p.value2 == null ? [p.value] : [p.value, p.value2]
+      );
+      expect(res.changed).toBeTruthy();
+    });
+
+    it('is not same if one value changes', () => {
+      let res;
+      res = hasPropsChanged({ value: 1 }, { value: 2 }, (p) => [p.value]);
+      expect(res.changed).toBeTruthy();
+      expect(res.indices).toEqual([0]);
+
+      res = hasPropsChanged({ value: 1, value2: 1 }, { value: 1, value2: 2 }, (p) => [p.value, p.value2]);
+      expect(res.changed).toBeTruthy();
+      expect(res.indices).toEqual([1]);
+
+      res = hasPropsChanged({ value: 1, value2: 1 }, { value: 2, value2: 2 }, (p) => [p.value, p.value2]);
+      expect(res.changed).toBeTruthy();
+      expect(res.indices).toEqual([0, 1]);
+
+      res = hasPropsChanged({ value: 1 }, { value: () => {} }, (p) => [p.value]);
+      expect(res.changed).toBeTruthy();
+      expect(res.indices).toEqual([0]);
+
+      res = hasPropsChanged({ value: 1 }, { value: '1' }, (p) => [p.value]);
+      expect(res.changed).toBeTruthy();
+      expect(res.indices).toEqual([0]);
+    });
   });
 });
