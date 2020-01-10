@@ -29,6 +29,7 @@ import {
   CloneFunction,
   NotifyFunc,
   TriggerReryError,
+  StateDecoratorOptions,
 } from './types';
 
 import {
@@ -167,57 +168,6 @@ type OptimisticData<S> = {
 type OnPropsChangeReducer<S, P> = (s: S, newProps: P, updatedIndices: number[]) => S;
 
 type PromiseMap = { [name: string]: { promise: Promise<any>; refArgs: any[] } };
-
-export type StateDecoratorOptions<S, A, P = {}> = {
-  /**
-   * The state decorator name. Use in debug traces to identify the useStateDecorator instance.
-   */
-  name?: string;
-
-  /**
-   * Show logs in the console in development mode.
-   */
-  logEnabled?: boolean;
-
-  /**
-   * List of action names that are marked as loading at initial time.
-   * As a render is done before first actions can be trigerred, some actions can be marked as loading at
-   * initial time.
-   */
-  initialActionsMarkedLoading?: string[];
-
-  /**
-   * Get a list of values that will be use as reference values.
-   * If they are different (shallow compare), onPropsChangeReducer then onPropsChange will be called.
-   */
-  getPropsRefValues?: (props: P) => any[];
-
-  /**
-   * Triggered when values of reference from props have changed. Allow to call actions after a prop change.
-   */
-  onPropsChange?: (s: S, newProps: any, actions: A, updatedIndices: number[]) => void;
-
-  /**
-   * Triggered when values of reference from props have changed. Allow to update state after a prop change.
-   * <b>null</b> means no change.
-   */
-  onPropsChangeReducer?: OnPropsChangeReducer<S, P>;
-
-  /**
-   * The callback function called if an asynchronous function succeeded and a success messsage is defined.
-   */
-  notifySuccess?: (message: string) => void;
-
-  /**
-   * The callback function called if an asynchronous function fails and an error messsage is defined.
-   */
-  notifyError?: (message: string) => void;
-
-  /**
-   * Initial actions
-   */
-  onMount?: (actions: A, props: P) => void;
-};
 
 /**
  * Returns a function that decorates the synchronous action.

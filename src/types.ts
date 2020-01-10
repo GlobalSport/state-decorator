@@ -108,7 +108,7 @@ export interface AsynchActionBase<S, F extends (...args: any[]) => any, A, P> {
   /**
    * A function that provides the error message to pass to the notifyError function passed as property to the StateDecorator.
    */
-  getErrorMessage?: (e: Error, args: Parameters<F>, props: P) => string;
+  getErrorMessage?: (e: any, args: Parameters<F>, props: P) => string;
 
   /**
    * If set, called with the result of the promise to update the current state.
@@ -238,3 +238,56 @@ export type GlobalAsyncHook = (error: any, isHandled: boolean) => void;
 export type CloneFunction = <C>(obj: C) => C;
 export type NotifyFunc = (msg: string) => void;
 export type TriggerReryError = (error: any) => boolean;
+
+type OnPropsChangeReducer<S, P> = (s: S, newProps: P, updatedIndices: number[]) => S;
+
+export type StateDecoratorOptions<S, A, P = {}> = {
+  /**
+   * The state decorator name. Use in debug traces to identify the useStateDecorator instance.
+   */
+  name?: string;
+
+  /**
+   * Show logs in the console in development mode.
+   */
+  logEnabled?: boolean;
+
+  /**
+   * List of action names that are marked as loading at initial time.
+   * As a render is done before first actions can be trigerred, some actions can be marked as loading at
+   * initial time.
+   */
+  initialActionsMarkedLoading?: string[];
+
+  /**
+   * Get a list of values that will be use as reference values.
+   * If they are different (shallow compare), onPropsChangeReducer then onPropsChange will be called.
+   */
+  getPropsRefValues?: (props: P) => any[];
+
+  /**
+   * Triggered when values of reference from props have changed. Allow to call actions after a prop change.
+   */
+  onPropsChange?: (s: S, newProps: any, actions: A, updatedIndices: number[]) => void;
+
+  /**
+   * Triggered when values of reference from props have changed. Allow to update state after a prop change.
+   * <b>null</b> means no change.
+   */
+  onPropsChangeReducer?: OnPropsChangeReducer<S, P>;
+
+  /**
+   * The callback function called if an asynchronous function succeeded and a success messsage is defined.
+   */
+  notifySuccess?: (message: string) => void;
+
+  /**
+   * The callback function called if an asynchronous function fails and an error messsage is defined.
+   */
+  notifyError?: (message: string) => void;
+
+  /**
+   * Initial actions
+   */
+  onMount?: (actions: A, props: P) => void;
+};

@@ -8,8 +8,8 @@ import {
   StateDecoratorAction,
   SynchAction,
   PromiseProvider,
+  StateDecoratorOptions,
 } from './types';
-import { StateDecoratorOptions } from 'useStateDecorator';
 
 export const IS_JEST_ENV = typeof process !== 'undefined' && process && !(process as any).browser;
 

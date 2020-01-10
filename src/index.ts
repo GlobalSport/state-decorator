@@ -5,7 +5,7 @@ import useStateDecorator, {
   setNotifyErrorFunction,
   setNotifySuccessFunction,
 } from './useStateDecorator';
-import { StateDecoratorActions, ConflictPolicy, LoadingProps, LoadingMap } from './types';
+import { StateDecoratorActions, ConflictPolicy, LoadingProps, LoadingMap, StateDecoratorOptions } from './types';
 import { useOnMount, useOnUnmount, useOnUnload } from './hooks';
 import {
   testSyncAction,
@@ -37,6 +37,7 @@ export {
   setIsTriggerRetryError,
   setNotifyErrorFunction,
   setNotifySuccessFunction,
+  StateDecoratorOptions,
 };
 
 export default useStateDecorator;
