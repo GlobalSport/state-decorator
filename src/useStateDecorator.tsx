@@ -130,7 +130,12 @@ type SideEffect<S, A extends DecoratedActions, P> = (
   dispatch?: React.Dispatch<ReducerAction<S, any, A, P>>
 ) => void;
 
-type SideEffects<S, A extends DecoratedActions, P> = SideEffect<S, A, P>[];
+type PromiseSideEffect<S, A extends DecoratedActions, P> = (
+  s: S,
+  dispatch?: React.Dispatch<ReducerAction<S, any, A, P>>
+) => Promise<void>;
+
+type SideEffects<S, A extends DecoratedActions, P> = PromiseSideEffect<S, A, P>[];
 
 type DebounceMap = {
   [name: string]: any;
@@ -190,7 +195,17 @@ export function addNewSideEffect<S, A extends DecoratedActions, P>(
   sideEffectsRef: React.MutableRefObject<SideEffects<S, A, P>>,
   newSideEffect: SideEffect<S, A, P>
 ) {
-  sideEffectsRef.current.push(newSideEffect);
+  // defer function call to next JS thread execution (use case: action that will trigger parent tree render)
+  // return promise for testing
+  const sideEffect: PromiseSideEffect<S, A, P> = (s: S, dispatch?: React.Dispatch<ReducerAction<S, any, A, P>>) =>
+    new Promise((res) => {
+      setTimeout(() => {
+        newSideEffect(s, dispatch);
+        res();
+      }, 0);
+    });
+
+  sideEffectsRef.current.push(sideEffect);
 }
 
 function processAdvancedSyncAction<S, F extends (...args: any[]) => any, A extends DecoratedActions, P>(
@@ -1156,7 +1171,7 @@ export default function useStateDecorator<S, A extends DecoratedActions, P = {}>
   if (!unmountedRef.current) {
     handlePropChange(dispatch, props, options, oldPropsRef, sideEffectsRef, actionsRef);
 
-    // onDone, onActionDone,onPropChange, sendRequest are side effects
+    // onDone, onActionDone, onPropChange, sendRequest are side effects
     processSideEffects(hookState.state, dispatch, sideEffectsRef);
 
     oldPropsRef.current = props;

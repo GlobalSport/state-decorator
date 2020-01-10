@@ -62,9 +62,9 @@ describe('handlePropChange', () => {
     handlePropChange(dispatch, props, { getPropsRefValues, onPropsChange }, oldPropRef, sideEffectRef, actionsRef);
 
     const s = { value: 'value' };
-    sideEffectRef.current[0](s);
-
-    expect(onPropsChange).toHaveBeenCalledWith(s, props, actionsRef.current, [0]);
+    return sideEffectRef.current[0](s).then(() => {
+      expect(onPropsChange).toHaveBeenCalledWith(s, props, actionsRef.current, [0]);
+    });
   });
 
   it('calls onPropChangeReducer & onPropChange correctly', () => {
@@ -92,9 +92,9 @@ describe('handlePropChange', () => {
     });
 
     const s = { value: 'value' };
-    sideEffectRef.current[0](s);
-
-    expect(onPropsChange).toHaveBeenCalledWith(s, props, actionsRef.current, [0]);
+    return sideEffectRef.current[0](s).then(() => {
+      expect(onPropsChange).toHaveBeenCalledWith(s, props, actionsRef.current, [0]);
+    });
   });
 });
 

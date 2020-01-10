@@ -141,7 +141,9 @@ describe('decorateAdvancedSyncAction', () => {
     const s = { value: 'value' };
     sideEffectRef.current[0](s);
 
-    expect(actionImpl.onActionDone).toHaveBeenCalledWith(s, ['value'], propsRef.current, actionsRef.current);
+    return getTimeoutPromise(100, () => {
+      expect(actionImpl.onActionDone).toHaveBeenCalledWith(s, ['value'], propsRef.current, actionsRef.current);
+    });
   });
 
   it('dispatches an advanced sync action correctly (debounce)', (done) => {

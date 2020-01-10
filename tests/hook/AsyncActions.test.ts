@@ -128,15 +128,17 @@ describe('decorateAsyncAction', () => {
       const s = { value: 'value' };
       ctx.sideEffectRef.current[0](s);
 
-      expect(actions.setValue.onDone).toHaveBeenCalledWith(
-        s,
-        'result',
-        ['value'],
-        ctx.propsRef.current,
-        ctx.actionsRef.current
-      );
+      return getTimeoutPromise(100, () => {
+        expect(actions.setValue.onDone).toHaveBeenCalledWith(
+          s,
+          'result',
+          ['value'],
+          ctx.propsRef.current,
+          ctx.actionsRef.current
+        );
 
-      expect(ctx.propsRef.current.notifySuccess).toHaveBeenCalledWith('success message: result');
+        expect(ctx.propsRef.current.notifySuccess).toHaveBeenCalledWith('success message: result');
+      });
     });
 
     processSideEffects(ctx.stateRef.current, ctx.dispatch, ctx.sideEffectRef);
