@@ -4,7 +4,7 @@ import typescript from 'rollup-plugin-typescript2';
 import commonjs from 'rollup-plugin-commonjs';
 import visualizer from 'rollup-plugin-visualizer';
 import resolve from 'rollup-plugin-node-resolve';
-import { terser } from 'rollup-plugin-terser';
+// import { terser } from 'rollup-plugin-terser';
 
 export default function(input, outDir) {
   return {
@@ -34,7 +34,8 @@ export default function(input, outDir) {
         preferBuiltins: false,
       }),
       commonjs(),
-      terser(),
+      // terser is doing some optims that is doing some crashes...
+      // terser(),
       visualizer(),
     ],
   };

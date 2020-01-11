@@ -1173,9 +1173,9 @@ export default function useStateDecorator<S, A extends DecoratedActions, P = {}>
 
     // onDone, onActionDone, onPropChange, sendRequest are side effects
     processSideEffects(hookState.state, dispatch, sideEffectsRef);
-
-    oldPropsRef.current = props;
   }
+
+  oldPropsRef.current = props;
 
   // initial actions
   useOnMount(() => {
