@@ -779,6 +779,7 @@ export function createNewHookState<S, A>(
 
     return {
       ...oldHookState,
+      state: newState || oldHookState.state,
       loadingMap: {
         ...oldHookState.loadingMap,
         [actionName]: len > 0,

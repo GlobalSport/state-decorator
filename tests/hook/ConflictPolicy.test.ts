@@ -61,6 +61,7 @@ describe('createNewHookState', () => {
     expect(oldHookState === newHookState).toBeFalsy();
     expect(newHookState.loadingMap.setValue).toBeTruthy();
     expect(newHookState.loadingParallelMap.setValue.id).toBeTruthy();
+    expect(newHookState.state.value).toEqual('newValue');
   });
 
   it('sets the parallel loading state to false', () => {
@@ -81,6 +82,7 @@ describe('createNewHookState', () => {
     expect(newHookState.loadingMap.setValue).toBeTruthy();
     expect(newHookState.loadingParallelMap.setValue.otherId).toBeTruthy();
     expect(newHookState.loadingParallelMap.setValue.id).toBeFalsy();
+    expect(newHookState.state.value).toEqual('newValue');
   });
 
   it('sets the parallel loading state to false (last value)', () => {
