@@ -72,13 +72,14 @@ export function setCloneFunction(cloneFn: CloneFunction) {
   cloneFunc = cloneFn;
 }
 
-let onAsyncError: GlobalAsyncHook = (f: GlobalAsyncHook) => {};
+const _defAsyncErr: GlobalAsyncHook = (f: GlobalAsyncHook) => {};
+let onAsyncError: GlobalAsyncHook = _defAsyncErr;
 
 /**
  * Sets a global callback function to handle asynchronous promise rejection errors.
  */
 export function setOnAsyncError(f: GlobalAsyncHook) {
-  onAsyncError = f;
+  onAsyncError = f || _defAsyncErr;
 }
 
 let isTriggerRetryError: TriggerReryError = (error: Error) => error instanceof TypeError;
@@ -150,6 +151,7 @@ export enum ReducerActionSubType {
   BEFORE_PROMISE,
   SUCCESS,
   ERROR,
+  ABORTED,
 }
 
 export type ReducerAction<S, F extends (...args: any[]) => any, A extends DecoratedActions, P> = {
@@ -528,11 +530,22 @@ export function sendRequest<S, F extends (...args: any[]) => any, A extends Deco
 
     logSingle(options.name, actionName, args, options.logEnabled, 'ABORTED');
 
+    dispatch({
+      actionName,
+      args,
+      promiseId,
+      props: propsRef.current,
+      type: ReducerActionType.ACTION,
+      subType: ReducerActionSubType.ABORTED,
+    });
+
     return null; // nothing to do
   }
 
   p = p
     .then((result: PromiseResult<ReturnType<F>>) => {
+      delete promisesRef.current[actionName];
+
       if (unmountedRef.current) {
         return null;
       }
@@ -554,8 +567,6 @@ export function sendRequest<S, F extends (...args: any[]) => any, A extends Deco
         type: ReducerActionType.ACTION,
         subType: ReducerActionSubType.SUCCESS,
       });
-
-      delete promisesRef.current[actionName];
 
       const notifySuccess = options.notifySuccess || propsRef.current['notifySuccess'] || globalNotifySuccess;
 
@@ -580,6 +591,8 @@ export function sendRequest<S, F extends (...args: any[]) => any, A extends Deco
       return result;
     })
     .catch((error: any) => {
+      delete promises[actionName];
+
       if (unmountedRef.current) {
         return null;
       }
@@ -602,8 +615,6 @@ export function sendRequest<S, F extends (...args: any[]) => any, A extends Deco
       if (notifyError && (asyncAction.errorMessage || asyncAction.getErrorMessage)) {
         let msg: string;
 
-        errorHandled = true;
-
         if (asyncAction.getErrorMessage) {
           msg = asyncAction.getErrorMessage(error, args, propsRef.current);
         }
@@ -613,6 +624,7 @@ export function sendRequest<S, F extends (...args: any[]) => any, A extends Deco
         }
 
         if (msg) {
+          errorHandled = true;
           notifyError(msg);
         }
       }
@@ -620,8 +632,6 @@ export function sendRequest<S, F extends (...args: any[]) => any, A extends Deco
       onAsyncError(error, errorHandled);
 
       const result = !errorHandled || asyncAction.rejectPromiseOnError ? Promise.reject(error) : undefined;
-
-      delete promises[actionName];
 
       processNextConflictAction(name, actionsRef.current, conflictActionsRef.current);
 
@@ -918,6 +928,19 @@ function processAsyncReducer<S, A extends DecoratedActions, P>(
         newOptimisticData
       );
     }
+    case ReducerActionSubType.ABORTED: {
+      const newHookState = createNewHookState(
+        hookState,
+        actionName,
+        action.conflictPolicy,
+        promiseId,
+        null,
+        false,
+        null
+      );
+
+      return newHookState;
+    }
 
     default:
       const s: never = actionType;
@@ -1184,6 +1207,8 @@ export default function useStateDecorator<S, A extends DecoratedActions, P = {}>
   });
 
   useEffect(() => {
+    unmountedRef.current = false;
+
     return () => {
       sideEffectsRef.current = [];
       unmountedRef.current = true;
