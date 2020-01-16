@@ -598,4 +598,37 @@ describe('getUseReducer', () => {
       reducerErrorTest(undefined, 'initial');
     });
   });
+
+  describe('aborted ', () => {
+    it('handles correctly async action (aborted, loading: false)', () => {
+      type S = { value: string };
+      type A = {
+        setValue: (v: string) => void;
+      };
+      type P = { prop: string };
+
+      const actions: StateDecoratorActions<S, A, P> = {
+        setValue: {
+          promise: () => null,
+          reducer: (s) => s,
+        },
+      };
+
+      const hookState = getInitialHookState((p: P) => ({ value: 'initial' }), actions, { prop: '' });
+
+      const reducerFunc = getUseReducer(actions, {});
+
+      const reducerAction: ReducerAction<S, any, A, P> = {
+        type: ReducerActionType.ACTION,
+        subType: ReducerActionSubType.ABORTED,
+        actionName: 'setValue',
+        args: ['value'],
+        props: { prop: 'prop' },
+      };
+
+      const newHookState = reducerFunc(hookState, reducerAction);
+
+      expect(newHookState.loadingMap.setValue).toBeFalsy();
+    });
+  });
 });

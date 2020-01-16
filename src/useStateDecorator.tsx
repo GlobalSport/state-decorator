@@ -151,6 +151,7 @@ export enum ReducerActionSubType {
   BEFORE_PROMISE,
   SUCCESS,
   ERROR,
+  ABORTED,
 }
 
 export type ReducerAction<S, F extends (...args: any[]) => any, A extends DecoratedActions, P> = {
@@ -529,11 +530,22 @@ export function sendRequest<S, F extends (...args: any[]) => any, A extends Deco
 
     logSingle(options.name, actionName, args, options.logEnabled, 'ABORTED');
 
+    dispatch({
+      actionName,
+      args,
+      promiseId,
+      props: propsRef.current,
+      type: ReducerActionType.ACTION,
+      subType: ReducerActionSubType.ABORTED,
+    });
+
     return null; // nothing to do
   }
 
   p = p
     .then((result: PromiseResult<ReturnType<F>>) => {
+      delete promisesRef.current[actionName];
+
       if (unmountedRef.current) {
         return null;
       }
@@ -579,6 +591,8 @@ export function sendRequest<S, F extends (...args: any[]) => any, A extends Deco
       return result;
     })
     .catch((error: any) => {
+      delete promises[actionName];
+
       if (unmountedRef.current) {
         return null;
       }
@@ -618,8 +632,6 @@ export function sendRequest<S, F extends (...args: any[]) => any, A extends Deco
       onAsyncError(error, errorHandled);
 
       const result = !errorHandled || asyncAction.rejectPromiseOnError ? Promise.reject(error) : undefined;
-
-      delete promises[actionName];
 
       processNextConflictAction(name, actionsRef.current, conflictActionsRef.current);
 
@@ -916,6 +928,19 @@ function processAsyncReducer<S, A extends DecoratedActions, P>(
         newOptimisticData
       );
     }
+    case ReducerActionSubType.ABORTED: {
+      const newHookState = createNewHookState(
+        hookState,
+        actionName,
+        action.conflictPolicy,
+        promiseId,
+        null,
+        false,
+        null
+      );
+
+      return newHookState;
+    }
 
     default:
       const s: never = actionType;
@@ -1182,6 +1207,8 @@ export default function useStateDecorator<S, A extends DecoratedActions, P = {}>
   });
 
   useEffect(() => {
+    unmountedRef.current = false;
+
     return () => {
       sideEffectsRef.current = [];
       unmountedRef.current = true;
