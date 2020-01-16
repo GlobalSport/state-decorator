@@ -72,13 +72,14 @@ export function setCloneFunction(cloneFn: CloneFunction) {
   cloneFunc = cloneFn;
 }
 
-let onAsyncError: GlobalAsyncHook = (f: GlobalAsyncHook) => {};
+const _defAsyncErr: GlobalAsyncHook = (f: GlobalAsyncHook) => {};
+let onAsyncError: GlobalAsyncHook = _defAsyncErr;
 
 /**
  * Sets a global callback function to handle asynchronous promise rejection errors.
  */
 export function setOnAsyncError(f: GlobalAsyncHook) {
-  onAsyncError = f;
+  onAsyncError = f || _defAsyncErr;
 }
 
 let isTriggerRetryError: TriggerReryError = (error: Error) => error instanceof TypeError;
@@ -555,8 +556,6 @@ export function sendRequest<S, F extends (...args: any[]) => any, A extends Deco
         subType: ReducerActionSubType.SUCCESS,
       });
 
-      delete promisesRef.current[actionName];
-
       const notifySuccess = options.notifySuccess || propsRef.current['notifySuccess'] || globalNotifySuccess;
 
       if (notifySuccess) {
@@ -602,8 +601,6 @@ export function sendRequest<S, F extends (...args: any[]) => any, A extends Deco
       if (notifyError && (asyncAction.errorMessage || asyncAction.getErrorMessage)) {
         let msg: string;
 
-        errorHandled = true;
-
         if (asyncAction.getErrorMessage) {
           msg = asyncAction.getErrorMessage(error, args, propsRef.current);
         }
@@ -613,6 +610,7 @@ export function sendRequest<S, F extends (...args: any[]) => any, A extends Deco
         }
 
         if (msg) {
+          errorHandled = true;
           notifyError(msg);
         }
       }

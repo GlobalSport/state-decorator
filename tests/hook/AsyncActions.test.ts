@@ -9,6 +9,7 @@ import {
   processSideEffects,
   setNotifyErrorFunction,
   setNotifySuccessFunction,
+  setOnAsyncError,
 } from '../../src/useStateDecorator';
 import { StateDecoratorActions } from '../../src/types';
 import { getTimeoutPromise, getFailedTimeoutPromise, getAsyncContext } from './testUtils';
@@ -248,7 +249,110 @@ describe('decorateAsyncAction', () => {
     return p;
   });
 
-  it('dispatches an async action correctly (error, notify from props)', (done) => {
+  it('dispatches an async action correctly (error, rejectPromise)', (done) => {
+    const ctx = getAsyncContext();
+
+    const addSideEffect = jest.fn(addNewSideEffect);
+
+    const actions = {
+      setValue: {
+        promise: () => getFailedTimeoutPromise(100, 'error'),
+        onDone: jest.fn(),
+        getErrorMessage: (error) => `error message: ${error}`,
+        rejectPromiseOnError: true,
+      },
+    };
+
+    const options = {
+      notifyError: jest.fn(),
+    };
+
+    const action = decorateAsyncAction(
+      ctx.dispatch,
+      'setValue',
+      ctx.stateRef,
+      ctx.propsRef,
+      ctx.unmountedRef,
+      ctx.actionsRef,
+      { current: actions },
+      ctx.sideEffectRef,
+      ctx.promisesRef,
+      ctx.conflicActionsRef,
+      options,
+      addSideEffect
+    );
+
+    const asyncHandler = jest.fn();
+    setOnAsyncError(asyncHandler);
+
+    expect(typeof action === 'function').toBeTruthy();
+
+    const p = action('value')
+      .then(() => {
+        done.fail();
+      })
+      .catch(() => {
+        expect(asyncHandler.mock.calls[0][1]).toBeTruthy();
+        setOnAsyncError(null);
+
+        done();
+      });
+
+    processSideEffects(ctx.stateRef.current, ctx.dispatch, ctx.sideEffectRef);
+
+    return p;
+  });
+
+  it('dispatches an async action correctly (error with not handler => promise rejected)', (done) => {
+    const ctx = getAsyncContext();
+
+    const addSideEffect = jest.fn(addNewSideEffect);
+
+    const actions = {
+      setValue: {
+        promise: () => getFailedTimeoutPromise(100, 'error'),
+      },
+    };
+
+    const options = {
+      notifyError: jest.fn(),
+    };
+
+    const action = decorateAsyncAction(
+      ctx.dispatch,
+      'setValue',
+      ctx.stateRef,
+      ctx.propsRef,
+      ctx.unmountedRef,
+      ctx.actionsRef,
+      { current: actions },
+      ctx.sideEffectRef,
+      ctx.promisesRef,
+      ctx.conflicActionsRef,
+      options,
+      addSideEffect
+    );
+
+    const asyncHandler = jest.fn();
+    setOnAsyncError(asyncHandler);
+
+    const p = action('value')
+      .then(() => {
+        done.fail();
+      })
+      .catch(() => {
+        expect(asyncHandler.mock.calls[0][1]).toBeFalsy();
+        setOnAsyncError(null);
+
+        done();
+      });
+
+    processSideEffects(ctx.stateRef.current, ctx.dispatch, ctx.sideEffectRef);
+
+    return p;
+  });
+
+  it('dispatches an async action correctly (error, global notification function)', (done) => {
     const ctx = getAsyncContext();
 
     const addSideEffect = jest.fn(addNewSideEffect);
@@ -330,8 +434,14 @@ describe('decorateAsyncAction', () => {
 
     expect(typeof action === 'function').toBeTruthy();
 
+    const asyncHandler = jest.fn();
+    setOnAsyncError(asyncHandler);
+
     const p = action('value').then(() => {
       expect(ctx.propsRef.current.notifyError).toHaveBeenCalledWith('error message: error');
+      expect(asyncHandler.mock.calls[0][1]).toBeTruthy();
+      setOnAsyncError(null);
+
       done();
     });
 
