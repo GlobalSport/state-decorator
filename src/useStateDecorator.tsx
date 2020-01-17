@@ -612,6 +612,10 @@ export function sendRequest<S, F extends (...args: any[]) => any, A extends Deco
 
       let errorHandled = false;
 
+      if ((rawActionsRef.current[actionName] as AsynchAction<S, any, A, P>).errorReducer) {
+        errorHandled = true;
+      }
+
       if (notifyError && (asyncAction.errorMessage || asyncAction.getErrorMessage)) {
         let msg: string;
 
