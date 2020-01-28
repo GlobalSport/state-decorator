@@ -27,9 +27,7 @@ export function getAsyncContext() {
   const actionsRef = {
     current: { setValue: jest.fn() as (...args: any[]) => Promise<any> },
   };
-  const sideEffectRef = {
-    current: [],
-  };
+  const sideEffectRef = getSideEffectRef();
   const promisesRef = { current: {} };
   const unmountedRef = { current: false };
   const conflicActionsRef = { current: {} };
@@ -44,8 +42,12 @@ export function getAsyncContext() {
   };
 
   let timer = null;
-  const addSideEffect = (ref, sideEffect) => {
-    ref.current.push(sideEffect);
+  const addSideEffect = (ref, sideEffect, delayed) => {
+    if (delayed) {
+      ref.current.delayed.push(sideEffect);
+    } else {
+      ref.current.list.push(sideEffect);
+    }
 
     if (timer === null) {
       timer = setTimeout(() => {
@@ -66,5 +68,11 @@ export function getAsyncContext() {
     stateRef,
     optimisticData,
     addSideEffect,
+  };
+}
+
+export function getSideEffectRef() {
+  return {
+    current: { list: [], delayed: [] },
   };
 }

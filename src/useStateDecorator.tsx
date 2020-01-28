@@ -136,7 +136,10 @@ type PromiseSideEffect<S, A extends DecoratedActions, P> = (
   dispatch?: React.Dispatch<ReducerAction<S, any, A, P>>
 ) => Promise<void>;
 
-type SideEffects<S, A extends DecoratedActions, P> = PromiseSideEffect<S, A, P>[];
+type SideEffects<S, A extends DecoratedActions, P> = {
+  list: PromiseSideEffect<S, A, P>[];
+  delayed: PromiseSideEffect<S, A, P>[];
+};
 
 type DebounceMap = {
   [name: string]: any;
@@ -195,7 +198,8 @@ export function decorateSyncAction<S, F extends (...args: any[]) => any, A exten
  */
 export function addNewSideEffect<S, A extends DecoratedActions, P>(
   sideEffectsRef: React.MutableRefObject<SideEffects<S, A, P>>,
-  newSideEffect: SideEffect<S, A, P>
+  newSideEffect: SideEffect<S, A, P>,
+  delayed?: boolean
 ) {
   // defer function call to next JS thread execution (use case: action that will trigger parent tree render)
   // return promise for testing
@@ -207,7 +211,12 @@ export function addNewSideEffect<S, A extends DecoratedActions, P>(
       }, 0);
     });
 
-  sideEffectsRef.current.push(sideEffect);
+  if (delayed) {
+    // if the promise is delayed, it must be executed at next render
+    sideEffectsRef.current.delayed.push(sideEffect);
+  } else {
+    sideEffectsRef.current.list.push(sideEffect);
+  }
 }
 
 function processAdvancedSyncAction<S, F extends (...args: any[]) => any, A extends DecoratedActions, P>(
@@ -1083,11 +1092,16 @@ export function handlePropChange<S, A extends DecoratedActions, P>(
     if (onPropsChangeReducer) {
       dispatch({ props, type: ReducerActionType.ON_PROP_CHANGE_REDUCER, args: indices });
     }
+
     if (onPropsChange) {
-      addNewSideEffect(sideEffectsRef, (s: S) => {
-        logSingle(options.name, 'onPropsChange', [], options.logEnabled);
-        onPropsChange(s, props, actionsRef.current, indices);
-      });
+      addNewSideEffect(
+        sideEffectsRef,
+        (s: S) => {
+          logSingle(options.name, `onPropsChange ${onPropsChange != null ? '(delayed)' : ''}`, [], options.logEnabled);
+          onPropsChange(s, props, actionsRef.current, indices);
+        },
+        onPropsChangeReducer != null
+      );
     }
   }
 }
@@ -1102,16 +1116,20 @@ export function processSideEffects<S, A extends DecoratedActions, P>(
   dispatch: React.Dispatch<ReducerAction<S, any, A, P>>,
   sideEffectRef: React.MutableRefObject<SideEffects<S, A, P>>
 ) {
-  if (sideEffectRef.current.length > 0) {
-    const jobs = sideEffectRef.current.concat();
-    // jobs will add new side effects to be processed in the future
-    sideEffectRef.current = [];
+  const ref = sideEffectRef.current;
+
+  if (ref.list.length > 0) {
+    const jobs = ref.list.concat();
     try {
       jobs.forEach((job) => job(state, dispatch));
     } catch (e) {
       console.error(e);
     }
   }
+
+  // jobs will add new side effects to be processed in the future
+  ref.list = ref.delayed;
+  ref.delayed = [];
 }
 
 /**
@@ -1133,7 +1151,7 @@ export default function useStateDecorator<S, A extends DecoratedActions, P = {}>
   const actionsRef = useRef<A>();
   const reducerRef = useRef<GetUseReducerResult<S, A, P>>();
   const rawActionsRef = useRef<StateDecoratorActions<S, A, P>>();
-  const sideEffectsRef = useRef<SideEffects<S, A, P>>([]);
+  const sideEffectsRef = useRef<SideEffects<S, A, P>>({ list: [], delayed: [] });
   const debounceActionMapRef = useRef<DebounceMap>({});
   const promisesRef = useRef<PromiseMap>({});
   const conflictActionsRef = useRef<ConflictActionsMap>({});
@@ -1214,7 +1232,8 @@ export default function useStateDecorator<S, A extends DecoratedActions, P = {}>
     unmountedRef.current = false;
 
     return () => {
-      sideEffectsRef.current = [];
+      sideEffectsRef.current.list = [];
+      sideEffectsRef.current.delayed = [];
       unmountedRef.current = true;
     };
   }, []);

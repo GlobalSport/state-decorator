@@ -127,7 +127,7 @@ describe('decorateAsyncAction', () => {
       });
 
       const s = { value: 'value' };
-      ctx.sideEffectRef.current[0](s);
+      ctx.sideEffectRef.current.list[0](s);
 
       return getTimeoutPromise(100, () => {
         expect(actions.setValue.onDone).toHaveBeenCalledWith(

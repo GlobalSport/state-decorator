@@ -109,11 +109,6 @@ describe('Testing utilities', () => {
       expect(action.action).toBeDefined();
       done();
     });
-    p && p.catch((e) => done.fail(e));
-  });
-
-  it('testSyncComplexAction (incorrect type)', (done) => {
-    const testFunc = jest.fn();
 
     testAdvancedSyncAction(actions.increment, testFunc).catch((e) => {
       expect(testFunc).not.toHaveBeenCalled();

@@ -8,7 +8,7 @@ import {
   ReducerAction,
 } from '../../src/useStateDecorator';
 import { StateDecoratorActions } from '../../src/types';
-import { getTimeoutPromise } from './testUtils';
+import { getTimeoutPromise, getSideEffectRef } from './testUtils';
 
 describe('decorateSyncAction', () => {
   it('dispatches a simple sync action correctly', () => {
@@ -47,9 +47,8 @@ describe('decorateAdvancedSyncAction', () => {
       current: { action: jest.fn() },
     };
 
-    const sideEffectRef = {
-      current: [],
-    };
+    const sideEffectRef = getSideEffectRef();
+
     const debounceMap = {
       current: {},
     };
@@ -97,9 +96,9 @@ describe('decorateAdvancedSyncAction', () => {
     const actionsRef = {
       current: { action: jest.fn() },
     };
-    const sideEffectRef = {
-      current: [],
-    };
+
+    const sideEffectRef = getSideEffectRef();
+
     const debounceMap = {
       current: {},
     };
@@ -139,7 +138,8 @@ describe('decorateAdvancedSyncAction', () => {
     expect(addSideEffect).toHaveBeenCalled();
 
     const s = { value: 'value' };
-    sideEffectRef.current[0](s);
+
+    sideEffectRef.current.list[0](s);
 
     return getTimeoutPromise(100, () => {
       expect(actionImpl.onActionDone).toHaveBeenCalledWith(s, ['value'], propsRef.current, actionsRef.current);
@@ -157,9 +157,8 @@ describe('decorateAdvancedSyncAction', () => {
     const actionsRef = {
       current: { action: jest.fn() },
     };
-    const sideEffectRef = {
-      current: [],
-    };
+    const sideEffectRef = getSideEffectRef();
+
     const debounceMap = {
       current: {},
     };
