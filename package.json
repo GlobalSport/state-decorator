@@ -1,6 +1,6 @@
 {
   "name": "state-decorator",
-  "version": "5.0.5",
+  "version": "5.0.6",
   "description": "React state management hook",
   "main": "index.js",
   "module": "index.es.js",
