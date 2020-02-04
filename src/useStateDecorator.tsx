@@ -230,13 +230,14 @@ function processAdvancedSyncAction<S, F extends (...args: any[]) => any, A exten
   options: StateDecoratorOptions<S, A, P>,
   addSideEffect: typeof addNewSideEffect
 ) {
-  dispatch({ actionName, args, props: propsRef.current, type: ReducerActionType.ACTION });
   if (action.onActionDone) {
     addSideEffect(sideEffectsRef, (s: S) => {
       logSingle(options.name, actionName, args, options.logEnabled, 'onActionDone SIDE EFFECT');
       action.onActionDone(s, args as any, propsRef.current, actionsRef.current);
     });
   }
+
+  dispatch({ actionName, args, props: propsRef.current, type: ReducerActionType.ACTION });
 }
 
 /**
