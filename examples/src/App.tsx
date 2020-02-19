@@ -8,6 +8,7 @@ import WrappedComponent from './hoc/WrappedComponent';
 import ContextContainer from './context/Context';
 import Debounce from './debounce/Debounce';
 import Optimistic from './Optimistic/Optimistic';
+import WarningActions from './WarningActions';
 
 export default class App extends React.Component {
   render() {
@@ -46,6 +47,11 @@ export default class App extends React.Component {
         <section>
           <h1>HOC</h1>
           <WrappedComponent value={10} />
+        </section>
+        <section>
+          <h1>WarningActions</h1>
+          <p>Look at console, the useStateDecorator is set new action at each render, so a warning is printed</p>
+          <WarningActions />
         </section>
       </div>
     );

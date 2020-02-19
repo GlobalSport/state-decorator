@@ -234,7 +234,7 @@ export interface ConflictActionsMap {
   [name: string]: FutureActions[];
 }
 
-export type GlobalAsyncHook = (error: any, isHandled: boolean) => void;
+export type GlobalAsyncHook = (error: any, isHandled: boolean, state: any, actionName: string, params: any[]) => void;
 export type CloneFunction = <C>(obj: C) => C;
 export type NotifyFunc = (msg: string) => void;
 export type TriggerReryError = (error: any) => boolean;

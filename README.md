@@ -164,6 +164,8 @@ export const CounterContainer = () => {
 
 The StateDecorator is taking a list of actions and decorate them to inject state, props, actions etc. and then expose to the child render prop the decorated actions that simply takes the function arguments.
 
+**Warning**: The actions are considered static and cannot be changed dynamically. Use state/props in your actions implementation to have a difference behavior.
+
 ## Initial action
 
 When the useStateDecorator is mounted, the **onMount** option is called with the decorated actions and props as parameters.

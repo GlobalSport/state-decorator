@@ -1159,7 +1159,6 @@ export default function useStateDecorator<S, A extends DecoratedActions, P = {}>
   const oldPropsRef = useRef<P>(null);
   const unmountedRef = useRef(false);
 
-  rawActionsRef.current = actions;
   propsRef.current = props;
 
   if (reducerRef.current == null) {
@@ -1175,6 +1174,7 @@ export default function useStateDecorator<S, A extends DecoratedActions, P = {}>
   stateRef.current = hookState.state;
 
   if (actionsRef.current == null) {
+    rawActionsRef.current = actions;
     actionsRef.current = Object.keys(actions).reduce((acc, actionName) => {
       const action = actions[actionName];
 
@@ -1211,6 +1211,8 @@ export default function useStateDecorator<S, A extends DecoratedActions, P = {}>
 
       return acc;
     }, {}) as A;
+  } else if (rawActionsRef.current !== actions) {
+    console.warn('Warning: the actions of a StateDecorator are static, new actions are ignored');
   }
 
   const decoratedActions = actionsRef.current;
