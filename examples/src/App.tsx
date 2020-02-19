@@ -9,6 +9,7 @@ import ContextContainer from './context/Context';
 import Debounce from './debounce/Debounce';
 import Optimistic from './Optimistic/Optimistic';
 import WarningActions from './WarningActions';
+import ErrorHandler from './ErrorHandler';
 
 export default class App extends React.Component {
   render() {
@@ -52,6 +53,11 @@ export default class App extends React.Component {
           <h1>WarningActions</h1>
           <p>Look at console, the useStateDecorator is set new action at each render, so a warning is printed</p>
           <WarningActions />
+        </section>
+        <section>
+          <h1>Async error handler</h1>
+          <p>Look at console, the useStateDecorator is trigerring a special handler on async errors</p>
+          <ErrorHandler />
         </section>
       </div>
     );
