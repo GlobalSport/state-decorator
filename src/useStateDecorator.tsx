@@ -1041,7 +1041,9 @@ export function getInitialHookState<S, A extends DecoratedActions, P>(
   stateInitializer: (props?: P) => S,
   actions: StateDecoratorActions<S, A, P>,
   props: P,
-  initialActionsMarkedLoading: string[] = []
+  initialActionsMarkedLoading: string[] = [],
+  logEnabled: boolean = false,
+  name: string = null
 ): HookState<S, A> {
   const names = Object.keys(actions);
   const initialActions = toMap(
@@ -1049,9 +1051,18 @@ export function getInitialHookState<S, A extends DecoratedActions, P>(
     (i) => i,
     (_) => true
   );
+
+  const state = stateInitializer(props);
+
+  if (process.env.NODE_ENV === 'development' && logEnabled) {
+    console.groupCollapsed(`${name || 'StateDecorator'}: Initial state`);
+    console.log(state);
+    console.groupEnd();
+  }
+
   return {
+    state,
     sideEffectRender: 0,
-    state: stateInitializer(props),
     loadingMap: toMap(
       names,
       (n) => n,
@@ -1168,7 +1179,14 @@ export default function useStateDecorator<S, A extends DecoratedActions, P = {}>
   const [hookState, dispatch] = useReducer(
     reducerRef.current,
     stateRef.current == null
-      ? getInitialHookState(stateInitializer, actions, props, options.initialActionsMarkedLoading)
+      ? getInitialHookState(
+          stateInitializer,
+          actions,
+          props,
+          options.initialActionsMarkedLoading,
+          options.logEnabled,
+          options.name
+        )
       : null
   );
   stateRef.current = hookState.state;

@@ -34,7 +34,8 @@ const CounterView = React.memo(function CounterView(props: State & Actions) {
 
 // Container that is managing the state using usetateDecorator hook
 const CounterContainer = () => {
-  const { state, actions } = useStateDecorator(getInitialState, actionsImpl);
+  const { state, actions } = useStateDecorator(getInitialState, actionsImpl, {}, { logEnabled: true });
+
   useOnMount(() => {
     actions.increment(10);
   });
