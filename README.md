@@ -4,7 +4,7 @@
   <img src="https://github.com/GlobalSport/state-decorator/blob/develop/doc/state-decorator-logo-small.png?raw=true" alt="useStateDecorator logo"/>
 </p>
 
-The useStateDecorator is a React hook that manages a component state in an easy, testable and determistic way.
+The useStateDecorator is a React hook that manages a component state in an easy, testable and deterministic way.
 
 # Features
 
@@ -26,7 +26,7 @@ The useStateDecorator is a React hook that manages a component state in an easy,
 
 ## Progressive migration
 
-- Actions implememtation is 100% compatible (same type).
+- Actions implementation is 100% compatible (same type).
 - The **useStateDecorator** hook is now the default way to go but to ease transition, the **StateDecorator** was rewritten using the hook.
 
 Change the import from
@@ -47,7 +47,7 @@ In 'state-decorator/compat' both the hook and the legacy are contained:
 
 ## Migrating from the StateDecorator to useStateDecorator
 
-The basic use case can migrated like this:
+The basic use case can be migrated like this:
 
 ```typescript
 const CounterContainer = () => {
@@ -131,7 +131,7 @@ const CounterView = React.memo(function CounterView(props: State & Actions) {
   );
 });
 
-// Container that is managing the state using usetateDecorator hook
+// Container that is managing the state using useStateDecorator hook
 export const CounterContainer = () => {
   const { state, actions } = useStateDecorator(getInitialState, counterActions);
   return <CounterView {...state} {...actions} />;
@@ -813,7 +813,7 @@ setCloneFunction(cloneDeep);
 # StateDecorator & Redux comparison
 
 The StateDecorator is like Redux (and others) a state management tool.
-They both have pros and cons and can be use at the same time (Redux for global state and StateDecorator for local states).
+They both have pros and cons and can be used at the same time (Redux for global state and StateDecorator for local states).
 
 ## State cleaning
 
@@ -830,7 +830,7 @@ Redux is based on actions which are messages:
 
 Most of the time, in real life cases, such extended decoupling is not really needed.
 
-The StateDecorator is based on directly on reducers:
+The StateDecorator is directly based on reducers:
 
 - The advantage is far simpler code, in a single place (easier to browse).
 - The downside is that there's no middleware.
@@ -849,7 +849,7 @@ If you are in that case, you can use [redux promise middleware](https://github.c
 
 To handle optimistic asynchronous actions, another middleware is needed like [redux optimistic](https://github.com/ForbesLindesay/redux-optimist).
 
-The StateDecorator has these feature built-in.
+The StateDecorator has these features built-in.
 
 ## <a name="API"></a>API
 
