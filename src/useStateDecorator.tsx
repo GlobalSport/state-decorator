@@ -1109,7 +1109,12 @@ export function handlePropChange<S, A extends DecoratedActions, P>(
       addNewSideEffect(
         sideEffectsRef,
         (s: S) => {
-          logSingle(options.name, `onPropsChange ${onPropsChange != null ? '(delayed)' : ''}`, [], options.logEnabled);
+          logSingle(
+            options.name,
+            `onPropsChange ${onPropsChangeReducer != null ? '(delayed)' : ''}`,
+            [],
+            options.logEnabled
+          );
           onPropsChange(s, props, actionsRef.current, indices);
         },
         onPropsChangeReducer != null
