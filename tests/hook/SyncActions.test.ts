@@ -6,6 +6,7 @@ import {
   getUseReducer,
   getInitialHookState,
   ReducerAction,
+  setNotifyWarningFunction,
 } from '../../src/useStateDecorator';
 import { StateDecoratorActions } from '../../src/types';
 import { getTimeoutPromise, getSideEffectRef } from './testUtils';
@@ -103,12 +104,16 @@ describe('decorateAdvancedSyncAction', () => {
       current: {},
     };
 
+    const notifyWarning = jest.fn();
+    setNotifyWarningFunction(notifyWarning);
+
     const addSideEffect = jest.fn(addNewSideEffect);
 
     const actionImpl = {
       action: (s) => s,
-      onActionDone: jest.fn((s, [], p, actions) => {
+      onActionDone: jest.fn((s, [], p, actions, notifyWarning) => {
         actions.action();
+        notifyWarning('_warning_');
       }),
     };
 

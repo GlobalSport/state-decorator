@@ -93,8 +93,9 @@ export function setIsTriggerRetryError(f: TriggerReryError) {
   isTriggerRetryError = f;
 }
 
-let globalNotifyError = null;
-let globalNotifySuccess = null;
+let globalNotifyError: NotifyFunc = null;
+let globalNotifySuccess: NotifyFunc = null;
+let globalNotifyWarning: NotifyFunc = null;
 
 /**
  * Sets a global notification function that will called when an asynchronous action fails,
@@ -116,6 +117,15 @@ export function setNotifyErrorFunction(notifyErrorIn: NotifyFunc) {
  */
 export function setNotifySuccessFunction(notifySuccessIn: NotifyFunc) {
   globalNotifySuccess = notifySuccessIn;
+}
+
+/**
+ * Sets a global notification function that will injected in onDone and onFail of an asynchronous actions and onActionDone of a synchronous function,
+ * If another function is set in the useStateDecorator options, the function from the options will be used.
+ * It allows to locally use another notification function.
+ */
+export function setNotifyWarningFunction(notifyWarningIn: NotifyFunc) {
+  globalNotifyWarning = notifyWarningIn;
 }
 
 type HookState<S, A> = {
@@ -239,7 +249,9 @@ function processAdvancedSyncAction<S, F extends (...args: any[]) => any, A exten
   if (action.onActionDone) {
     addSideEffect(sideEffectsRef, (s: S) => {
       logSingle(options.name, actionName, args, options.logEnabled, 'onActionDone SIDE EFFECT');
-      action.onActionDone(s, args as any, propsRef.current, actionsRef.current);
+      const notifyWarning =
+        options.notifyWarning || (propsRef.current['notifyWarning'] as NotifyFunc) || globalNotifyWarning;
+      action.onActionDone(s, args as any, propsRef.current, actionsRef.current, notifyWarning);
     });
   }
 
@@ -570,7 +582,9 @@ export function sendRequest<S, F extends (...args: any[]) => any, A extends Deco
         // delayed job after state update
         addSideEffect(sideEffectsRef, (s: S) => {
           logSingle(options.name, actionName, args, options.logEnabled, 'onDone SIDE EFFECT');
-          asyncAction.onDone(s, result, args as any, propsRef.current, actionsRef.current);
+          const notifyWarning =
+            options.notifyWarning || (propsRef.current['notifyWarning'] as NotifyFunc) || globalNotifyWarning;
+          asyncAction.onDone(s, result, args as any, propsRef.current, actionsRef.current, notifyWarning);
         });
       }
 
@@ -621,7 +635,9 @@ export function sendRequest<S, F extends (...args: any[]) => any, A extends Deco
         // delayed job after state update
         addSideEffect(sideEffectsRef, (s: S) => {
           logSingle(options.name, actionName, args, options.logEnabled, 'onFail SIDE EFFECT');
-          asyncAction.onFail(s, error, args as any, propsRef.current, actionsRef.current);
+          const notifyWarning =
+            options.notifyWarning || (propsRef.current['notifyWarning'] as NotifyFunc) || globalNotifyWarning;
+          asyncAction.onFail(s, error, args as any, propsRef.current, actionsRef.current, notifyWarning);
         });
       }
 

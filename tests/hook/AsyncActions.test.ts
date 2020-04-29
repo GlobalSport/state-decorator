@@ -10,6 +10,7 @@ import {
   setNotifyErrorFunction,
   setNotifySuccessFunction,
   setOnAsyncError,
+  setNotifyWarningFunction,
 } from '../../src/useStateDecorator';
 import { StateDecoratorActions } from '../../src/types';
 import { getTimeoutPromise, getFailedTimeoutPromise, getAsyncContext } from './testUtils';
@@ -86,11 +87,16 @@ describe('decorateAsyncAction', () => {
 
     ctx.propsRef.current.notifySuccess = jest.fn();
 
+    const notifyWarning = jest.fn();
+    setNotifyWarningFunction(notifyWarning);
+
     const actions = {
       setValue: {
         promise: () => getTimeoutPromise(100, 'result'),
         getSuccessMessage: (result) => `success message: ${result}`,
-        onDone: jest.fn(),
+        onDone: jest.fn((s, res, args, props, actions, notify) => {
+          notify('_warning_');
+        }),
       },
     };
 
@@ -133,13 +139,18 @@ describe('decorateAsyncAction', () => {
       const s = { value: 'value' };
       ctx.sideEffectRef.current.list[0](s);
 
+      setNotifyWarningFunction(null);
+
       expect(actions.setValue.onDone).toHaveBeenCalledWith(
         s,
         'result',
         ['value'],
         ctx.propsRef.current,
-        ctx.actionsRef.current
+        ctx.actionsRef.current,
+        notifyWarning
       );
+
+      expect(notifyWarning).toHaveBeenCalledWith('_warning_');
 
       expect(ctx.propsRef.current.notifySuccess).toHaveBeenCalledWith('success message: result');
     });
@@ -194,11 +205,16 @@ describe('decorateAsyncAction', () => {
 
     const addSideEffect = jest.fn(mockAddNewSideEffect);
 
+    const notifyWarning = jest.fn();
+    setNotifyWarningFunction(notifyWarning);
+
     const actions = {
       setValue: {
         promise: () => getFailedTimeoutPromise(100, 'error'),
         onDone: jest.fn(),
-        onFail: jest.fn(),
+        onFail: jest.fn((s, res, args, props, actions, notify) => {
+          notify('_warning_');
+        }),
         getErrorMessage: (error) => `error message: ${error}`,
       },
     };
@@ -249,12 +265,15 @@ describe('decorateAsyncAction', () => {
 
       processSideEffects(ctx.stateRef.current, ctx.dispatch, ctx.sideEffectRef);
 
+      setNotifyWarningFunction(null);
+
       expect(actions.setValue.onFail).toHaveBeenCalledWith(
         ctx.stateRef.current,
         'error',
         ['value'],
         ctx.propsRef.current,
-        ctx.actionsRef.current
+        ctx.actionsRef.current,
+        notifyWarning
       );
     });
 
@@ -368,7 +387,8 @@ describe('decorateAsyncAction', () => {
           'error',
           ['value'],
           ctx.propsRef.current,
-          ctx.actionsRef.current
+          ctx.actionsRef.current,
+          null
         );
 
         done();

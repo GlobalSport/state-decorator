@@ -74,7 +74,7 @@ export type AdvancedSynchAction<S, F extends (...args: any[]) => any, A, P> = {
   /**
    * Action to call when the action is done. Used to trigger other actions (even asynchronous),
    */
-  onActionDone?: (state: S, args: Parameters<F>, props: P, actions: A) => void;
+  onActionDone?: (state: S, args: Parameters<F>, props: P, actions: A, notifyWarning: NotifyFunc) => void;
 };
 
 export type PromiseIdMap = { [promiseId: string]: boolean };
@@ -132,8 +132,16 @@ export interface AsynchActionBase<S, F extends (...args: any[]) => any, A, P> {
    * @param args The argument during the call of the request function
    * @param props The props passed to the state decorator
    * @param actions The actions available
+   * @param notifyWarning If specified, a notify function to indicate that the action is a semi success (use successMessage / getSuccessMessage otherwise).
    */
-  onDone?: (state: S, result: PromiseResult<ReturnType<F>>, args: Parameters<F>, props: P, actions: A) => void;
+  onDone?: (
+    state: S,
+    result: PromiseResult<ReturnType<F>>,
+    args: Parameters<F>,
+    props: P,
+    actions: A,
+    notifyWarning: NotifyFunc
+  ) => void;
 
   /**
    * Handle side effects when the request failed.
@@ -141,8 +149,9 @@ export interface AsynchActionBase<S, F extends (...args: any[]) => any, A, P> {
    * @param args The argument during the call of the request function
    * @param props The props passed to the state decorator
    * @param actions The actions available
+   * @param notifyWarning If specified, a notify function to indicate that the action is a semi failure (use errorMessage / getErrorMessage otherwise).
    */
-  onFail?: (state: S, error: Error, args: Parameters<F>, props: P, actions: A) => void;
+  onFail?: (state: S, error: Error, args: Parameters<F>, props: P, actions: A, notifyWarning: NotifyFunc) => void;
 
   /**
    * Retrieve the state to set as current data before the promise is resolved.
@@ -300,12 +309,17 @@ export type StateDecoratorOptions<S, A, P = {}> = {
   /**
    * The callback function called if an asynchronous function succeeded and a success messsage is defined.
    */
-  notifySuccess?: (message: string) => void;
+  notifySuccess?: NotifyFunc;
 
   /**
    * The callback function called if an asynchronous function fails and an error messsage is defined.
    */
-  notifyError?: (message: string) => void;
+  notifyError?: NotifyFunc;
+
+  /**
+   * The callback function injected in onDone and onFail of asynchronous functions to notify a semi success / failed request.
+   */
+  notifyWarning?: NotifyFunc;
 
   /**
    * Initial actions
