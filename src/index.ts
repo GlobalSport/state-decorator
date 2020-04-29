@@ -4,6 +4,7 @@ import useStateDecorator, {
   setIsTriggerRetryError,
   setNotifyErrorFunction,
   setNotifySuccessFunction,
+  setNotifyWarningFunction,
 } from './useStateDecorator';
 import { StateDecoratorActions, ConflictPolicy, LoadingProps, LoadingMap, StateDecoratorOptions } from './types';
 import { useOnMount, useOnUnmount, useOnUnload } from './hooks';
@@ -37,6 +38,7 @@ export {
   setIsTriggerRetryError,
   setNotifyErrorFunction,
   setNotifySuccessFunction,
+  setNotifyWarningFunction,
   StateDecoratorOptions,
 };
 

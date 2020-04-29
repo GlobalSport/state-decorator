@@ -259,7 +259,7 @@ If **null** is returned by **promise**, the action is aborted. It allows to canc
 
 ### Asynchronous action lifecycle
 
-![Lifecycle](https://raw.githubusercontent.com/GlobalSport/state-decorator/master/doc/StateDecoratorDiagram.png)
+![Lifecycle](https://raw.githubusercontent.com/GlobalSport/state-decorator/develop/doc/StateDecoratorDiagram.png)
 
 - check if a previous call to this action is ongoing,
   - if yes, check if the conflict policy is parallel,
