@@ -199,17 +199,23 @@ export function decorateSyncAction<S, F extends (...args: any[]) => any, A exten
 export function addNewSideEffect<S, A extends DecoratedActions, P>(
   sideEffectsRef: React.MutableRefObject<SideEffects<S, A, P>>,
   newSideEffect: SideEffect<S, A, P>,
-  delayed?: boolean
+  delayed?: boolean,
+  useTimeout = true
 ) {
   // defer function call to next JS thread execution (use case: action that will trigger parent tree render)
   // return promise for testing
   const sideEffect: PromiseSideEffect<S, A, P> = (s: S, dispatch?: React.Dispatch<ReducerAction<S, any, A, P>>) =>
-    new Promise((res) => {
-      setTimeout(() => {
-        newSideEffect(s, dispatch);
-        res();
-      }, 0);
-    });
+    useTimeout
+      ? new Promise((res) => {
+          setTimeout(() => {
+            newSideEffect(s, dispatch);
+            res();
+          }, 0);
+        })
+      : new Promise((res) => {
+          newSideEffect(s, dispatch);
+          res();
+        });
 
   if (delayed) {
     // if the promise is delayed, it must be executed at next render
@@ -607,6 +613,18 @@ export function sendRequest<S, F extends (...args: any[]) => any, A extends Deco
         return null;
       }
 
+      let errorHandled = false;
+
+      if (asyncAction.onFail) {
+        errorHandled = true;
+
+        // delayed job after state update
+        addSideEffect(sideEffectsRef, (s: S) => {
+          logSingle(options.name, actionName, args, options.logEnabled, 'onFail SIDE EFFECT');
+          asyncAction.onFail(s, error, args as any, propsRef.current, actionsRef.current);
+        });
+      }
+
       dispatch({
         actionName,
         args,
@@ -620,9 +638,7 @@ export function sendRequest<S, F extends (...args: any[]) => any, A extends Deco
 
       const notifyError = options.notifyError || propsRef.current['notifyError'] || globalNotifyError;
 
-      let errorHandled = false;
-
-      if ((rawActionsRef.current[actionName] as AsynchAction<S, any, A, P>).errorReducer) {
+      if (asyncAction.errorReducer) {
         errorHandled = true;
       }
 
@@ -932,7 +948,7 @@ function processAsyncReducer<S, A extends DecoratedActions, P>(
         logStateChange(options.name, actionName, options.logEnabled, state, newState, args, 'errorReducer');
       }
 
-      return createNewHookState(
+      const newHookState = createNewHookState(
         hookState,
         actionName,
         action.conflictPolicy,
@@ -941,6 +957,13 @@ function processAsyncReducer<S, A extends DecoratedActions, P>(
         false,
         newOptimisticData
       );
+
+      if (action.onFail) {
+        // force re-render even if no state change
+        newHookState.sideEffectRender = 1 - hookState.sideEffectRender;
+      }
+
+      return newHookState;
     }
     case ReducerActionSubType.ABORTED: {
       const newHookState = createNewHookState(
@@ -1243,7 +1266,7 @@ export default function useStateDecorator<S, A extends DecoratedActions, P = {}>
   if (!unmountedRef.current) {
     handlePropChange(dispatch, props, options, oldPropsRef, sideEffectsRef, actionsRef);
 
-    // onDone, onActionDone, onPropChange, sendRequest are side effects
+    // onDone, onFail, onActionDone, onPropChange, sendRequest are side effects
     processSideEffects(hookState.state, dispatch, sideEffectsRef);
   }
 

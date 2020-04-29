@@ -268,14 +268,17 @@ If **null** is returned by **promise**, the action is aborted. It allows to canc
 - **preReducer**: change state from actions arguments.
 - **optimisticReducer**: change state from action arguments and record next state changes to rollback if promise fails.
 - **promise**: get a promise from action arguments:
+
   - if promise is resolved:
     - **reducer**: update state from action arguments and the result of the promise
     - if **notifySuccess** is set, call it with **successMessage** or **getSuccessMessage()**
-    - **onDone**: trigger an action with no change on state.
+    - **onDone**: trigger a side effect with no change on state.
   - if promise is rejected:
     - if the action was optimistic, revert the **optimisticReducer** change and replay all following actions.
     - **errorReducer**: change state from promise arguments and returned error.
     - if **notifyError** is set, call it with **errorMessage** or **getErrorMessage()**.
+    - **onFail**: trigger a side effect with no change on state.
+
 - If a conflicting action is stored, process it.
 
 ### Loading state
@@ -437,7 +440,7 @@ Synchronous and asynchronous actions can be chained.
 - Advanced synchronous actions can internally call another action using **actionDone**.
 - Asynchronous actions can internally call another action.
   - The promise provider function has the decorated actions in parameter (see [API](#API)) so they can return a promise by calling another action. To chain an asynchronous action to a synchronous action, create a new asynchronous action that will call the synchronous action and returns the asynchronous action.
-  - Using **onDone**, you can call another action.
+  - Using **onDone** or **onFail**, you can call another action.
   - The difference is that if the chained action fails, the entire action has failed (see [Error management](#ErrorManagement)). Using **onDone**, the chained action is a side effect of the success of the first action.
 
 ```typescript

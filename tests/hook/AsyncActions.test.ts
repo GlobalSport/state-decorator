@@ -14,11 +14,15 @@ import {
 import { StateDecoratorActions } from '../../src/types';
 import { getTimeoutPromise, getFailedTimeoutPromise, getAsyncContext } from './testUtils';
 
+const mockAddNewSideEffect = (sideEffectsRef, newSideEffect, delayed) => {
+  addNewSideEffect(sideEffectsRef, newSideEffect, delayed, false);
+};
+
 describe('decorateAsyncAction', () => {
   it('dispatches an async action correctly (success, no side effect)', () => {
     const ctx = getAsyncContext();
 
-    const addSideEffect = jest.fn(addNewSideEffect);
+    const addSideEffect = jest.fn(mockAddNewSideEffect);
 
     const actions = {
       setValue: {
@@ -78,7 +82,7 @@ describe('decorateAsyncAction', () => {
 
   it('dispatches an async action correctly (success, with side effect)', () => {
     const ctx = getAsyncContext();
-    const addSideEffect = jest.fn(addNewSideEffect);
+    const addSideEffect = jest.fn(mockAddNewSideEffect);
 
     ctx.propsRef.current.notifySuccess = jest.fn();
 
@@ -129,17 +133,15 @@ describe('decorateAsyncAction', () => {
       const s = { value: 'value' };
       ctx.sideEffectRef.current.list[0](s);
 
-      return getTimeoutPromise(100, () => {
-        expect(actions.setValue.onDone).toHaveBeenCalledWith(
-          s,
-          'result',
-          ['value'],
-          ctx.propsRef.current,
-          ctx.actionsRef.current
-        );
+      expect(actions.setValue.onDone).toHaveBeenCalledWith(
+        s,
+        'result',
+        ['value'],
+        ctx.propsRef.current,
+        ctx.actionsRef.current
+      );
 
-        expect(ctx.propsRef.current.notifySuccess).toHaveBeenCalledWith('success message: result');
-      });
+      expect(ctx.propsRef.current.notifySuccess).toHaveBeenCalledWith('success message: result');
     });
 
     processSideEffects(ctx.stateRef.current, ctx.dispatch, ctx.sideEffectRef);
@@ -148,7 +150,7 @@ describe('decorateAsyncAction', () => {
 
   it('dispatches an async action correctly (global success)', () => {
     const ctx = getAsyncContext();
-    const addSideEffect = jest.fn(addNewSideEffect);
+    const addSideEffect = jest.fn(mockAddNewSideEffect);
 
     const notifySuccess = jest.fn();
     setNotifySuccessFunction(notifySuccess);
@@ -187,15 +189,16 @@ describe('decorateAsyncAction', () => {
     return p;
   });
 
-  it('dispatches an async action correctly (error)', (done) => {
+  it('dispatches an async action correctly (error)', () => {
     const ctx = getAsyncContext();
 
-    const addSideEffect = jest.fn(addNewSideEffect);
+    const addSideEffect = jest.fn(mockAddNewSideEffect);
 
     const actions = {
       setValue: {
         promise: () => getFailedTimeoutPromise(100, 'error'),
         onDone: jest.fn(),
+        onFail: jest.fn(),
         getErrorMessage: (error) => `error message: ${error}`,
       },
     };
@@ -230,6 +233,7 @@ describe('decorateAsyncAction', () => {
         type: ReducerActionType.ACTION,
         subType: ReducerActionSubType.BEFORE_PROMISE,
       });
+
       expect(ctx.dispatch).toHaveBeenNthCalledWith(2, {
         actionName: 'setValue',
         args: ['value'],
@@ -240,8 +244,18 @@ describe('decorateAsyncAction', () => {
         rawActionsRef: { current: actions },
         error: 'error',
       });
+
       expect(options.notifyError).toHaveBeenCalledWith('error message: error');
-      done();
+
+      processSideEffects(ctx.stateRef.current, ctx.dispatch, ctx.sideEffectRef);
+
+      expect(actions.setValue.onFail).toHaveBeenCalledWith(
+        ctx.stateRef.current,
+        'error',
+        ['value'],
+        ctx.propsRef.current,
+        ctx.actionsRef.current
+      );
     });
 
     processSideEffects(ctx.stateRef.current, ctx.dispatch, ctx.sideEffectRef);
@@ -252,7 +266,7 @@ describe('decorateAsyncAction', () => {
   it('dispatches an async action correctly (error, rejectPromise)', (done) => {
     const ctx = getAsyncContext();
 
-    const addSideEffect = jest.fn(addNewSideEffect);
+    const addSideEffect = jest.fn(mockAddNewSideEffect);
 
     const actions = {
       setValue: {
@@ -306,11 +320,12 @@ describe('decorateAsyncAction', () => {
   it('dispatches an async action correctly (error, reducer)', (done) => {
     const ctx = getAsyncContext();
 
-    const addSideEffect = jest.fn(addNewSideEffect);
+    const addSideEffect = jest.fn(mockAddNewSideEffect);
 
     const actions = {
       setValue: {
         promise: () => getFailedTimeoutPromise(100, 'error'),
+        onFail: jest.fn(),
         errorReducer: (s) => s,
       },
     };
@@ -345,6 +360,17 @@ describe('decorateAsyncAction', () => {
         // but onAsyncError is called with handled to true
         expect(asyncHandler.mock.calls[0][1]).toBeTruthy();
         setOnAsyncError(null);
+
+        processSideEffects(ctx.stateRef.current, ctx.dispatch, ctx.sideEffectRef);
+
+        expect(actions.setValue.onFail).toHaveBeenCalledWith(
+          ctx.stateRef.current,
+          'error',
+          ['value'],
+          ctx.propsRef.current,
+          ctx.actionsRef.current
+        );
+
         done();
       })
       .catch(() => {
@@ -359,7 +385,7 @@ describe('decorateAsyncAction', () => {
   it('dispatches an async action correctly (error with no handler => promise rejected)', (done) => {
     const ctx = getAsyncContext();
 
-    const addSideEffect = jest.fn(addNewSideEffect);
+    const addSideEffect = jest.fn(mockAddNewSideEffect);
 
     const actions = {
       setValue: {
@@ -408,7 +434,7 @@ describe('decorateAsyncAction', () => {
   it('dispatches an async action correctly (error, global notification function)', (done) => {
     const ctx = getAsyncContext();
 
-    const addSideEffect = jest.fn(addNewSideEffect);
+    const addSideEffect = jest.fn(mockAddNewSideEffect);
 
     const actions = {
       setValue: {
@@ -456,7 +482,7 @@ describe('decorateAsyncAction', () => {
   it('dispatches an async action correctly (error, notify from props)', (done) => {
     const ctx = getAsyncContext();
 
-    const addSideEffect = jest.fn(addNewSideEffect);
+    const addSideEffect = jest.fn(mockAddNewSideEffect);
 
     const actions = {
       setValue: {

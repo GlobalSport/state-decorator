@@ -126,12 +126,23 @@ export interface AsynchActionBase<S, F extends (...args: any[]) => any, A, P> {
   rejectPromiseOnError?: boolean;
 
   /**
-   * Handle called when the request is done.
+   * Handle side effects when the request succeeded.
    * @param result The result of the request
    * @param newData The data after the reducer is applied
    * @param args The argument during the call of the request function
+   * @param props The props passed to the state decorator
+   * @param actions The actions available
    */
   onDone?: (state: S, result: PromiseResult<ReturnType<F>>, args: Parameters<F>, props: P, actions: A) => void;
+
+  /**
+   * Handle side effects when the request failed.
+   * @param error The error of the request
+   * @param args The argument during the call of the request function
+   * @param props The props passed to the state decorator
+   * @param actions The actions available
+   */
+  onFail?: (state: S, error: Error, args: Parameters<F>, props: P, actions: A) => void;
 
   /**
    * Retrieve the state to set as current data before the promise is resolved.
