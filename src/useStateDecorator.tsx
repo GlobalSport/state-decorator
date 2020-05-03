@@ -8,7 +8,7 @@
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import React, { useReducer, useRef, useEffect } from 'react';
+import React, { useReducer, useRef, useEffect, useCallback } from 'react';
 
 import {
   DecoratedActions,
@@ -30,6 +30,7 @@ import {
   NotifyFunc,
   TriggerReryError,
   StateDecoratorOptions,
+  AbortActionCallback,
 } from './types';
 
 import {
@@ -133,7 +134,7 @@ type HookState<S, A> = {
   sideEffectRender: number;
   loadingMap: LoadingMap<A>;
   loadingParallelMap: LoadingMapParallelActions<A>;
-  optimisticData: OptimisticData<S>;
+  optimisticData: OptimisticData<S, A>;
 };
 
 type SideEffect<S, A extends DecoratedActions, P> = (
@@ -174,20 +175,22 @@ export type ReducerAction<S, F extends (...args: any[]) => any, A extends Decora
   promiseId?: string;
   error?: any;
   props: P;
-  actionName?: string;
+  actionName?: keyof A;
   subType?: ReducerActionSubType;
   rawActionsRef?: React.MutableRefObject<StateDecoratorActions<S, A, P>>;
 };
 
-type OptimisticData<S> = {
-  history: ActionHistory<S>[];
-  optimisticActions: OptimisticActionsMap;
+type OptimisticData<S, A> = {
+  history: ActionHistory<S, A>[];
+  optimisticActions: OptimisticActionsMap<A>;
   shouldRecordHistory: boolean;
 };
 
 type OnPropsChangeReducer<S, P> = (s: S, newProps: P, updatedIndices: number[]) => S;
 
-type PromiseMap = { [name: string]: { promise: Promise<any>; refArgs: any[] } };
+type PromiseMap<A> = {
+  [name in keyof A]?: { promise: Promise<any>; refArgs: any[]; abortController: AbortController };
+};
 
 /**
  * Returns a function that decorates the synchronous action.
@@ -314,12 +317,12 @@ export function decorateAdvancedSyncAction<S, F extends (...args: any[]) => any,
 /**
  * Handles a conflicting action depending on the action conflict policy.
  */
-function handleConflictingAction(
+function handleConflictingAction<A>(
   sdName: string,
-  promises: PromiseMap,
-  conflictActions: ConflictActionsMap,
+  promises: PromiseMap<A>,
+  conflictActions: ConflictActionsMap<A>,
   logEnabled: boolean,
-  actionName: string,
+  actionName: keyof A,
   conflictPolicy: ConflictPolicy,
   args: any[]
 ) {
@@ -376,14 +379,14 @@ function handleConflictingAction(
 /**
  * Processes next conflicting action (see ConflictPolicy) in the queue.
  */
-function processNextConflictAction<A>(actionName: string, actions: A, conflictActions: ConflictActionsMap) {
+function processNextConflictAction<A>(actionName: keyof A, actions: A, conflictActions: ConflictActionsMap<A>) {
   const futureActions = conflictActions[actionName];
 
   if (futureActions && futureActions.length > 0) {
     const futureAction = conflictActions[actionName].shift();
 
     if (futureAction) {
-      const p = actions[actionName](...futureAction.args) as Promise<any>;
+      const p = (actions[actionName] as any)(...futureAction.args) as Promise<any>;
       if (p == null) {
         processNextConflictAction(actionName, actions, conflictActions);
       } else {
@@ -406,13 +409,13 @@ function processNextConflictAction<A>(actionName: string, actions: A, conflictAc
  * @param args The arguments of the action (will be cloned)
  * @param beforeState state before the optimistic action
  */
-function pushActionToHistory<S>(
-  optimisticData: OptimisticData<S>,
-  actionName: string,
+function pushActionToHistory<S, A>(
+  optimisticData: OptimisticData<S, A>,
+  actionName: keyof A,
   reducer: ReducerName,
   args: any[],
   beforeState = null
-): OptimisticData<S> {
+): OptimisticData<S, A> {
   const { shouldRecordHistory } = optimisticData;
   let { history } = optimisticData;
 
@@ -442,8 +445,8 @@ function pushActionToHistory<S>(
  * @param actionName The action name.
  */
 function undoOptimisticAction<S, A extends DecoratedActions, P>(
-  optimisticData: OptimisticData<S>,
-  actionName: string,
+  optimisticData: OptimisticData<S, A>,
+  actionName: keyof A,
   onPropChangeReducer: OnPropsChangeReducer<S, P>,
   rawActions: StateDecoratorActions<S, A, P>
 ) {
@@ -488,18 +491,18 @@ function undoOptimisticAction<S, A extends DecoratedActions, P>(
   return { state, optimisticData: newOptimisticData };
 }
 
-export function cleanHistoryAfterOptimistAction<S>(
-  optimisticData: OptimisticData<S>,
-  name: string,
+export function cleanHistoryAfterOptimistAction<S, A>(
+  optimisticData: OptimisticData<S, A>,
+  actionName: keyof A,
   indexInHistory: number = undefined
 ) {
   const { optimisticActions, history } = optimisticData;
 
-  if (!optimisticActions[name]) {
+  if (!optimisticActions[actionName]) {
     return null;
   }
 
-  delete optimisticActions[name];
+  delete optimisticActions[actionName];
 
   const optiStateKeys = Object.keys(optimisticActions);
 
@@ -507,7 +510,7 @@ export function cleanHistoryAfterOptimistAction<S>(
     optimisticData.history = [];
     optimisticData.shouldRecordHistory = false;
   } else {
-    const index = indexInHistory === undefined ? history.findIndex((a) => a.actionName === name) : indexInHistory;
+    const index = indexInHistory === undefined ? history.findIndex((a) => a.actionName === actionName) : indexInHistory;
 
     if (index === 0) {
       // this was the first optimist action, so find the next one
@@ -528,7 +531,7 @@ export function cleanHistoryAfterOptimistAction<S>(
 export function sendRequest<S, F extends (...args: any[]) => any, A extends DecoratedActions, P>(
   dispatch: React.Dispatch<ReducerAction<S, F, A, P>>,
   state: S,
-  actionName: string,
+  actionName: keyof A,
   asyncAction: AsynchActionPromise<S, F, A, P>,
   args: Parameters<F>,
   promiseId: string,
@@ -537,10 +540,11 @@ export function sendRequest<S, F extends (...args: any[]) => any, A extends Deco
   actionsRef: React.MutableRefObject<A>,
   rawActionsRef: React.MutableRefObject<StateDecoratorActions<S, A, P>>,
   sideEffectsRef: React.MutableRefObject<SideEffects<S, A, P>>,
-  promisesRef: React.MutableRefObject<PromiseMap>,
-  conflictActionsRef: React.MutableRefObject<ConflictActionsMap>,
+  promisesRef: React.MutableRefObject<PromiseMap<A>>,
+  conflictActionsRef: React.MutableRefObject<ConflictActionsMap<A>>,
   options: StateDecoratorOptions<S, A, P>,
-  addSideEffect: typeof addNewSideEffect
+  addSideEffect: typeof addNewSideEffect,
+  abortSignal: AbortSignal
 ) {
   const { current: promises } = promisesRef;
   const { promise, retryCount, retryDelaySeed } = asyncAction;
@@ -549,7 +553,8 @@ export function sendRequest<S, F extends (...args: any[]) => any, A extends Deco
     args,
     state,
     propsRef.current,
-    actionsRef.current
+    actionsRef.current,
+    abortSignal
   );
 
   if (p === null) {
@@ -675,7 +680,7 @@ export function sendRequest<S, F extends (...args: any[]) => any, A extends Deco
         }
       }
 
-      onAsyncError(error, errorHandled, state, propsRef.current, actionName, args);
+      onAsyncError(error, errorHandled, state, propsRef.current, actionName as string, args);
 
       const result = !errorHandled || asyncAction.rejectPromiseOnError ? Promise.reject(error) : undefined;
 
@@ -692,15 +697,15 @@ export function sendRequest<S, F extends (...args: any[]) => any, A extends Deco
  */
 export function decorateAsyncAction<S, F extends (...args: any[]) => any, A extends DecoratedActions, P>(
   dispatch: React.Dispatch<ReducerAction<S, F, A, P>>,
-  actionName: string,
+  actionName: keyof A,
   stateRef: React.MutableRefObject<S>,
   propsRef: React.MutableRefObject<P>,
   unmountedRef: React.MutableRefObject<boolean>,
   actionsRef: React.MutableRefObject<A>,
   rawActionsRef: React.MutableRefObject<StateDecoratorActions<S, A, P>>,
   sideEffectsRef: React.MutableRefObject<SideEffects<S, A, P>>,
-  promisesRef: React.MutableRefObject<PromiseMap>,
-  conflictActionsRef: React.MutableRefObject<ConflictActionsMap>,
+  promisesRef: React.MutableRefObject<PromiseMap<A>>,
+  conflictActionsRef: React.MutableRefObject<ConflictActionsMap<A>>,
   options: StateDecoratorOptions<S, A, P>,
   addSideEffect: typeof addNewSideEffect
 ) {
@@ -714,7 +719,7 @@ export function decorateAsyncAction<S, F extends (...args: any[]) => any, A exte
       return null;
     }
 
-    const { conflictPolicy = ConflictPolicy.KEEP_ALL } = asyncAction;
+    const { conflictPolicy = ConflictPolicy.KEEP_ALL, abortable = false } = asyncAction;
     const { current: promises } = promisesRef;
     const isParallel = conflictPolicy === ConflictPolicy.PARALLEL;
 
@@ -740,6 +745,9 @@ export function decorateAsyncAction<S, F extends (...args: any[]) => any, A exte
       promiseId = asyncAction.getPromiseId(...args);
     }
 
+    //
+    const abortController = abortable && window.AbortController ? new AbortController() : null;
+
     const p = new Promise((res, rej) => {
       addSideEffect(sideEffectsRef, (s, d) => {
         // send request when before promise action is done
@@ -759,7 +767,8 @@ export function decorateAsyncAction<S, F extends (...args: any[]) => any, A exte
           promisesRef,
           conflictActionsRef,
           options,
-          addSideEffect
+          addSideEffect,
+          abortController ? abortController.signal : undefined
         );
 
         if (p === null) {
@@ -772,6 +781,7 @@ export function decorateAsyncAction<S, F extends (...args: any[]) => any, A exte
     });
 
     promises[actionName] = {
+      abortController,
       promise: p,
       refArgs: conflictPolicy === ConflictPolicy.REUSE && args.length > 0 ? [...args] : [],
     };
@@ -789,7 +799,7 @@ export function decorateAsyncAction<S, F extends (...args: any[]) => any, A exte
   };
 }
 
-function cloneOptimisticData<S>(optimisticData: OptimisticData<S>) {
+function cloneOptimisticData<S, A>(optimisticData: OptimisticData<S, A>) {
   return {
     ...optimisticData,
     history: clone(optimisticData.history),
@@ -799,12 +809,12 @@ function cloneOptimisticData<S>(optimisticData: OptimisticData<S>) {
 
 export function createNewHookState<S, A>(
   oldHookState: HookState<S, A>,
-  actionName: string,
+  actionName: keyof A,
   conflictPolicy: ConflictPolicy,
   promiseId: string,
   newState: S,
   actionLoading: boolean,
-  newOptimisticData: OptimisticData<S>
+  newOptimisticData: OptimisticData<S, A>
 ): HookState<S, A> {
   if (conflictPolicy === ConflictPolicy.PARALLEL) {
     if (actionLoading) {
@@ -867,7 +877,7 @@ function processAsyncReducer<S, A extends DecoratedActions, P>(
   const state = hookState.state;
 
   let newState = null;
-  let newOptimisticData: OptimisticData<S> = null;
+  let newOptimisticData: OptimisticData<S, A> = null;
 
   switch (actionType) {
     case ReducerActionSubType.BEFORE_PROMISE: {
@@ -1020,7 +1030,7 @@ export function getUseReducer<S, A extends DecoratedActions, P>(
     const { type, actionName, args, props } = reducerAction;
     const { state, optimisticData } = hookState;
 
-    let newOptimisticData: OptimisticData<S> = optimisticData;
+    let newOptimisticData: OptimisticData<S, A> = optimisticData;
 
     if (type === ReducerActionType.ON_PROP_CHANGE_REDUCER) {
       const newState = options.onPropsChangeReducer(state, props, args as number[]);
@@ -1209,8 +1219,8 @@ export default function useStateDecorator<S, A extends DecoratedActions, P = {}>
   const rawActionsRef = useRef<StateDecoratorActions<S, A, P>>();
   const sideEffectsRef = useRef<SideEffects<S, A, P>>({ list: [], delayed: [] });
   const debounceActionMapRef = useRef<DebounceMap>({});
-  const promisesRef = useRef<PromiseMap>({});
-  const conflictActionsRef = useRef<ConflictActionsMap>({});
+  const promisesRef = useRef<PromiseMap<A>>({});
+  const conflictActionsRef = useRef<ConflictActionsMap<A>>({});
   const oldPropsRef = useRef<P>(null);
   const unmountedRef = useRef(false);
 
@@ -1303,7 +1313,17 @@ export default function useStateDecorator<S, A extends DecoratedActions, P = {}>
     };
   }, []);
 
+  const abortAction: AbortActionCallback<A> = useCallback((actionName: keyof A) => {
+    const promiseInfo = promisesRef.current[actionName];
+    if (promiseInfo && promiseInfo.abortController) {
+      promiseInfo.abortController.abort();
+      return true;
+    }
+    return false;
+  }, []);
+
   return {
+    abortAction,
     loading: isLoading(hookState.loadingMap),
     state: hookState.state,
     actions: decoratedActions,

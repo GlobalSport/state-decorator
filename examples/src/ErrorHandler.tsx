@@ -38,11 +38,13 @@ export const actionsErrorHandler: StateDecoratorActions<State, Actions, Props> =
  * Global asynchronous actions error hander
  */
 function onAsyncError(error: any, isHandled: boolean, state: any, props: any, actionName: string, args: any[]) {
-  console.error(error);
-  console.error('state:', state);
-  console.error('props:', props);
-  console.error('action:', actionName);
-  console.error('args:', args);
+  if (error && error.name != 'AbortError') {
+    console.error(error);
+    console.error('state:', state);
+    console.error('props:', props);
+    console.error('action:', actionName);
+    console.error('args:', args);
+  }
 }
 
 export function onMount(actions: ErrorHandlerActions) {
