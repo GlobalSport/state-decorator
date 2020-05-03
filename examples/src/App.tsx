@@ -10,11 +10,16 @@ import Debounce from './debounce/Debounce';
 import Optimistic from './Optimistic/Optimistic';
 import WarningActions from './WarningActions';
 import ErrorHandler from './ErrorHandler';
+import Abort from './abort/Abort';
 
 export default class App extends React.Component {
   render() {
     return (
       <div>
+        <section>
+          <h1>Abort action</h1>
+          <Abort />
+        </section>
         <section>
           <h1>Debounce</h1>
           <Debounce />

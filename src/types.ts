@@ -46,7 +46,8 @@ export type PromiseProvider<S, F extends (...args: any[]) => any, A, P> = (
   args: Parameters<F>,
   state: S,
   props: P,
-  actions: A
+  actions: A,
+  abortSignal: AbortSignal
 ) => ReturnType<F> | null;
 
 /**
@@ -89,7 +90,19 @@ export type LoadingProps<A> = {
   loadingParallelMap: LoadingMapParallelActions<A>;
 };
 
+/**
+ * Try to abort an action, if the action is <code>abortable</code>.
+ * @returns <code>true</code> if the action is abortable and an action is ongoing, <code>false</code> otherwise.
+ */
+export type AbortActionCallback<A> = (actionName: keyof A) => boolean;
+
 export interface AsynchActionBase<S, F extends (...args: any[]) => any, A, P> {
+  /**
+   * This action can be aborted. An abortSignal will be injected to the <code>promise</code> / <code>promiseGet</code>.
+   */
+
+  abortable?: boolean;
+
   /**
    * The success message to pass to the notifySuccess function passed as property to the StateDecorator.
    */
@@ -230,16 +243,16 @@ export type StateDecoratorActions<S, A extends DecoratedActions, P = {}> = {
   [Prop in keyof A]: StateDecoratorAction<S, A[Prop], A, P>;
 };
 
-export interface ActionHistory<S> {
-  actionName: string;
+export interface ActionHistory<S, A> {
+  actionName: keyof A;
   reducer: ReducerName;
   args: any[];
   beforeState?: S;
 }
 
-export interface OptimisticActionsMap {
-  [name: string]: any;
-}
+export type OptimisticActionsMap<A> = {
+  [name in keyof A]?: any;
+};
 
 export type FutureActions = {
   args: any[];
@@ -250,9 +263,9 @@ export type FutureActions = {
 
 export type ReducerName = 'onPropChangeReducer' | 'preReducer' | 'optimisticReducer' | 'reducer' | 'errorReducer';
 
-export interface ConflictActionsMap {
-  [name: string]: FutureActions[];
-}
+export type ConflictActionsMap<A> = {
+  [name in keyof A]?: FutureActions[];
+};
 
 /**
  * Global asynchronous actions error handler

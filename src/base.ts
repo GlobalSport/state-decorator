@@ -38,9 +38,9 @@ export function retryDecorator<S, F extends (...args: any[]) => Promise<any>, A,
   if (maxCalls === 1) {
     return promiseProvider;
   }
-  return (args: any, state: S, props: P, actions: A): ReturnType<F> => {
+  return (args: any, state: S, props: P, actions: A, abortSignal: AbortSignal): ReturnType<F> => {
     function call(callCount: number, resolve: (res: any) => any, reject: (e: Error) => any) {
-      const p = promiseProvider(args, state, props, actions);
+      const p = promiseProvider(args, state, props, actions, abortSignal);
 
       if (p === null) {
         return null;
@@ -270,9 +270,9 @@ function buildDiff<S>(oldState: S, newState: S) {
   return res;
 }
 
-export function logStateChange<S>(
+export function logStateChange<S, A>(
   name: string,
-  actionName: string,
+  actionName: keyof A,
   logEnabled: boolean,
   oldState: S,
   newState: S,
@@ -307,7 +307,7 @@ export function logStateChange<S>(
   }
 }
 
-export function logSingle(name: string, actionName: string, args: any[], logEnabled: boolean, state: string = '') {
+export function logSingle<A>(name: string, actionName: keyof A, args: any[], logEnabled: boolean, state: string = '') {
   if (process.env.NODE_ENV === 'development' && logEnabled) {
     console.group(`[${name ?? 'StateDecorator'}${name || ''}] ${actionName} ${state}`);
     if (Object.keys(args).length > 0) {
