@@ -211,6 +211,8 @@ const actions: StateDecoratorActions<State, Actions> = {
 };
 ```
 
+[![See Debounce demo](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/debounce-91lwo?autoresize=1&fontsize=14&hidenavigation=1&module=%2Fsrc%2FDebounce.tsx&theme=dark)
+
 ## Asynchronous actions
 
 An asynchronous action is made of, at least:
