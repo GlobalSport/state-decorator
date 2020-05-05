@@ -255,7 +255,7 @@ export default function MyContainer(props: Props) {
 }
 ```
 
-If **null** is returned by **promise**, the action is aborted. It allows to cancel an action depending on state or props.
+If **null** is returned by **promise**, the action is not executed. It allows to not cancel an action depending on state or props.
 
 **promiseGet** is a shortcut that sets the conflict policy to **ConflictPolicy.REUSE** and **retryCount** to 3.
 
@@ -399,7 +399,7 @@ _Note_: In conjunction to this parameter, you can use [lodash debounce](https://
 
 ### Abort asynchronous action
 
-Asynchronous actions can be aborted using, under the hood, the [AbortController](https://developer.mozilla.org/en-US/docs/Web/API/AbortController/AbortController), if you target browsers support it.
+Ongoing asynchronous actions can be aborted using, under the hood, the [AbortController](https://developer.mozilla.org/en-US/docs/Web/API/AbortController/AbortController), if you target browsers which support it.
 
 1. Action implementation:
    - An asynchronous action must be marked as **abortable**.

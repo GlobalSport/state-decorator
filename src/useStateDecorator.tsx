@@ -188,8 +188,16 @@ type OptimisticData<S, A> = {
 
 type OnPropsChangeReducer<S, P> = (s: S, newProps: P, updatedIndices: number[]) => S;
 
+const DEFAULT_PROMISE_ID = 'StateDecoratorDefault';
+
 type PromiseMap<A> = {
-  [name in keyof A]?: { promise: Promise<any>; refArgs: any[]; abortController: AbortController };
+  [name in keyof A]?: {
+    [promiseId: string]: {
+      promise: Promise<any>;
+      refArgs: any[];
+      abortController: AbortController;
+    };
+  };
 };
 
 /**
@@ -328,8 +336,8 @@ function handleConflictingAction<A>(
 ) {
   let policy: ConflictPolicy = conflictPolicy;
   if (policy === ConflictPolicy.REUSE) {
-    if (areSameArgs(promises[actionName].refArgs, args)) {
-      return promises[actionName].promise;
+    if (areSameArgs(promises[actionName][DEFAULT_PROMISE_ID].refArgs, args)) {
+      return promises[actionName][DEFAULT_PROMISE_ID].promise;
     } // else
     policy = ConflictPolicy.KEEP_ALL;
   }
@@ -540,13 +548,12 @@ export function sendRequest<S, F extends (...args: any[]) => any, A extends Deco
   actionsRef: React.MutableRefObject<A>,
   rawActionsRef: React.MutableRefObject<StateDecoratorActions<S, A, P>>,
   sideEffectsRef: React.MutableRefObject<SideEffects<S, A, P>>,
-  promisesRef: React.MutableRefObject<PromiseMap<A>>,
+  promises: PromiseMap<A>,
   conflictActionsRef: React.MutableRefObject<ConflictActionsMap<A>>,
   options: StateDecoratorOptions<S, A, P>,
   addSideEffect: typeof addNewSideEffect,
   abortSignal: AbortSignal
 ) {
-  const { current: promises } = promisesRef;
   const { promise, retryCount, retryDelaySeed } = asyncAction;
 
   let p = retryDecorator(promise, retryCount ? 1 + retryCount : 1, retryDelaySeed, isTriggerRetryError)(
@@ -559,7 +566,7 @@ export function sendRequest<S, F extends (...args: any[]) => any, A extends Deco
 
   if (p === null) {
     // remove current promise that was pending in decorated action.
-    delete promises[actionName];
+    delete promises[actionName]?.[promiseId];
 
     logSingle(options.name, actionName, args, options.logEnabled, 'ABORTED');
 
@@ -577,7 +584,9 @@ export function sendRequest<S, F extends (...args: any[]) => any, A extends Deco
 
   p = p
     .then((result: PromiseResult<ReturnType<F>>) => {
-      delete promisesRef.current[actionName];
+      if (promises[actionName]) {
+        delete promises[actionName]?.[promiseId];
+      }
 
       if (unmountedRef.current) {
         return null;
@@ -626,7 +635,7 @@ export function sendRequest<S, F extends (...args: any[]) => any, A extends Deco
       return result;
     })
     .catch((error: any) => {
-      delete promises[actionName];
+      delete promises[actionName]?.[promiseId];
 
       if (unmountedRef.current) {
         return null;
@@ -723,18 +732,6 @@ export function decorateAsyncAction<S, F extends (...args: any[]) => any, A exte
     const { current: promises } = promisesRef;
     const isParallel = conflictPolicy === ConflictPolicy.PARALLEL;
 
-    if (!isParallel && promises[actionName]) {
-      return handleConflictingAction(
-        options.name,
-        promisesRef.current,
-        conflictActionsRef.current,
-        options.logEnabled,
-        actionName,
-        conflictPolicy,
-        args
-      );
-    }
-
     let promiseId = null;
     if (isParallel) {
       if (!asyncAction.getPromiseId) {
@@ -743,9 +740,22 @@ export function decorateAsyncAction<S, F extends (...args: any[]) => any, A exte
         );
       }
       promiseId = asyncAction.getPromiseId(...args);
+    } else {
+      promiseId = DEFAULT_PROMISE_ID;
     }
 
-    //
+    if (!isParallel && promises[actionName]?.[promiseId]) {
+      return handleConflictingAction(
+        options.name,
+        promises,
+        conflictActionsRef.current,
+        options.logEnabled,
+        actionName,
+        conflictPolicy,
+        args
+      );
+    }
+
     const abortController = abortable && window.AbortController ? new AbortController() : null;
 
     const p = new Promise((res, rej) => {
@@ -764,7 +774,7 @@ export function decorateAsyncAction<S, F extends (...args: any[]) => any, A exte
           actionsRef,
           rawActionsRef,
           sideEffectsRef,
-          promisesRef,
+          promises,
           conflictActionsRef,
           options,
           addSideEffect,
@@ -781,9 +791,12 @@ export function decorateAsyncAction<S, F extends (...args: any[]) => any, A exte
     });
 
     promises[actionName] = {
-      abortController,
-      promise: p,
-      refArgs: conflictPolicy === ConflictPolicy.REUSE && args.length > 0 ? [...args] : [],
+      ...(promises[actionName] || {}),
+      [promiseId || DEFAULT_PROMISE_ID]: {
+        abortController,
+        promise: p,
+        refArgs: conflictPolicy === ConflictPolicy.REUSE && args.length > 0 ? [...args] : [],
+      },
     };
 
     dispatch({
@@ -1313,13 +1326,16 @@ export default function useStateDecorator<S, A extends DecoratedActions, P = {}>
     };
   }, []);
 
-  const abortAction: AbortActionCallback<A> = useCallback((actionName: keyof A) => {
-    const promiseInfo = promisesRef.current[actionName];
-    if (promiseInfo && promiseInfo.abortController) {
-      promiseInfo.abortController.abort();
-      return true;
+  const abortAction: AbortActionCallback<A> = useCallback((actionName: keyof A, promiseId: string) => {
+    const abortController = promisesRef.current[actionName]?.[promiseId ?? DEFAULT_PROMISE_ID]?.abortController;
+
+    let res = false;
+    if (abortController) {
+      abortController.abort();
+      res = true;
     }
-    return false;
+
+    return res;
   }, []);
 
   return {
