@@ -219,6 +219,7 @@ describe('optimistic actions', () => {
       type S = {
         value: string;
         value2: string;
+        error: boolean;
       };
       type A = {
         setValue: (value: string) => Promise<string>;
@@ -233,6 +234,7 @@ describe('optimistic actions', () => {
             value,
           }),
           promise: () => getTimeoutPromise(0, 'result'),
+          errorReducer: (s) => ({ ...s, error: true }),
         },
         setValue2: (s, [value2]) => ({ ...s, value2: `${s.value2} ${value2}` }),
         setValue2Adv: {
@@ -401,9 +403,13 @@ describe('optimistic actions', () => {
       });
 
       it('with error', () => {
-        const hookState = getInitialHookState((p: P) => ({ value: 'initial', value2: 'initial' }), actions, {
-          prop: '',
-        });
+        const hookState = getInitialHookState(
+          (p: P) => ({ value: 'initial', value2: 'initial', error: false }),
+          actions,
+          {
+            prop: '',
+          }
+        );
         populateHistory(hookState.optimisticData);
 
         const reducerFunc = getUseReducer(actions, {
@@ -433,13 +439,18 @@ describe('optimistic actions', () => {
         expect(newHookState.state).toEqual({
           value: 'before props_updated',
           value2: 'before sync advanced pre-async reducer-async error-error',
+          error: true,
         });
       });
 
       it('with error (while other optimistic ongoing)', () => {
-        const hookState = getInitialHookState((p: P) => ({ value: 'initial', value2: 'initial' }), actions, {
-          prop: '',
-        });
+        const hookState = getInitialHookState(
+          (p: P) => ({ value: 'initial', value2: 'initial', error: true }),
+          actions,
+          {
+            prop: '',
+          }
+        );
 
         const oldOptData = hookState.optimisticData;
 
@@ -455,6 +466,7 @@ describe('optimistic actions', () => {
             beforeState: {
               value: 'before',
               value2: 'before',
+              error: false,
             },
           },
           {
@@ -470,6 +482,7 @@ describe('optimistic actions', () => {
             beforeState: {
               value: 'before',
               value2: 'sync',
+              error: false,
             },
           },
           {
@@ -496,8 +509,22 @@ describe('optimistic actions', () => {
 
         const optData = newHookState.optimisticData;
         // clean
-        // 3 = reducer of action + 2 remaining actions
-        expect(optData.history).toHaveLength(2);
+        // 3 = reducer of action + 1 remaining actions
+        expect(optData.history).toEqual([
+          {
+            actionName: 'setValue2',
+            args: [['opti'], {}],
+            beforeState: { error: false, value: 'before', value2: 'before sync' },
+            reducer: 'optimisticReducer',
+          },
+          { actionName: 'setValue2', args: [['advanced'], {}], beforeState: null, reducer: null },
+          {
+            actionName: 'setValue',
+            args: ['error', ['value'], { prop: 'prop' }],
+            beforeState: null,
+            reducer: 'errorReducer',
+          },
+        ]);
 
         expect(optData.optimisticActions.setValue).toBeFalsy();
         expect(optData.optimisticActions.setValue2).toBeTruthy();
@@ -506,7 +533,7 @@ describe('optimistic actions', () => {
         expect(optData.shouldRecordHistory).toBeTruthy();
 
         // reducer was applied
-        expect(newHookState.state).toEqual({ value: 'before', value2: 'before sync opti advanced' });
+        expect(newHookState.state).toEqual({ value: 'before', value2: 'before sync opti advanced', error: true });
       });
     });
   });
