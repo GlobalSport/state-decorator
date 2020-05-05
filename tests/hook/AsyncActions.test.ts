@@ -55,7 +55,7 @@ describe('decorateAsyncAction', () => {
       expect(ctx.dispatch).toHaveBeenNthCalledWith(1, {
         actionName: 'setValue',
         args: ['value'],
-        promiseId: null,
+        promiseId: 'StateDecoratorDefault',
         props: ctx.propsRef.current,
         type: ReducerActionType.ACTION,
         subType: ReducerActionSubType.BEFORE_PROMISE,
@@ -64,7 +64,7 @@ describe('decorateAsyncAction', () => {
       expect(ctx.dispatch).toHaveBeenNthCalledWith(2, {
         actionName: 'setValue',
         args: ['value'],
-        promiseId: null,
+        promiseId: 'StateDecoratorDefault',
         props: ctx.propsRef.current,
         type: ReducerActionType.ACTION,
         subType: ReducerActionSubType.SUCCESS,
@@ -121,7 +121,7 @@ describe('decorateAsyncAction', () => {
       expect(ctx.dispatch).toHaveBeenNthCalledWith(1, {
         actionName: 'setValue',
         args: ['value'],
-        promiseId: null,
+        promiseId: 'StateDecoratorDefault',
         props: ctx.propsRef.current,
         type: ReducerActionType.ACTION,
         subType: ReducerActionSubType.BEFORE_PROMISE,
@@ -129,7 +129,7 @@ describe('decorateAsyncAction', () => {
       expect(ctx.dispatch).toHaveBeenNthCalledWith(2, {
         actionName: 'setValue',
         args: ['value'],
-        promiseId: null,
+        promiseId: 'StateDecoratorDefault',
         props: ctx.propsRef.current,
         type: ReducerActionType.ACTION,
         subType: ReducerActionSubType.SUCCESS,
@@ -244,7 +244,7 @@ describe('decorateAsyncAction', () => {
       expect(ctx.dispatch).toHaveBeenNthCalledWith(1, {
         actionName: 'setValue',
         args: ['value'],
-        promiseId: null,
+        promiseId: 'StateDecoratorDefault',
         props: ctx.propsRef.current,
         type: ReducerActionType.ACTION,
         subType: ReducerActionSubType.BEFORE_PROMISE,
@@ -253,7 +253,7 @@ describe('decorateAsyncAction', () => {
       expect(ctx.dispatch).toHaveBeenNthCalledWith(2, {
         actionName: 'setValue',
         args: ['value'],
-        promiseId: null,
+        promiseId: 'StateDecoratorDefault',
         props: ctx.propsRef.current,
         type: ReducerActionType.ACTION,
         subType: ReducerActionSubType.ERROR,

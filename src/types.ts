@@ -94,7 +94,7 @@ export type LoadingProps<A> = {
  * Try to abort an action, if the action is <code>abortable</code>.
  * @returns <code>true</code> if the action is abortable and an action is ongoing, <code>false</code> otherwise.
  */
-export type AbortActionCallback<A> = (actionName: keyof A) => boolean;
+export type AbortActionCallback<A> = (actionName: keyof A, promiseId?: string) => boolean;
 
 export interface AsynchActionBase<S, F extends (...args: any[]) => any, A, P> {
   /**
