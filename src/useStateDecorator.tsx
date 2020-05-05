@@ -964,7 +964,7 @@ function processAsyncReducer<S, A extends DecoratedActions, P>(
       }
 
       if (action.errorReducer) {
-        newState = action.errorReducer(state, error, args as any, props);
+        newState = action.errorReducer(newState || state, error, args as any, props);
         newOptimisticData = pushActionToHistory(newOptimisticData || optimisticData, actionName, 'errorReducer', [
           error,
           args,

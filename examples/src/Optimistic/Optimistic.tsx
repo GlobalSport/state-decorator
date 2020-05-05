@@ -2,9 +2,14 @@ import React from 'react';
 import { StateDecoratorActions } from '../../../src/types';
 import useStateDecorator from '../../../src/useStateDecorator';
 
+// Types
+
 type State = {
   value: string;
   otherValue: string;
+  // during optimistic requests the loading flag for action is set to false
+  // so we must track loading using this flag
+  loading: boolean;
 };
 
 type Actions = {
@@ -13,33 +18,44 @@ type Actions = {
   setValueError: (value: string) => Promise<string>;
 };
 
-function getInitialState() {
-  return {
-    otherValue: 'initial',
-    value: 'initial',
-  };
-}
+export type OptimisticViewProps = State & Actions;
 
-const optimisticActions: StateDecoratorActions<State, Actions> = {
+// Initial state
+
+export const getInitialState = (): State => ({
+  otherValue: 'initial',
+  value: 'initial',
+  loading: false,
+});
+
+// Actions implementation
+
+export const optimisticActions: StateDecoratorActions<State, Actions> = {
   setValueSuccess: {
-    promise: ([value]) => new Promise((res) => setTimeout(res, 1000, value)),
+    preReducer: (s) => ({ ...s, loading: true }),
+    promise: ([value]) => new Promise((res) => setTimeout(res, 5000, value)),
     optimisticReducer: (s, [value]) => ({ ...s, value }),
-    reducer: (s, value) => ({ ...s, value }),
+    reducer: (s, value) => ({ ...s, value, loading: false }),
   },
   setValueError: {
-    promise: ([value]) => new Promise((_, rej) => setTimeout(rej, 1000, value)),
+    preReducer: (s) => ({ ...s, loading: true }),
+    promise: ([value]) => new Promise((_, rej) => setTimeout(rej, 5000, value)),
     optimisticReducer: (s, [value]) => ({ ...s, value }),
+    errorReducer: (s) => ({ ...s, loading: false }),
+    onFail: () => console.log('failed'),
+    errorMessage: 'failed',
   },
   setOtherValue: (s, [otherValue]) => ({ ...s, otherValue }),
 };
 
-function OptimisticView(props: State & Actions) {
+function OptimisticView(props: OptimisticViewProps) {
   const { value, otherValue, setOtherValue, setValueError, setValueSuccess } = props;
   return (
     <div>
-      <div />
+      {props.loading && <div>LOADING...</div>}
       <div>value: {value}</div>
       <div>other value: {otherValue}</div>
+
       <div>
         <button onClick={() => setValueSuccess('new value')}>Set value (optimistic, will succeed)</button>
         <button onClick={() => setValueError('new temporary value')}>Set value (optimistic, will fail)</button>
