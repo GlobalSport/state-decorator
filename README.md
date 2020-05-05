@@ -275,7 +275,7 @@ If **null** is returned by **promise**, the action is aborted. It allows to canc
     - **reducer**: update state from action arguments and the result of the promise
     - if **notifySuccess** is set, call it with **successMessage** or **getSuccessMessage()**
     - **onDone**: trigger a side effect with no change on state.
-  - if promise is rejected:
+  - if promise is rejected (or aborted):
     - if the action was optimistic, revert the **optimisticReducer** change and replay all following actions.
     - **errorReducer**: change state from promise arguments and returned error.
     - if **notifyError** is set, call it with **errorMessage** or **getErrorMessage()**.
@@ -396,6 +396,43 @@ It can takes the following values (use ConflictPolicy enum), choose the one the 
 Run the "Conflicting actions" example.
 
 _Note_: In conjunction to this parameter, you can use [lodash debounce](https://lodash.com/docs/4.17.10#debounce) to call actions every _n_ ms at most
+
+### Abort asynchronous action
+
+Asynchronous actions can be aborted using, under the hood, the [AbortController](https://developer.mozilla.org/en-US/docs/Web/API/AbortController/AbortController), if you target browsers support it.
+
+1. Action implementation:
+   - An asynchronous action must be marked as **abortable**.
+   - Then, in the **promise** method, the injected **abortSignal** have to be used to add a listener on abort of action and _reject_ the promise with a `new DOMException('Aborted', 'AbortError')`. Or pass it to the **fetch**, i.e. `fetch(url, { signal })`.
+2. Usage:
+   - In the result of the **useStateDecorator**, use the **abortAction** with an action name to abort the action
+3. An abort is a specific failure of an action, ie. **errorReducer** and **onFail** will be called. Use the error type and name to distinguish an aborted action from a regular failed action.
+
+```typescript
+export const actionsAbort: StateDecoratorActions<State, Actions, Props> = {
+  onAction: {
+    abortable: true,
+    preReducer: () => ({ isError: false, isSuccess: false, isAborted: false }),
+    promise: ([willCrash], s, p, a, abortSignal) =>
+      new Promise((resolve, reject) => {
+        const timeout = window.setTimeout(willCrash ? reject : resolve, 2500, willCrash ? new Error('boom') : 'result');
+        abortSignal.addEventListener('abort', () => {
+          window.clearTimeout(timeout);
+          reject(new DOMException('Aborted', 'AbortError'));
+        });
+      }),
+    errorReducer: (s, e) => (e.name === 'AbortError' ? { ...s, isAborted: true } : { ...s, isError: true }),
+    reducer: (s) => ({ ...s, isSuccess: true }),
+    onFail: (s, e) => {
+      if (e.name === 'AbortError') {
+        console.log('AbortError side effect');
+      } else {
+        console.log('Other error side effect');
+      }
+    },
+  },
+};
+```
 
 ## Persist state on unmount
 
