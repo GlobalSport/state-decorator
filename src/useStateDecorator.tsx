@@ -336,6 +336,7 @@ function handleConflictingAction<A>(
 ) {
   let policy: ConflictPolicy = conflictPolicy;
   if (policy === ConflictPolicy.REUSE) {
+    // use default because action cannot be parallel
     if (areSameArgs(promises[actionName][DEFAULT_PROMISE_ID].refArgs, args)) {
       return promises[actionName][DEFAULT_PROMISE_ID].promise;
     } // else
@@ -1103,14 +1104,14 @@ export function getInitialHookState<S, A extends DecoratedActions, P>(
   stateInitializer: (props?: P) => S,
   actions: StateDecoratorActions<S, A, P>,
   props: P,
-  initialActionsMarkedLoading: string[] = [],
+  initialActionsMarkedLoading: (keyof A)[] = [],
   logEnabled: boolean = false,
   name: string = null
 ): HookState<S, A> {
   const names = Object.keys(actions);
   const initialActions = toMap(
     initialActionsMarkedLoading,
-    (i) => i,
+    (i) => i as string,
     (_) => true
   );
 
