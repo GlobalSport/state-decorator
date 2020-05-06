@@ -300,7 +300,7 @@ export type StateDecoratorOptions<S, A, P = {}> = {
    * As a render is done before first actions can be trigerred, some actions can be marked as loading at
    * initial time.
    */
-  initialActionsMarkedLoading?: string[];
+  initialActionsMarkedLoading?: (keyof A)[];
 
   /**
    * Get a list of values that will be use as reference values.
