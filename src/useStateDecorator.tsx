@@ -586,7 +586,7 @@ export function sendRequest<S, F extends (...args: any[]) => any, A extends Deco
   p = p
     .then((result: PromiseResult<ReturnType<F>>) => {
       if (promises[actionName]) {
-        delete promises[actionName]?.[promiseId];
+        delete promises[actionName][promiseId];
       }
 
       if (unmountedRef.current) {
