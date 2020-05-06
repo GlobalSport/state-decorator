@@ -21,8 +21,8 @@ The useStateDecorator is a React hook that manages a component state in an easy,
 
 ## v5.x vs v4.x
 
-- React >= 16.8: use 4.x version and _useStateDecorator_ hook. The _StateDecorator_ and _injectState_ HOC are still valid but are using internally the hook.
-- React < 16.8: use 3.x version.
+- React >= 16.8: use 5.x version and _useStateDecorator_ hook. The _StateDecorator_ and _injectState_ HOC are still valid but are using internally the hook.
+- React < 16.8: use 4.x version.
 
 ## Progressive migration
 
