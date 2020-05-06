@@ -92,6 +92,8 @@ export type LoadingProps<A> = {
 
 /**
  * Try to abort an action, if the action is <code>abortable</code>.
+ * @param actionName The action name
+ * @param promiseId If the action conflict type is <code>ConflictType.PARALLEL</code>, the identifier of the promise.
  * @returns <code>true</code> if the action is abortable and an action is ongoing, <code>false</code> otherwise.
  */
 export type AbortActionCallback<A> = (actionName: keyof A, promiseId?: string) => boolean;

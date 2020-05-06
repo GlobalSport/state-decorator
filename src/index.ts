@@ -6,7 +6,14 @@ import useStateDecorator, {
   setNotifySuccessFunction,
   setNotifyWarningFunction,
 } from './useStateDecorator';
-import { StateDecoratorActions, ConflictPolicy, LoadingProps, LoadingMap, StateDecoratorOptions } from './types';
+import {
+  StateDecoratorActions,
+  ConflictPolicy,
+  LoadingProps,
+  LoadingMap,
+  StateDecoratorOptions,
+  AbortActionCallback,
+} from './types';
 import { useOnMount, useOnUnmount, useOnUnload } from './hooks';
 import {
   testSyncAction,
@@ -23,6 +30,7 @@ export {
   ConflictPolicy,
   LoadingProps,
   LoadingMap,
+  AbortActionCallback,
   useOnMount,
   useOnUnmount,
   useOnUnload,
