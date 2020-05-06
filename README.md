@@ -434,6 +434,8 @@ export const actionsAbort: StateDecoratorActions<State, Actions, Props> = {
 };
 ```
 
+[![Edit blissful-lake-dilyo](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/blissful-lake-dilyo?fontsize=14&hidenavigation=1&theme=dark)
+
 ## Persist state on unmount
 
 To persist the state when the container hook is unmounted, use the **onUnmount** hook.
