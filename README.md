@@ -434,7 +434,7 @@ export const actionsAbort: StateDecoratorActions<State, Actions, Props> = {
 };
 ```
 
-[![Edit blissful-lake-dilyo](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/blissful-lake-dilyo?fontsize=14&hidenavigation=1&module=%2Fsrc%2FAbort.tsx&theme=dark)
+[![Edit Abort](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/blissful-lake-dilyo?fontsize=14&hidenavigation=1&module=%2Fsrc%2FAbort.tsx&theme=dark)
 
 ## Persist state on unmount
 
@@ -1174,6 +1174,8 @@ export default function TodoContainer() {
   );
 }
 ```
+
+[![Edit Todo](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/todo-s2qpu?fontsize=14&hidenavigation=1&module=%2Fsrc%2FTodoApp.tsx&theme=dark)
 
 ## Conflicting actions
 
