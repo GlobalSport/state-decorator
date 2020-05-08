@@ -7,7 +7,7 @@ export type State = {
 };
 
 export type Actions = {
-  getData: () => Promise<string>;
+  getData: (id: string) => Promise<string>;
 };
 
 export const getInitialState = (): State => ({
@@ -28,9 +28,14 @@ export default class ReuseConflictPolicy extends React.PureComponent {
         {({ counter }, actions, loading) => (
           <div style={{ border: '1px solid grey', marginBottom: 10 }}>
             <h3>Reuse</h3>
-            <p>Returns the current promise, if any, or create a new promise.</p>
+            <p>If a call to this action is ongoing with same parameters, reuse the promise.</p>
+            <p>Otherwise, use KEEP_ALL policy and queue the action calls.</p>
             <p>The buttons triggers an action that takes 3 seconds to return.</p>
-            <button onClick={() => actions.getData()}>Get Data</button>
+            <p>
+              Usage: shared state / action used in different components that call this action at initialization time.
+            </p>
+            <button onClick={() => actions.getData('1')}>Get Data ID 1</button>
+            <button onClick={() => actions.getData('2')}>Get Data ID 2</button>
             <div>{loading ? 'loading...' : ''}</div>
             <div>Counter: {counter}</div>
           </div>
