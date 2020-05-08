@@ -334,7 +334,7 @@ function handleConflictingAction<A>(
   conflictPolicy: ConflictPolicy,
   args: any[]
 ) {
-  let policy: ConflictPolicy = conflictPolicy;
+  let policy = conflictPolicy;
   if (policy === ConflictPolicy.REUSE) {
     // use default because action cannot be parallel
     if (areSameArgs(promises[actionName][DEFAULT_PROMISE_ID].refArgs, args)) {
@@ -370,6 +370,7 @@ function handleConflictingAction<A>(
           conflictActions[actionName] = stack = [];
         }
         stack.push(futureAction);
+
         break;
       }
       case ConflictPolicy.PARALLEL:
@@ -567,9 +568,9 @@ export function sendRequest<S, F extends (...args: any[]) => any, A extends Deco
 
   if (p === null) {
     // remove current promise that was pending in decorated action.
-    delete promises[actionName]?.[promiseId];
+    delete promises[actionName][promiseId];
 
-    logSingle(options.name, actionName, args, options.logEnabled, 'ABORTED');
+    logSingle(options.name, actionName, args, options.logEnabled, 'null promise, CANCELLED');
 
     dispatch({
       actionName,
@@ -585,9 +586,7 @@ export function sendRequest<S, F extends (...args: any[]) => any, A extends Deco
 
   p = p
     .then((result: PromiseResult<ReturnType<F>>) => {
-      if (promises[actionName]) {
-        delete promises[actionName][promiseId];
-      }
+      delete promises[actionName][promiseId];
 
       if (unmountedRef.current) {
         return null;
@@ -636,7 +635,7 @@ export function sendRequest<S, F extends (...args: any[]) => any, A extends Deco
       return result;
     })
     .catch((error: any) => {
-      delete promises[actionName]?.[promiseId];
+      delete promises[actionName][promiseId];
 
       if (unmountedRef.current) {
         return null;
@@ -799,6 +798,8 @@ export function decorateAsyncAction<S, F extends (...args: any[]) => any, A exte
         refArgs: conflictPolicy === ConflictPolicy.REUSE && args.length > 0 ? [...args] : [],
       },
     };
+
+    logSingle(options.name, actionName, args, options.logEnabled, 'START');
 
     dispatch({
       actionName,
@@ -1332,6 +1333,7 @@ export default function useStateDecorator<S, A extends DecoratedActions, P = {}>
 
     let res = false;
     if (abortController) {
+      logSingle(options.name, actionName, [], options.logEnabled, 'ABORT ACTION');
       abortController.abort();
       res = true;
     }
