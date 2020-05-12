@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import produce from 'immer';
 import { pick } from 'lodash';
 import { StateDecoratorActions } from '../../../src/types';
@@ -77,27 +77,22 @@ const Todo = React.memo(function Todo(props: { todo: TodoItem } & Actions) {
 });
 
 const Todos = React.memo(function Todos(props: Pick<State, 'todoIds' | 'todoMap' | 'filter'> & Actions) {
-  const { filter } = props;
+  const { filter, todoIds, todoMap } = props;
 
-  const onFilter = useCallback(
-    (todoId: string) => {
-      const { filter, todoMap } = props;
-      const todo = todoMap[todoId];
-
-      if (filter === Filter.ALL) {
-        return true;
-      }
-
-      return filter === Filter.COMPLETED ? todo.completed : !todo.completed;
-    },
-    [filter]
+  const filteredTodos = useMemo(
+    () =>
+      filter === Filter.ALL
+        ? todoIds
+        : todoIds.filter((todoId: string) => {
+            const todo = todoMap[todoId];
+            return filter === Filter.COMPLETED ? todo.completed : !todo.completed;
+          }),
+    [todoMap, todoIds, filter]
   );
-
-  const { todoIds, todoMap } = props;
 
   return (
     <div>
-      {todoIds.filter(onFilter).map((todoId) => (
+      {filteredTodos.map((todoId) => (
         <Todo key={todoId} todo={todoMap[todoId]} {...props} />
       ))}
     </div>
