@@ -46,7 +46,6 @@ import {
   defaultCloneFunc,
   hasPropsChanged,
 } from './base';
-import { useOnMount } from './hooks';
 
 let cloneFunc: CloneFunction = defaultCloneFunc;
 
@@ -1238,6 +1237,7 @@ export default function useStateDecorator<S, A extends DecoratedActions, P = {}>
   const conflictActionsRef = useRef<ConflictActionsMap<A>>({});
   const oldPropsRef = useRef<P>(null);
   const unmountedRef = useRef(false);
+  const initialized = useRef(false);
 
   propsRef.current = props;
 
@@ -1314,9 +1314,10 @@ export default function useStateDecorator<S, A extends DecoratedActions, P = {}>
   oldPropsRef.current = props;
 
   // initial actions
-  useOnMount(() => {
+  if (!initialized.current) {
     options?.onMount?.(decoratedActions, props);
-  });
+    initialized.current = true;
+  }
 
   useEffect(() => {
     unmountedRef.current = false;
