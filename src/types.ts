@@ -337,7 +337,7 @@ export type StateDecoratorOptions<S, A, P = {}> = {
   notifyWarning?: NotifyFunc;
 
   /**
-   * Initial actions
+   * Initial actions. They are executed outside of a side effect to trigger asynchronous actions.
    */
   onMount?: (actions: A, props: P) => void;
 };

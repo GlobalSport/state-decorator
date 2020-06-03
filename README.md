@@ -183,6 +183,8 @@ export const CounterContainer = () => {
 
 This is usually used to load asynchronous data to populate the state.
 
+Note: the onMount is not executed in a _useEffect_ in order to start asynchronous actions _before_ rendering.
+
 ## Synchronous actions
 
 ### Simple form
