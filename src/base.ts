@@ -309,7 +309,7 @@ export function logStateChange<S, A>(
 
 export function logSingle<A>(name: string, actionName: keyof A, args: any[], logEnabled: boolean, state: string = '') {
   if (process.env.NODE_ENV === 'development' && logEnabled) {
-    console.group(`[${name ?? 'StateDecorator'}${name || ''}] ${actionName} ${state}`);
+    console.group(`[${name ?? 'StateDecorator'} ${actionName} ${state}`);
     if (Object.keys(args).length > 0) {
       console.group('Arguments');
       Object.keys(args).forEach((prop) => console.log(prop, ':', args[prop]));
