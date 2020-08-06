@@ -688,7 +688,14 @@ export function sendRequest<S, F extends (...args: any[]) => any, A extends Deco
         }
       }
 
-      onAsyncError(error, errorHandled, state, propsRef.current, actionName as string, args);
+      onAsyncError(
+        error,
+        errorHandled || asyncAction.rejectPromiseOnError,
+        state,
+        propsRef.current,
+        actionName as string,
+        args
+      );
 
       const result = !errorHandled || asyncAction.rejectPromiseOnError ? Promise.reject(error) : undefined;
 
