@@ -290,8 +290,13 @@ export function logStateChange<S, A>(
       Object.keys(args).forEach((prop) => console.log(prop, ':', args[prop]));
       console.groupEnd();
     }
+
     console.groupCollapsed('Before');
-    Object.keys(oldState).forEach((prop) => console.log(prop, ':', oldState[prop]));
+    if (oldState == null) {
+      console.log('was null');
+    } else {
+      Object.keys(oldState).forEach((prop) => console.log(prop, ':', oldState[prop]));
+    }
     console.groupEnd();
 
     console.groupCollapsed('After');
