@@ -98,6 +98,8 @@ export type LoadingProps<A> = {
  */
 export type AbortActionCallback<A> = (actionName: keyof A, promiseId?: string) => boolean;
 
+export type GetErrorMessage<F extends (...args: any[]) => any, P> = (e: any, args: Parameters<F>, props: P) => string;
+
 export interface AsynchActionBase<S, F extends (...args: any[]) => any, A, P> {
   /**
    * This action can be aborted. An abortSignal will be injected to the <code>promise</code> / <code>promiseGet</code>.
@@ -123,7 +125,7 @@ export interface AsynchActionBase<S, F extends (...args: any[]) => any, A, P> {
   /**
    * A function that provides the error message to pass to the notifyError function passed as property to the StateDecorator.
    */
-  getErrorMessage?: (e: any, args: Parameters<F>, props: P) => string;
+  getErrorMessage?: GetErrorMessage<F, P>;
 
   /**
    * If set, called with the result of the promise to update the current state.

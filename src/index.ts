@@ -5,6 +5,7 @@ import useStateDecorator, {
   setNotifyErrorFunction,
   setNotifySuccessFunction,
   setNotifyWarningFunction,
+  setDefaultGetErrorMessage,
 } from './useStateDecorator';
 import {
   StateDecoratorActions,
@@ -47,6 +48,7 @@ export {
   setNotifyErrorFunction,
   setNotifySuccessFunction,
   setNotifyWarningFunction,
+  setDefaultGetErrorMessage,
   StateDecoratorOptions,
 };
 

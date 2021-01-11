@@ -31,6 +31,7 @@ import {
   TriggerReryError,
   StateDecoratorOptions,
   AbortActionCallback,
+  GetErrorMessage,
 } from './types';
 
 import {
@@ -126,6 +127,12 @@ export function setNotifySuccessFunction(notifySuccessIn: NotifyFunc) {
  */
 export function setNotifyWarningFunction(notifyWarningIn: NotifyFunc) {
   globalNotifyWarning = notifyWarningIn;
+}
+
+let defaultGetErrorMessage: GetErrorMessage<any, any> = null;
+
+export function setDefaultGetErrorMessage(f: GetErrorMessage<any, any>) {
+  defaultGetErrorMessage = f;
 }
 
 type HookState<S, A> = {
@@ -287,12 +294,12 @@ export function decorateAdvancedSyncAction<S, F extends (...args: any[]) => any,
     if (action.debounceTimeout != null) {
       const debounceActionMap = debounceActionMapRef.current;
 
-      if (debounceActionMap[name] != null) {
-        clearTimeout(debounceActionMap[name]);
+      if (debounceActionMap[actionName] != null) {
+        clearTimeout(debounceActionMap[actionName]);
       }
 
-      debounceActionMap[name] = setTimeout(() => {
-        debounceActionMap[name] = null;
+      debounceActionMap[actionName] = setTimeout(() => {
+        debounceActionMap[actionName] = null;
         processAdvancedSyncAction(
           dispatch,
           actionName,
@@ -353,7 +360,7 @@ function handleConflictingAction<A>(
     switch (policy) {
       case ConflictPolicy.IGNORE:
         logSingle(sdName, actionName, args, logEnabled, 'Drop request (Conflict policy is IGNORE)');
-        resolve();
+        resolve(void 0);
         break;
       case ConflictPolicy.REJECT:
         logSingle(sdName, actionName, args, logEnabled, 'Reject request (Conflict policy is REJECT)');
@@ -553,7 +560,8 @@ export function sendRequest<S, F extends (...args: any[]) => any, A extends Deco
   conflictActionsRef: React.MutableRefObject<ConflictActionsMap<A>>,
   options: StateDecoratorOptions<S, A, P>,
   addSideEffect: typeof addNewSideEffect,
-  abortSignal: AbortSignal
+  abortSignal: AbortSignal,
+  defaultGetErrorMessage: GetErrorMessage<F, P>
 ) {
   const { promise, retryCount, retryDelaySeed } = asyncAction;
 
@@ -671,7 +679,7 @@ export function sendRequest<S, F extends (...args: any[]) => any, A extends Deco
         errorHandled = true;
       }
 
-      if (notifyError && (asyncAction.errorMessage || asyncAction.getErrorMessage)) {
+      if (notifyError && (asyncAction.errorMessage || asyncAction.getErrorMessage || defaultGetErrorMessage)) {
         let msg: string;
 
         if (asyncAction.getErrorMessage) {
@@ -680,6 +688,10 @@ export function sendRequest<S, F extends (...args: any[]) => any, A extends Deco
 
         if (!msg) {
           msg = asyncAction.errorMessage;
+        }
+
+        if (!msg && defaultGetErrorMessage) {
+          msg = defaultGetErrorMessage(error, args, propsRef.current);
         }
 
         if (msg) {
@@ -699,7 +711,7 @@ export function sendRequest<S, F extends (...args: any[]) => any, A extends Deco
 
       const result = !errorHandled || asyncAction.rejectPromiseOnError ? Promise.reject(error) : undefined;
 
-      processNextConflictAction(name, actionsRef.current, conflictActionsRef.current);
+      processNextConflictAction(actionName, actionsRef.current, conflictActionsRef.current);
 
       return result;
     });
@@ -784,7 +796,8 @@ export function decorateAsyncAction<S, F extends (...args: any[]) => any, A exte
           conflictActionsRef,
           options,
           addSideEffect,
-          abortController ? abortController.signal : undefined
+          abortController ? abortController.signal : undefined,
+          defaultGetErrorMessage
         );
 
         if (p === null) {

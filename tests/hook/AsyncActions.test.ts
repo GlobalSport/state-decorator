@@ -11,6 +11,7 @@ import {
   setNotifySuccessFunction,
   setOnAsyncError,
   setNotifyWarningFunction,
+  setDefaultGetErrorMessage,
 } from '../../src/useStateDecorator';
 import { StateDecoratorActions } from '../../src/types';
 import { getTimeoutPromise, getFailedTimeoutPromise, getAsyncContext } from './testUtils';
