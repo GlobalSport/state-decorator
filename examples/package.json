@@ -54,7 +54,7 @@
     "acorn": "^6.4.1",
     "kind-of": "^6.0.3",
     "elliptic": "^6.5.3",
-    "terser-webpack-plugin": "5.1.1",
+    "lodash": "^4.17.20",
     "ini": "1.3.6"
   }
 }
