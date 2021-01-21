@@ -44,7 +44,6 @@
     "enzyme": "^3.6.0",
     "enzyme-adapter-react-16": "^1.5.0",
     "husky": "^1.0.0-rc.15",
-    "immer": "^1.7.2",
     "jest": "^26.0.0",
     "json": "^9.0.6",
     "lint-staged": "^7.3.0",
