@@ -1335,7 +1335,7 @@ export default function useStateDecorator<S, A extends DecoratedActions, P = {}>
 
   // initial actions
   if (!initialized.current) {
-    options?.onMount?.(decoratedActions, props);
+    options?.onMount?.(decoratedActions, props, hookState.state);
     initialized.current = true;
   }
 

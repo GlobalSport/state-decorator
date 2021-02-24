@@ -341,5 +341,5 @@ export type StateDecoratorOptions<S, A, P = {}> = {
   /**
    * Initial actions. They are executed outside of a side effect to trigger asynchronous actions.
    */
-  onMount?: (actions: A, props: P) => void;
+  onMount?: (actions: A, props: P, state: S) => void;
 };
