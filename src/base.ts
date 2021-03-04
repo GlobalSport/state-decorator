@@ -291,6 +291,11 @@ export function logStateChange<S, A>(
       console.groupEnd();
     }
 
+    if (newState === null) {
+      console.log('Cancelled');
+      return void 0;
+    }
+
     console.groupCollapsed('Before');
     if (oldState == null) {
       console.log('was null');
