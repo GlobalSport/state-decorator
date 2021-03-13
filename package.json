@@ -11,7 +11,7 @@
   "author": "Damien Garbarino <d.garbarino@mycoachsport.com>",
   "license": "MIT",
   "scripts": {
-    "test": "jest tests --runInBand",
+    "test": "yarn jest ./tests/*.ts ./tests/hook/*.ts --runInBand",
     "bump-version": "yarn test && yarn clean && yarn rollup && bump --commit 'build: release v%s' --tag --push && yarn copy",
     "clean": "rimraf ./dist",
     "copy": "copyfiles -f package.json README.md LICENSE dist && json -I -f dist/package.json -e \"this.private=false; this.devDependencies=undefined; this.optionalDependencies=undefined; this.scripts=undefined; this.husky=undefined; this['lint-staged']=undefined; \"",
