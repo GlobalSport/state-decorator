@@ -1,4 +1,5 @@
 import isEqual from 'fast-deep-equal';
+import {} from '../src/types';
 
 import {
   AsynchAction,
@@ -9,6 +10,7 @@ import {
   SynchAction,
   PromiseProvider,
   StateDecoratorOptions,
+  AsynchActionPromiseGet,
 } from './types';
 
 export const IS_JEST_ENV = typeof process !== 'undefined' && process && !(process as any).browser;
@@ -74,6 +76,15 @@ export function isAsyncAction<S, F extends (...args: any[]) => any, A, P>(
   action: StateDecoratorAction<S, F, A, P>
 ): action is AsynchAction<S, F, A, P> {
   return !(action instanceof Function) && (action.hasOwnProperty('promise') || action.hasOwnProperty('promiseGet'));
+}
+
+/**
+ * Type guard function to test if an action is a asynchronous action.
+ */
+export function isAsyncPromiseGetAction<S, F extends (...args: any[]) => any, A, P>(
+  action: StateDecoratorAction<S, F, A, P>
+): action is AsynchActionPromiseGet<S, F, A, P> {
+  return !(action instanceof Function) && !(action.hasOwnProperty('promise') && action.hasOwnProperty('promiseGet'));
 }
 
 /**

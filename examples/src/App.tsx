@@ -1,22 +1,34 @@
 import React from 'react';
-import TodoContainer from './todo/Todos';
-import ConflictingActionsApp from './conflict/ConflictingActions';
-import CounterContainer from './counter/Counter';
-import Retry from './retry/Retry';
-import PropsChangeApp from './propsChange/PropsChange';
-import WrappedComponent from './hoc/WrappedComponent';
-import ContextContainer from './context/Context';
-import Debounce from './debounce/Debounce';
-import Optimistic from './Optimistic/Optimistic';
-import WarningActions from './WarningActions';
-import ErrorHandler from './ErrorHandler';
-import Abort from './abort/Abort';
+import { MyContainer } from './sample';
+import ShapesApp from './Shapes';
+import TodoContainer from './Todos';
+// import ConflictingActionsApp from './conflict/ConflictingActions';
+// import CounterContainer from './counter/Counter';
+// import Retry from './retry/Retry';
+// import PropsChangeApp from './propsChange/PropsChange';
+// import WrappedComponent from './hoc/WrappedComponent';
+// import ContextContainer from './context/Context';
+// import Debounce from './debounce/Debounce';
+// import Optimistic from './Optimistic/Optimistic';
+// import WarningActions from './WarningActions';
+// import ErrorHandler from './ErrorHandler';
+// import Abort from './abort/Abort';
 
-export default class App extends React.Component {
-  render() {
-    return (
-      <div>
-        <section>
+export default function App() {
+  return (
+    <div>
+      <section>
+        <h1>Share state</h1>
+        <MyContainer />
+      </section>
+      {/* <section>
+        <h1>Todo</h1>
+        <TodoContainer />
+      </section> */}
+
+      {/* <ShapesApp /> */}
+
+      {/* <section>
           <h1>Abort action</h1>
           <Abort />
         </section>
@@ -32,10 +44,7 @@ export default class App extends React.Component {
           <h1>Context</h1>
           <ContextContainer />
         </section>
-        <section>
-          <h1>Todo</h1>
-          <TodoContainer />
-        </section>
+
         <section>
           <h1>Conflict</h1>
           <ConflictingActionsApp />
@@ -63,8 +72,7 @@ export default class App extends React.Component {
           <h1>Async error handler</h1>
           <p>Look at console, the useStateDecorator is trigerring a special handler on async errors</p>
           <ErrorHandler />
-        </section>
-      </div>
-    );
-  }
+        </section> */}
+    </div>
+  );
 }

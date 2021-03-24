@@ -13,5 +13,6 @@
     "strict": true,
     "lib": ["es2017", "dom"]
   },
-  "exclude": ["node_modules", "dist", "tests"]
+  
+  "exclude": ["node_modules", "dist", "../legacy/tests/tests", "legacy"]
 }

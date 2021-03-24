@@ -1,5 +1,5 @@
 module.exports = {
-  collectCoverage: false,
+  collectCoverage: true,
   coverageDirectory: 'tests/reports',
   coveragePathIgnorePatterns: ['/node_modules/', '/tests/', '/jest', '/.history/'],
   moduleFileExtensions: ['js', 'ts', 'tsx'],
