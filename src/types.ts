@@ -1,4 +1,28 @@
+/*
+ * Copyright 2019 Globalsport SAS
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+
 export type PromiseResult<Type> = Type extends Promise<infer X> ? X : null;
+
+export type NotifyFunc = (msg: string) => void;
+
+export type PromiseIdMap = { [promiseId: string]: boolean };
+
+export type LoadingMap<A> = { [pId in keyof A]?: boolean };
+export type LoadingParallelMap<A> = { [P in keyof A]?: PromiseIdMap };
+export type InternalLoadingMap<A> = LoadingParallelMap<A>;
+
+export type LoadingProps<A> = {
+  loading: boolean;
+  loadingMap: LoadingMap<A>;
+  loadingParallelMap: LoadingParallelMap<A>;
+};
 
 // https://github.com/Microsoft/TypeScript/issues/15300
 export interface DecoratedActions {
@@ -43,51 +67,31 @@ export enum ConflictPolicy {
 }
 
 export type PromiseProvider<S, F extends (...args: any[]) => any, A, P> = (
-  args: Parameters<F>,
-  state: S,
-  props: P,
-  actions: A,
-  abortSignal: AbortSignal
+  ctx: GetPromiseInvocationContext<S, F, P, A>
 ) => ReturnType<F> | null;
 
 /**
  * Simple form of a synchronous action.
  */
-export type SynchAction<S, F extends (...args: any[]) => any, P> = (
-  state: S,
-  args: Parameters<F>,
-  props: P
-) => S | null;
+export type SimpleSyncAction<S, F extends (...args: any[]) => any, P, FxRes = S> = (
+  ctx: InvocationContext<S, F, P>
+) => FxRes | null;
 
-/**
- * Advanced synchronous action.
- * Allows to set advanced properties to a synchronous action.
- */
-export type AdvancedSynchAction<S, F extends (...args: any[]) => any, A, P> = {
+export type SyncAction<S, F extends (...args: any[]) => any, A, P, FxRes = S> = {
   /**
    * The action to execute.
    */
-  action: (state: S, args: Parameters<F>, props: P) => S | null;
+  effects?: (ctx: EffectsInvocationContext<S, F, P>) => FxRes | null;
+
   /**
    * Debounces the action if this parameter is defined.
    */
-  debounceTimeout?: number;
+  debounceSideEffectsTimeout?: number;
+
   /**
    * Action to call when the action is done. Used to trigger other actions (even asynchronous),
    */
-  onActionDone?: (state: S, args: Parameters<F>, props: P, actions: A, notifyWarning: NotifyFunc) => void;
-};
-
-export type PromiseIdMap = { [promiseId: string]: boolean };
-
-export type InternalLoadingMap<A> = { [name: string]: undefined | boolean | PromiseIdMap };
-export type LoadingMap<A> = { [P in keyof A]: undefined | boolean };
-export type LoadingMapParallelActions<A> = { [P in keyof A]: PromiseIdMap };
-
-export type LoadingProps<A> = {
-  loading: boolean;
-  loadingMap: LoadingMap<A>;
-  loadingParallelMap: LoadingMapParallelActions<A>;
+  sideEffects?: (ctx: SideEffectsInvocationContext<S, F, P, A>) => void;
 };
 
 /**
@@ -98,44 +102,132 @@ export type LoadingProps<A> = {
  */
 export type AbortActionCallback<A> = (actionName: keyof A, promiseId?: string) => boolean;
 
-export type GetErrorMessage<F extends (...args: any[]) => any, P> = (e: any, args: Parameters<F>, props: P) => string;
+export type GetErrorMessage<S, F extends (...args: any[]) => any, P> = (
+  ctx: ErrorMessageInvocationContext<S, F, P>
+) => string;
 
-export interface AsynchActionBase<S, F extends (...args: any[]) => any, A, P> {
+export type ContextState<S> = {
+  state: S;
+  s: S;
+};
+
+export type ContextBase<S, P> = ContextState<S> & {
+  state: S;
+  s: S;
+  props: P;
+  p: P;
+};
+
+export type InvocationContextActions<A> = {
+  actions: A;
+  a: A;
+};
+
+export type WarningNotifyFunc = {
+  notifyWarning?: NotifyFunc;
+};
+
+export type InvocationContext<S, F extends (...args: any[]) => any, P> = ContextBase<S, P> & {
+  args: Parameters<F>;
+  promiseId?: string;
+};
+
+export type EffectsInvocationContext<S, F extends (...args: any[]) => any, P> = InvocationContext<S, F, P> & {
+  result: PromiseResult<ReturnType<F>>;
+  res: PromiseResult<ReturnType<F>>;
+};
+
+export type GetPromiseInvocationContext<S, F extends (...args: any[]) => any, P, A> = InvocationContextActions<A> &
+  InvocationContext<S, F, P> & {
+    abortSignal: AbortSignal;
+  };
+
+export type ErrorEffectsInvocationContext<S, F extends (...args: any[]) => any, P> = InvocationContext<S, F, P> & {
+  error: Error;
+  err: Error;
+};
+
+export type SuccessMessageInvocationContext<S, F extends (...args: any[]) => any, P> = EffectsInvocationContext<
+  S,
+  F,
+  P
+>;
+export type ErrorMessageInvocationContext<S, F extends (...args: any[]) => any, P> = ErrorEffectsInvocationContext<
+  S,
+  F,
+  P
+>;
+
+export type SideEffectsInvocationContext<S, F extends (...args: any[]) => any, P, A> = EffectsInvocationContext<
+  S,
+  F,
+  P
+> &
+  InvocationContextActions<A> &
+  WarningNotifyFunc;
+
+export type ErrorSideEffectsInvocationContext<
+  S,
+  F extends (...args: any[]) => any,
+  P,
+  A
+> = ErrorEffectsInvocationContext<S, F, P> & InvocationContextActions<A> & WarningNotifyFunc;
+
+export type OnMountInvocationContext<S, A, P> = ContextBase<S, P> & InvocationContextActions<A>;
+
+export type EffectsType = 'preEffects' | 'effects' | 'errorEffects' | 'optimisticEffects' | null;
+
+export type MiddlewareActionContext<S, A, P> = {
+  name: keyof A;
+  type: EffectsType;
+  isAsync: boolean;
+  context: InvocationContext<S, any, P>;
+};
+
+export type MiddlewareStoreContext<S, A extends DecoratedActions, P> = {
+  actions: StoreActions<S, A, P>;
+  options: StoreOptions<S, A, P, any>;
+};
+
+export type Middleware<S, A extends DecoratedActions, P> = {
+  init: (storeContext: MiddlewareStoreContext<S, A, P>) => void;
+  effects: (
+    actionContext: MiddlewareActionContext<S, A, P>,
+    oldState: S,
+    newState: S,
+    loading: boolean
+  ) => null | {
+    state: S;
+    loading: boolean;
+  };
+  destroy: () => void;
+};
+
+export type AsyncActionBase<S, F extends (...args: any[]) => any, A, P, FxRes = S> = {
   /**
    * This action can be aborted. An abortSignal will be injected to the <code>promise</code> / <code>promiseGet</code>.
    */
-
   abortable?: boolean;
-
-  /**
-   * The success message to pass to the notifySuccess function passed as property to the StateDecorator.
-   */
-  successMessage?: string;
 
   /**
    * A function that provides the success message to pass to the notifySuccess function passed as property to the StateDecorator.
    */
-  getSuccessMessage?: (result: PromiseResult<ReturnType<F>>, args: Parameters<F>, props: P) => string;
-
-  /**
-   * The error message to pass to the notifyError function passed as property to the StateDecorator.
-   */
-  errorMessage?: string;
+  getSuccessMessage?: (ctx: SuccessMessageInvocationContext<S, F, P>) => string;
 
   /**
    * A function that provides the error message to pass to the notifyError function passed as property to the StateDecorator.
    */
-  getErrorMessage?: GetErrorMessage<F, P>;
+  getErrorMessage?: GetErrorMessage<S, F, P>;
 
   /**
    * If set, called with the result of the promise to update the current state.
    */
-  reducer?: (state: S, result: PromiseResult<ReturnType<F>>, args: Parameters<F>, props: P) => S | null;
+  effects?: (ctx: EffectsInvocationContext<S, F, P>) => FxRes | null;
 
   /**
    * If set, called with the error of the promise to update the current state.
    */
-  errorReducer?: (state: S, error: any, args: Parameters<F>, props: P) => S | null;
+  errorEffects?: (ctx: ErrorEffectsInvocationContext<S, F, P>) => FxRes | null;
 
   /**
    * Whether reject the promise instead of handling it.
@@ -151,14 +243,7 @@ export interface AsynchActionBase<S, F extends (...args: any[]) => any, A, P> {
    * @param actions The actions available
    * @param notifyWarning If specified, a notify function to indicate that the action is a semi success (use successMessage / getSuccessMessage otherwise).
    */
-  onDone?: (
-    state: S,
-    result: PromiseResult<ReturnType<F>>,
-    args: Parameters<F>,
-    props: P,
-    actions: A,
-    notifyWarning: NotifyFunc
-  ) => void;
+  sideEffects?: (ctx: SideEffectsInvocationContext<S, F, P, A>) => void;
 
   /**
    * Handle side effects when the request failed.
@@ -168,19 +253,19 @@ export interface AsynchActionBase<S, F extends (...args: any[]) => any, A, P> {
    * @param actions The actions available
    * @param notifyWarning If specified, a notify function to indicate that the action is a semi failure (use errorMessage / getErrorMessage otherwise).
    */
-  onFail?: (state: S, error: Error, args: Parameters<F>, props: P, actions: A, notifyWarning: NotifyFunc) => void;
+  errorSideEffects?: (ctx: ErrorSideEffectsInvocationContext<S, F, P, A>) => void;
 
   /**
    * Retrieve the state to set as current data before the promise is resolved.
    * If the there's no reducer, this data will be used after the promise is done.
    */
-  preReducer?: (state: S, args: Parameters<F>, props: P) => S | null;
+  preEffects?: (ctx: InvocationContext<S, F, P>) => FxRes | null;
 
   /**
    * Retrieve the state to set as current data before the promise is resolved.
    * If the there's no reducer, this data will be used after the promise is done.
    */
-  optimisticReducer?: (state: S, args: Parameters<F>, props: P) => S | null;
+  optimisticEffects?: (ctx: InvocationContext<S, F, P>) => FxRes | null;
 
   /**
    * Policy to apply when a call to an asynchronous action is done but a previous call is still not resolved.
@@ -211,117 +296,81 @@ export interface AsynchActionBase<S, F extends (...args: any[]) => any, A, P> {
    * Function to test if the error will trigger an action retry or will fail directly.
    */
   isTriggerRetryError?: (e: Error) => boolean;
-}
+};
 
-export interface AsynchActionPromise<S, F extends (...args: any[]) => any, A, P> extends AsynchActionBase<S, F, A, P> {
+export type AsyncActionPromise<S, F extends (...args: any[]) => any, A, P, FxRes = S> = AsyncActionBase<
+  S,
+  F,
+  A,
+  P,
+  FxRes
+> & {
   /**
    * The request, returns a promise
    */
-  promise: PromiseProvider<S, F, A, P>;
-}
-export interface AsynchActionPromiseGet<S, F extends (...args: any[]) => any, A, P>
-  extends AsynchActionBase<S, F, A, P> {
+  getPromise: PromiseProvider<S, F, A, P>;
+};
+
+export type AsyncActionPromiseGet<S, F extends (...args: any[]) => any, A, P, FxRes = S> = AsyncActionBase<
+  S,
+  F,
+  A,
+  P,
+  FxRes
+> & {
   /**
    * The request, returns a promise that is a GET request.
    * A shortcut to set:
    *   - retryCount: 3
    *   - conflictPolicy: ConflictPolicy.REUSE
    */
-  promiseGet: PromiseProvider<S, F, A, P>;
-}
+  getGetPromise: PromiseProvider<S, F, A, P>;
+};
 
-export type AsynchAction<S, F extends (...args: any[]) => any, A, P> =
-  | AsynchActionPromise<S, F, A, P>
-  | AsynchActionPromiseGet<S, F, A, P>;
+export type AsyncAction<S, F extends (...args: any[]) => any, A, P, FxRes = S> =
+  | AsyncActionPromise<S, F, A, P, FxRes>
+  | AsyncActionPromiseGet<S, F, A, P, FxRes>;
 
-export type StateDecoratorAction<S, F extends (...args: any[]) => any, A, P> =
-  | AsynchAction<S, F, A, P>
-  | SynchAction<S, F, P>
-  | AdvancedSynchAction<S, F, A, P>;
+export type StoreAction<S, F extends (...args: any[]) => any, A, P, FxRes = S> =
+  | AsyncAction<S, F, A, P, FxRes>
+  | SimpleSyncAction<S, F, P, FxRes>
+  | SyncAction<S, F, A, P, FxRes>;
 
 /**
  * S: The type of the state
  * A: The type of the actions to pass to the children (used to check keys only).
  */
-export type StateDecoratorActions<S, A extends DecoratedActions, P = {}> = {
-  [Prop in keyof A]: StateDecoratorAction<S, A[Prop], A, P>;
+export type StoreActions<S, A extends DecoratedActions, P = {}, FxRes = S> = {
+  [Prop in keyof A]: StoreAction<S, A[Prop], A, P, FxRes>;
 };
 
-export interface ActionHistory<S, A> {
-  actionName: keyof A;
-  reducer: ReducerName;
-  args: any[];
-  beforeState?: S;
-}
-
-export type OptimisticActionsMap<A> = {
-  [name in keyof A]?: any;
+export type OnPropsChangeEffectsContext<S, P> = ContextBase<S, P> & {
+  indices: number[];
 };
 
-export type FutureActions = {
-  args: any[];
-  resolve: (...args: any[]) => void;
-  reject: (...args: any[]) => void;
-  timestamp?: number;
+export type OnPropsChangeSideEffectsContext<S, P, A> = OnPropsChangeEffectsContext<S, P> & {
+  actions: A;
+  a: A;
 };
 
-export type ReducerName = 'onPropChangeReducer' | 'preReducer' | 'optimisticReducer' | 'reducer' | 'errorReducer';
-
-export type ConflictActionsMap<A> = {
-  [name in keyof A]?: FutureActions[];
+type DerivedStateOption<S, P, DS> = {
+  [k in keyof DS]: {
+    getDeps: (ctx: ContextBase<S, P>) => any[];
+    get: (ctx: ContextBase<S, P>) => DS[k];
+  };
 };
 
-/**
- * Global asynchronous actions error handler
- */
-export type GlobalAsyncHook = (
-  error: any,
-  isHandled: boolean,
-  state: any,
-  props: any,
-  actionName: string,
-  args: any[]
-) => void;
-export type CloneFunction = <C>(obj: C) => C;
-export type NotifyFunc = (msg: string) => void;
-export type TriggerReryError = (error: any) => boolean;
-
-type OnPropsChangeReducer<S, P> = (s: S, newProps: P, updatedIndices: number[]) => S;
-
-export type StateDecoratorOptions<S, A, P = {}> = {
+export type StoreOptions<S, A, P, DS = S> = {
   /**
    * The state decorator name. Use in debug traces to identify the useStateDecorator instance.
    */
   name?: string;
 
-  /**
-   * Show logs in the console in development mode.
-   */
-  logEnabled?: boolean;
-
-  /**
-   * List of action names that are marked as loading at initial time.
-   * As a render is done before first actions can be trigerred, some actions can be marked as loading at
-   * initial time.
-   */
-  initialActionsMarkedLoading?: (keyof A)[];
-
-  /**
-   * Get a list of values that will be use as reference values.
-   * If they are different (shallow compare), onPropsChangeReducer then onPropsChange will be called.
-   */
-  getPropsRefValues?: (props: P) => any[];
-
-  /**
-   * Triggered when values of reference from props have changed. Allow to call actions after a prop change.
-   */
-  onPropsChange?: (s: S, newProps: any, actions: A, updatedIndices: number[]) => void;
-
-  /**
-   * Triggered when values of reference from props have changed. Allow to update state after a prop change.
-   * <b>null</b> means no change.
-   */
-  onPropsChangeReducer?: OnPropsChangeReducer<S, P>;
+  onPropsChange?: {
+    getDeps: (p: P) => any[];
+    effects?: (ctx: OnPropsChangeEffectsContext<S, P>) => S;
+    sideEffects?: (ctx: OnPropsChangeSideEffectsContext<S, P, A>) => void;
+  };
 
   /**
    * The callback function called if an asynchronous function succeeded and a success messsage is defined.
@@ -339,7 +388,12 @@ export type StateDecoratorOptions<S, A, P = {}> = {
   notifyWarning?: NotifyFunc;
 
   /**
-   * Initial actions. They are executed outside of a side effect to trigger asynchronous actions.
+   * Initial actions.
    */
-  onMount?: (actions: A, props: P, state: S) => void;
+  onMount?: (ctx: OnMountInvocationContext<S, A, P>) => void;
+
+  /**
+   * Compute derived state
+   */
+  derivedState?: DerivedStateOption<S, P, DS>;
 };

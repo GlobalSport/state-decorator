@@ -1,5 +1,5 @@
 import TodoContainer, { getInitialState, Filter, todoActions } from '../../src/todo/Todos';
-import { testSyncAction } from '../../../src/base';
+import { testSyncAction } from '../../../../src/base';
 
 describe('Todo', () => {
   it('onCreate', () => {
