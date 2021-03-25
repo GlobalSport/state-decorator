@@ -26,7 +26,7 @@ The StateDecorator is a set of Reacts hook that manages a complex component stat
 - New derived state support
 - Updated terminology (less redux, more consistent)
 - Action context: no more arguments order issue
-- See migration details in [migration] section.
+- See migration details in [migration section](#migration).
 
 # Getting started
 
@@ -384,11 +384,11 @@ action: {
 }
 ```
 
-If **null** is returned by **getPromise**, the action is not executed. It allows to not cancel an action depending on state or props etc.
+- If **null** is returned by **getPromise**, the action is not executed. It allows to not cancel an action depending on state or props etc.
 
-**getGetpromise** is a shortcut that sets the conflict policy to **ConflictPolicy.REUSE** and **retryCount** to 3.
+- **getGetPromise** is a shortcut that sets the conflict policy to **ConflictPolicy.REUSE** and **retryCount** to 3.
 
-To cancel any effects just return **null** instead of new state in **xxxEffects**.
+- To cancel any effects just return **null** instead of new state in **xxxEffects**.
 
 ## Asynchronous action lifecycle
 
