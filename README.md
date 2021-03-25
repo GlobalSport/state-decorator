@@ -482,8 +482,7 @@ It can takes the following values (use **ConflictPolicy** enum), choose the one 
   - A **getPromiseId** function must be provided to assign an identifier to each call from call arguments.
   - The **isLoading** function will return the loading state for each promise identifier.
 
-<!--
-[![Edit ConflictPolicy](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/conflictpolicy-rgqhq?fontsize=14&hidenavigation=1&module=%2Fsrc%2FConflictPolicy.tsx&theme=dark) -->
+[![Edit ConflictPolicy](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/conflictpolicy-v6-fhqco)
 
 ## Retry
 
@@ -563,7 +562,7 @@ export const actionsAbort: StoreActions<State, Actions, Props> = {
 };
 ```
 
-[![Edit Abort](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/blissful-lake-dilyo?fontsize=14&hidenavigation=1&module=%2Fsrc%2FAbort.tsx&theme=dark)
+[![Edit Abort](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/abort-v6-uvnl7)
 
 ## Call actions on mount
 
@@ -762,6 +761,8 @@ describe('Todo', () => {
 });
 ```
 
+[![Edit Todo](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/todo-forked-ml0z6?file=/src/TodoApp.tsx)
+
 ## API
 
 ### MockStore
@@ -826,12 +827,76 @@ You can new store in new code.
 
 ### Code
 
-TBD
+#### Types
 
-### Tests
+| Before                | After        |
+| --------------------- | ------------ |
+| StateDecoratorActions | StoreActions |
+| StateDecoratorOptions | StoreOptions |
+
+### Hooks
+
+Choose one of _useLocalStore_, _useStore_, _useBindStore_ or _useStoreSlice_.
+
+### Actions
+
+| Before            | After             |
+| ----------------- | ----------------- |
+| action            | effects           |
+| onActionDone      | sideEffects       |
+| debounceTimeout   | Removed           |
+| preReducer        | preEffects        |
+| optimisticReducer | optimisticEffects |
+| reducer           | effects           |
+| errorReducer      | errorEffects      |
+| onDone            | sideEffects       |
+| onFail            | errorSideEffects  |
+| promise           | getPromise        |
+| promiseGet        | getGetPromise     |
+| successMessage    | getSuccessMessage |
+| errorMessage      | getErrorMessage   |
+
+### Options
+
+#### onMount
+
+```typescript
+- const options: StateDecoratorOptions<S, A, P> = {
+-   onMount: (actions, props, state) => { /* initial side effects */ }
+- };
+
++ const options: StoreOptions<S, A, P> = {
++   onMount: ({s, p, a}) => { /* initial side effects */ }
++} ;
+```
+
+#### Props changes
+
+```diff
+- const options: StateDecoratorOptions<S, A, P> = {
+-   getPropsRef: (p) => [],
+-   onPropsChangeReducer: (s, p, indices) => ({ ...s /* new state */ }),
+-   onPropsChange: (s, p, a, indices) => {
+-     /* side effects */
+-   },
+- };
+
++ const options: StoreOptions<S, A, P> = {
++   onPropsChange: {
++     getDeps: (p) => [],
++     effects: ({ s, p, indices }) => ({ ...s /* new state */ }),
++     sideEffects: ({ s, p, a, indices }) => {
++       /* side effects */
++     },
++   },
++} ;
+```
+
+### Reuse v5 tests with v6 actions
 
 ```diff
 - import { testSyncAction, testAsyncAction } from 'state-decorator';
+
 + import { testV6SyncAction, testV6AsyncAction } from 'state-decorator/v5';
 ```
 
@@ -845,7 +910,7 @@ TBD
 
 Show various ways of handling conflicting actions, ie. asynchronous actions triggered when a previous action of same type is still ongoing.
 
-[![Edit ConflictPolicy](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/conflictpolicy-rgqhq?fontsize=14&hidenavigation=1&module=%2Fsrc%2FConflictPolicy.tsx&theme=dark)
+[![Edit ConflictPolicy](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/conflictpolicy-v6-fhqco)
 
 ## Parallel actions
 
