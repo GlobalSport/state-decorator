@@ -252,9 +252,9 @@ const store = createStore(getInitialState, actionsImpl, {
 });
 ```
 
-# Derived values
+# Derived state
 
-A derived value is a value that can be deduced from state and props.
+A derived state is a state that can be deduced from state and props.
 
 ```typescript
 import { createStore } from 'state-decorator';
@@ -302,10 +302,10 @@ export function App(props: Props) {
 
 ## Recipes
 
-- Derived values are the same as one _useMemo_ per derived value.
-- If the derived value is needed in one component only, it may prove better to use a _useMemo_ in this component to save memory when it is unmounted and store not.
+- Derived state is the same as using _useMemo_ pin sub component.
+- If the derived state is needed in one component only, it may prove better to use a _useMemo_ in this component to save memory when it is unmounted and store not.
 - In general, do **not** compute derived values directly in state, it's error prone as you can forget some places or implement different logic.
-- Use derived value especially if this value is shared
+- Use derived state especially if this state is shared accross several sub components
 
 # Actions
 
@@ -314,8 +314,6 @@ The StateDecorator is taking a list of actions and decorate them to inject state
 **Warning**: The actions are considered static and cannot be changed dynamically. Use state/props in your actions implementation to have different logic depending on some inputs.
 
 # Synchronous actions
-
-A simple synchronous action is a function that takes the current state and an optional list of parameters and returns a new state or _null_ if there's no change.
 
 ## Short form
 
@@ -844,7 +842,7 @@ Choose one of _useLocalStore_, _useStore_, _useBindStore_ or _useStoreSlice_.
 | ----------------- | ----------------- |
 | action            | effects           |
 | onActionDone      | sideEffects       |
-| debounceTimeout   | Removed           |
+| debounceTimeout   | **Removed**       |
 | preReducer        | preEffects        |
 | optimisticReducer | optimisticEffects |
 | reducer           | effects           |
@@ -860,14 +858,30 @@ Choose one of _useLocalStore_, _useStore_, _useBindStore_ or _useStoreSlice_.
 
 #### onMount
 
-```typescript
+```diff
 - const options: StateDecoratorOptions<S, A, P> = {
 -   onMount: (actions, props, state) => { /* initial side effects */ }
 - };
 
 + const options: StoreOptions<S, A, P> = {
-+   onMount: ({s, p, a}) => { /* initial side effects */ }
++   onMount: ({state, props, actions}) => { /* initial side effects */ }
 +} ;
+```
+
+#### logEnabled
+
+```diff
+- function Container(props: Props) {
+-   const { state, actions } = useStateDecorator(getInitialState, actionsImpl, props, { logEnabled: true });
+-   return <div />;
+- }
+
++ import { logDetailedEffects } from 'state-decorator/middlewares';
++
++ function Container(props: Props) {
++   const { state, actions } = useLocalStore(getInitialState, actionsImpl, props, {}, [logDetailedEffects()]);
++   return <div />;
++ }
 ```
 
 #### Props changes
