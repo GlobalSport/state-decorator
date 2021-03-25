@@ -839,7 +839,7 @@ TBD
 
 ## TodoApp
 
-[![Edit Todo](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/todo-s2qpu?fontsize=14&hidenavigation=1&module=%2Fsrc%2FTodoApp.tsx&theme=dark)
+[![Edit Todo](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/todo-forked-ml0z6?file=/src/TodoApp.tsx)
 
 ## Conflicting actions
 
