@@ -129,7 +129,7 @@ export type WarningNotifyFunc = {
 
 export type InvocationContext<S, F extends (...args: any[]) => any, P> = ContextBase<S, P> & {
   args: Parameters<F>;
-  promiseId?: string;
+  promiseId: string;
 };
 
 export type EffectsInvocationContext<S, F extends (...args: any[]) => any, P> = InvocationContext<S, F, P> & {

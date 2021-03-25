@@ -358,7 +358,7 @@ const actions: StoreActions<State, Actions> = {
 };
 ```
 
-<!-- [![See Debounce demo](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/debounce-91lwo?autoresize=1&fontsize=14&hidenavigation=1&module=%2Fsrc%2FDebounce.tsx&theme=dark) -->
+[![See Debounce demo](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/debounce-forked-tmk2j?file=/src/Debounce.tsx)
 
 ## Cancel effects
 
