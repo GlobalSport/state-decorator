@@ -300,23 +300,3 @@ export function createMockStoreAction<S, A extends DecoratedActions, F extends (
     },
   };
 }
-
-// function addAlias(ctx: any, propName: string, aliasName: string) {
-//   if (ctx[aliasName] == null && ctx[propName] != null) {
-//     ctx[aliasName] = ctx[propName];
-//   } else if (ctx[aliasName] == null && ctx[propName] != null) {
-//     ctx[propName] = ctx[aliasName];
-//   }
-// }
-
-// function decorateTestAction<A extends (ctx: any) => any>(action: A): A {
-//   return ((ctx: any) => {
-//     addAlias(ctx, 'state', 's');
-//     addAlias(ctx, 'props', 'p');
-//     addAlias(ctx, 'actions', 'a');
-//     addAlias(ctx, 'result', 'res');
-//     addAlias(ctx, 'error', 'err');
-
-//     return action(ctx);
-//   }) as A;
-// }
