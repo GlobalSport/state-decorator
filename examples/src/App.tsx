@@ -1,4 +1,5 @@
 import React from 'react';
+import Parallel from './Parallel';
 import { MyContainer } from './sample';
 import ShapesApp from './Shapes';
 import TodoContainer from './Todos';
@@ -17,16 +18,21 @@ import TodoContainer from './Todos';
 export default function App() {
   return (
     <div>
-      <section>
+      {/* <section>
         <h1>Share state</h1>
         <MyContainer />
-      </section>
+      </section> */}
       {/* <section>
         <h1>Todo</h1>
         <TodoContainer />
       </section> */}
 
       {/* <ShapesApp /> */}
+
+      <section>
+        <h1>Parallel actions</h1>
+        <Parallel />
+      </section>
 
       {/* <section>
           <h1>Abort action</h1>

@@ -785,6 +785,32 @@ export function decorateAsyncAction<S, F extends (...args: any[]) => any, A exte
   };
 }
 
+/** @internal */
+export function isLoadingImpl<A, K extends keyof A>(loadingMap: InternalLoadingMap<A>, ...props: (K | [K, string])[]) {
+  return props.some((propIn) => {
+    let actionName: keyof A = null;
+    let promiseId = DEFAULT_PROMISE_ID;
+
+    if (Array.isArray(propIn)) {
+      [actionName, promiseId = DEFAULT_PROMISE_ID] = propIn;
+    } else {
+      actionName = propIn;
+    }
+
+    const res = loadingMap[actionName];
+
+    if (res == null) {
+      return false;
+    }
+
+    if (res[promiseId] != null) {
+      return res[promiseId];
+    }
+
+    return false;
+  });
+}
+
 // ------------------------------
 //
 // Conflict management

@@ -32,6 +32,7 @@ import {
   onPropChange,
   runMiddlewares,
   buildLoadingMap,
+  isLoadingImpl,
 } from './impl';
 
 import {
@@ -57,6 +58,7 @@ import {
   ContextState,
   ConflictPolicy,
   Middleware,
+  AbortActionCallback,
 } from './types';
 
 export {
@@ -64,6 +66,7 @@ export {
   StoreActions,
   InternalLoadingMap as LoadingMap,
   StoreOptions,
+  LoadingParallelMap,
   AsyncActionPromise as AsynchActionPromise,
   InvocationContext,
   GetPromiseInvocationContext,
@@ -82,34 +85,10 @@ export {
   GlobalConfig,
   Middleware,
   setGlobalConfig,
+  AbortActionCallback,
 };
 
-export function isLoadingImpl<A, K extends keyof A>(loadingMap: InternalLoadingMap<A>, ...props: (K | [K, string])[]) {
-  return props.some((propIn) => {
-    let actionName: keyof A = null;
-    let promiseId = DEFAULT_PROMISE_ID;
-
-    if (Array.isArray(propIn)) {
-      [actionName, promiseId = DEFAULT_PROMISE_ID] = propIn;
-    } else {
-      actionName = propIn;
-    }
-
-    const res = loadingMap[actionName];
-
-    if (res == null) {
-      return false;
-    }
-
-    if (res[promiseId] != null) {
-      return res[promiseId];
-    }
-
-    return false;
-  });
-}
-
-type IsLoadingFunc<A, K extends keyof A> = (...props: K[]) => boolean;
+export type IsLoadingFunc<A> = (...props: (keyof A | [keyof A, string])[]) => boolean;
 type StateListenerUnregister = () => void;
 
 export type StoreApi<S, A, P, DS = {}> = {
@@ -123,10 +102,10 @@ export type StoreApi<S, A, P, DS = {}> = {
   destroy: () => void;
   abortAction: (actionName: keyof A, promiseId?: string) => boolean;
   addStateListener: (listener: StateListener<S, DS, A>) => StateListenerUnregister;
-  isLoading: IsLoadingFunc<A, any>;
+  isLoading: IsLoadingFunc<A>;
 };
 
-export type StateListener<S, DS, A> = (s: S, derivedState: DS, isLoading: IsLoadingFunc<A, any>) => void;
+export type StateListener<S, DS, A> = (s: S, derivedState: DS, isLoading: IsLoadingFunc<A>) => void;
 
 // =============================
 //
@@ -340,8 +319,8 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
     return acc;
   }, {} as A);
 
-  function isLoading(actionName: keyof A, promiseId: string = DEFAULT_PROMISE_ID) {
-    return isLoadingImpl(loadingMapRef.current, actionName, promiseId);
+  function isLoading<K extends keyof A>(...props: (K | [K, string])[]) {
+    return isLoadingImpl(loadingMapRef.current, ...props);
   }
 
   function abortAction(actionName: keyof A, promiseId: string = DEFAULT_PROMISE_ID) {
@@ -419,7 +398,7 @@ export function useStoreSlice<
   A extends DecoratedActions,
   P,
   DS,
-  Selector extends (s: S & DS, a: A, isLoading: IsLoadingFunc<A, any>) => any
+  Selector extends (s: S & DS, a: A, isLoading: IsLoadingFunc<A>) => any
 >(store: StoreApi<S, A, P, DS>, slicerFunc: Selector, comparator: ComparatorFunction = null): ReturnType<Selector> {
   const [, forceRefresh] = useReducer((s) => 1 - s, 0);
   const sliceRef = useRef<ReturnType<Selector>>(slicerFunc(store.state, store.actions, store.isLoading));
@@ -464,7 +443,10 @@ export function useStore<S, A extends DecoratedActions, P, DS>(store: StoreApi<S
   useEffect(() => {
     return () => store.destroy();
   }, []);
-  return useStoreSlice(store, (s, a, isLoading) => ({ isLoading, state: s, actions: a }));
+  return {
+    ...useStoreSlice(store, (s, a, isLoading) => ({ isLoading, state: s, actions: a })),
+    abortAction: store.abortAction,
+  };
 }
 
 /**
