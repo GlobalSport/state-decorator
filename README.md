@@ -838,6 +838,8 @@ Choose one of _useLocalStore_, _useStore_, _useBindStore_ or _useStoreSlice_.
 
 ### Actions
 
+- rename action properties
+
 | Before            | After             |
 | ----------------- | ----------------- |
 | action            | effects           |
@@ -853,6 +855,28 @@ Choose one of _useLocalStore_, _useStore_, _useBindStore_ or _useStoreSlice_.
 | promiseGet        | getGetPromise     |
 | successMessage    | getSuccessMessage |
 | errorMessage      | getErrorMessage   |
+
+- replace argumtents by action context
+
+```diff
+- const actions: StateDecoratorActions<S, A, P> = {
++ const actions: StoreActions<S, A, P> = {
+-   loadList: {
+-     promise: ([id], s, p, a) => {
++     getPromise: ({ s, args: [id], p, a }) => {
+-       /* ... */
+-     },
+-     reducer: (s, res) => ({
++     effects: ({ s, res }) => ({
+-       /* ... */
+-     }),
+-     errorReducer: (s, err) => ({
++     errorEffects: ({ s, err }) => ({
+-       /* ... */
+-     }),
+-   },
+- };
+```
 
 ### Options
 
