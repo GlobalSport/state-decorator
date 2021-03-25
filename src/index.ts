@@ -130,12 +130,6 @@ export type StateListener<S, DS, A> = (s: S, derivedState: DS, isLoading: IsLoad
 
 // =============================
 //
-// OPTIMISTIC EFFECTS
-//
-// =============================
-
-// =============================
-//
 // STORE
 //
 // =============================
