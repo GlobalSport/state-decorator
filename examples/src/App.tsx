@@ -1,4 +1,5 @@
 import React from 'react';
+import ConflictPolicies from './ConflictPolicies';
 import Parallel from './Parallel';
 import { MyContainer } from './sample';
 import ShapesApp from './Shapes';
@@ -32,6 +33,11 @@ export default function App() {
       <section>
         <h1>Parallel actions</h1>
         <Parallel />
+      </section>
+
+      <section>
+        <h1>Conflict policy</h1>
+        <ConflictPolicies />
       </section>
 
       {/* <section>

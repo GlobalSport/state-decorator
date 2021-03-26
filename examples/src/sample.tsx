@@ -197,7 +197,7 @@ export function StateContainer(props: MyProps) {
 export function StateView() {
   const logNodeRef = useRef<HTMLDivElement>();
 
-  const state = useStoreSlice(myStore, (s) => s);
+  const { state } = useStoreSlice(myStore, (i) => i);
   return (
     <FlashingBox>
       <div style={{ display: 'flex' }}>
@@ -231,7 +231,7 @@ const Child2 = React.memo(function Child2() {
 });
 
 function List() {
-  const slice = useStoreSlice(myStore, (s, a) => ({ list: s.list, addItem: a.addItem }));
+  const slice = useStoreSlice(myStore, ({ s, a }) => ({ list: s.list, addItem: a.addItem }));
 
   return (
     <FlashingBox>
@@ -246,7 +246,7 @@ function List() {
 }
 
 function Prop1() {
-  const slice = useStoreSlice(myStore, (s, a) => ({ item: s.prop1, setItem: a.setProp1 }));
+  const slice = useStoreSlice(myStore, ({ s, a }) => ({ item: s.prop1, setItem: a.setProp1 }));
 
   return (
     <FlashingBox>
@@ -261,7 +261,7 @@ function Prop1() {
 }
 
 function LoadList() {
-  const { loading, loadList } = useStoreSlice(myStore, (s, a, isLoading) => ({
+  const { loading, loadList } = useStoreSlice(myStore, ({ a, isLoading }) => ({
     loadList: a.loadList,
     loading: isLoading('loadList'),
   }));
@@ -277,7 +277,7 @@ function LoadList() {
 }
 
 function LoadFail() {
-  const { loading, load } = useStoreSlice(myStore, (s, a, isLoading) => ({
+  const { loading, load } = useStoreSlice(myStore, ({ a, isLoading }) => ({
     load: a.loadAndFail,
     loading: isLoading('loadAndFail'),
   }));
@@ -292,7 +292,7 @@ function LoadFail() {
   );
 }
 function LoadCancel() {
-  const { loading, load } = useStoreSlice(myStore, (s, a, isLoading) => ({
+  const { loading, load } = useStoreSlice(myStore, ({ a, isLoading }) => ({
     load: a.loadCancel,
     loading: isLoading('loadCancel'),
   }));
@@ -308,7 +308,7 @@ function LoadCancel() {
 }
 
 function Prop2() {
-  const slice = useStoreSlice(myStore, (s, a) => ({ item: s.prop2, setItem: a.setProp2 }));
+  const slice = useStoreSlice(myStore, ({ s, a }) => ({ item: s.prop2, setItem: a.setProp2 }));
 
   return (
     <FlashingBox>
@@ -322,7 +322,7 @@ function Prop2() {
   );
 }
 function Prop3() {
-  const slice = useStoreSlice(myStore, (s, a) => ({ item: s.prop3, setItem: a.setProp3 }));
+  const slice = useStoreSlice(myStore, ({ s, a }) => ({ item: s.prop3, setItem: a.setProp3 }));
 
   return (
     <FlashingBox>

@@ -34,6 +34,7 @@ import {
   OnPropsChangeEffectsContext,
   ContextState,
   Middleware,
+  MiddlewareFactory,
 } from './types';
 
 export type SetStateFunc<S, A, P> = (
@@ -183,7 +184,7 @@ export type GlobalConfig = {
    * Default middlewares. Store middleware array will be concatenated with this one.
    * By default contains only the optimistic middleware.
    */
-  defaultMiddlewares: Middleware<any, any, any>[];
+  defaultMiddlewares: MiddlewareFactory<any, any, any>[];
 };
 
 /** @internal */
