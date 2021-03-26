@@ -1,10 +1,17 @@
-import type { AsyncAction, DecoratedActions, EffectsType, Middleware, MiddlewareStoreContext } from './types';
+import type {
+  AsyncAction,
+  DecoratedActions,
+  EffectsType,
+  Middleware,
+  MiddlewareFactory,
+  MiddlewareStoreContext,
+} from './types';
 import isEqual from 'fast-deep-equal';
 import { CloneFunction, globalConfig, isSimpleSyncAction } from './impl';
 
 export function logEffects<S, A extends DecoratedActions, P>(
   log: (msg: string) => void = console.log
-): Middleware<S, A, P> {
+): MiddlewareFactory<S, A, P> {
   const f = () => {
     const logger = log;
     let storeName = '';
@@ -26,7 +33,7 @@ export function logEffects<S, A extends DecoratedActions, P>(
     return middleware;
   };
 
-  return f();
+  return f;
 }
 
 export type Logger = {
@@ -36,8 +43,10 @@ export type Logger = {
   groupEnd: (...args: any[]) => void;
 };
 
-export function logDetailedEffects<S, A extends DecoratedActions, P>(logger: Logger = console): Middleware<S, A, P> {
-  const f = () => {
+export function logDetailedEffects<S, A extends DecoratedActions, P>(
+  logger: Logger = console
+): MiddlewareFactory<S, A, P> {
+  return () => {
     let storeName = '';
 
     const console = logger;
@@ -195,8 +204,6 @@ export function logDetailedEffects<S, A extends DecoratedActions, P>(logger: Log
 
     return middleware;
   };
-
-  return f();
 }
 
 // ------------------------------
@@ -227,7 +234,9 @@ type OptimisticData<S, A> = {
   shouldRecordHistory: boolean;
 };
 
-export function optimisticActions<S, A extends DecoratedActions, P>(cloneFunc?: CloneFunction): Middleware<S, A, P> {
+export function optimisticActions<S, A extends DecoratedActions, P>(
+  cloneFunc?: CloneFunction
+): MiddlewareFactory<S, A, P> {
   function getMiddleWare() {
     let storeContext: MiddlewareStoreContext<S, A, P> = null;
 
@@ -434,5 +443,5 @@ export function optimisticActions<S, A extends DecoratedActions, P>(cloneFunc?: 
     };
     return middleware;
   }
-  return getMiddleWare();
+  return getMiddleWare;
 }

@@ -110,7 +110,7 @@ function ShapesApp() {
 
 // memo nothing to not refresh on state change
 const ShapesAppView = memo(function ShapesAppView() {
-  const { addShape } = useStoreSlice(store, (s, actions) => ({ addShape: actions.addShape }));
+  const { addShape } = useStoreSlice(store, ({ s, actions }) => ({ addShape: actions.addShape }));
 
   return (
     <div>
@@ -125,7 +125,7 @@ const ShapesAppView = memo(function ShapesAppView() {
 });
 
 function Board() {
-  const { addShape } = useStoreSlice(store, (s, actions) => ({ addShape: actions.addShape }));
+  const { addShape } = useStoreSlice(store, ({ actions }) => ({ addShape: actions.addShape }));
 
   return (
     <div
@@ -138,7 +138,7 @@ function Board() {
 }
 
 function ShapeList() {
-  const { ids } = useStoreSlice(store, (s) => ({ ids: s.shapeIds }));
+  const { ids } = useStoreSlice(store, ({ s }) => ({ ids: s.shapeIds }));
 
   return (
     <Fragment>
@@ -158,7 +158,7 @@ const preventDefault = (e) => {
 
 // memo the id
 const Shape = memo(function Shape(p: ShapeProps) {
-  const { shape, isSelected, move, select } = useStoreSlice(store, (s, a) => ({
+  const { shape, isSelected, move, select } = useStoreSlice(store, ({ s, a }) => ({
     shape: s.shapeMap[p.id],
     isSelected: s.selectedId === p.id,
     move: a.moveShape,
@@ -323,7 +323,7 @@ const Shape2 = memo(function Shape2(p: ShapeProps) {
 });
 
 function ProperySheet() {
-  const { shape, move, setColor, selectedId } = useStoreSlice(store, (s, a) => ({
+  const { shape, move, setColor, selectedId } = useStoreSlice(store, ({ s, a }) => ({
     selectedId: s.selectedId,
     shape: s.selectedId ? s.shapeMap[s.selectedId] : null,
     move: a.moveShape,

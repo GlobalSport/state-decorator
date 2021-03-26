@@ -188,6 +188,7 @@ export type MiddlewareStoreContext<S, A extends DecoratedActions, P> = {
   actions: StoreActions<S, A, P>;
   options: StoreOptions<S, A, P, any>;
 };
+export type MiddlewareFactory<S, A extends DecoratedActions, P> = () => Middleware<S, A, P>;
 
 export type Middleware<S, A extends DecoratedActions, P> = {
   init: (storeContext: MiddlewareStoreContext<S, A, P>) => void;

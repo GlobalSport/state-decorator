@@ -59,6 +59,7 @@ import {
   ConflictPolicy,
   Middleware,
   AbortActionCallback,
+  MiddlewareFactory,
 } from './types';
 
 export {
@@ -105,7 +106,14 @@ export type StoreApi<S, A, P, DS = {}> = {
   isLoading: IsLoadingFunc<A>;
 };
 
-export type StateListener<S, DS, A> = (s: S, derivedState: DS, isLoading: IsLoadingFunc<A>) => void;
+export type StateListenerContext<S, DS, A> = Pick<
+  StoreApi<S, A, any, DS>,
+  'state' | 'actions' | 'loading' | 'isLoading' | 'abortAction'
+> & {
+  s: S & DS;
+  a: A;
+};
+export type StateListener<S, DS, A> = (ctx: StateListenerContext<S, DS, A>) => void;
 
 // =============================
 //
@@ -124,7 +132,7 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
   getInitialState: (p: P) => S,
   actionsImpl: StoreActions<S, A, P>,
   options: StoreOptions<S, A, P, DS> = {},
-  storeMiddlewares: Middleware<S, A, P>[] = null
+  storeMiddlewares: MiddlewareFactory<S, A, P>[] = null
 ): StoreApi<S, A, P, DS> {
   const stateRef = createRef<S>();
   const derivedStateRef = createRef<DerivedState<DS>>();
@@ -136,7 +144,7 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
   const conflictActionsRef = createRef<ConflictActionsMap<A>>();
   const initializedRef = createRef(false);
 
-  const middlewares: Middleware<S, A, P>[] = (globalConfig.defaultMiddlewares || []).concat(storeMiddlewares || []);
+  const middlewaresRef = createRef<Middleware<S, A, P>[]>([]);
 
   let stateListeners: Record<string, StateListener<S, DS, A>> = {};
   let stateListenerCount = 0;
@@ -150,8 +158,23 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
   }
 
   function notifyStateListeners(newState: S, derivedState: DS) {
+    const s = {
+      ...newState,
+      ...derivedState,
+    };
+
+    const ctx: StateListenerContext<S, DS, A> = {
+      s,
+      isLoading,
+      abortAction,
+      state: s,
+      a: actionsRef.current,
+      actions: actionsRef.current,
+      loading: isAnyLoading(),
+    };
+
     Object.keys(stateListeners).forEach((listenerId) => {
-      stateListeners[listenerId](newState, derivedState, isLoading);
+      stateListeners[listenerId](ctx);
     });
   }
 
@@ -181,7 +204,16 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
         deps: {},
       };
 
-      middlewares?.forEach((m) => {
+      // init middlewares
+      middlewaresRef.current = [];
+      const mapper = (m: MiddlewareFactory<S, A, P>) => {
+        middlewaresRef.current.push(m());
+      };
+      globalConfig.defaultMiddlewares?.forEach(mapper);
+      storeMiddlewares?.forEach(mapper);
+      // end init
+
+      middlewaresRef.current.forEach((m) => {
         m.init?.({
           options,
           actions: actionsImpl,
@@ -214,9 +246,11 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
     stateListeners = {};
     initializedRef.current = false;
 
-    middlewares?.forEach((m) => {
+    middlewaresRef.current.forEach((m) => {
       m.destroy?.();
     });
+
+    middlewaresRef.current = [];
   }
 
   function setState(
@@ -241,7 +275,7 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
       : false;
 
     const { newState, newLoading } = runMiddlewares(
-      middlewares,
+      middlewaresRef.current,
       stateRef.current,
       newStateIn,
       oldLoading,
@@ -335,6 +369,13 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
     return res;
   }
 
+  function isAnyLoading() {
+    if (initializedRef.current) {
+      return Object.keys(loadingMapRef.current).length > 0;
+    }
+    return null;
+  }
+
   return {
     setProps,
     addStateListener,
@@ -355,10 +396,7 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
       return null;
     },
     get loading() {
-      if (initializedRef.current) {
-        return Object.keys(loadingMapRef.current).length > 0;
-      }
-      return null;
+      return isAnyLoading();
     },
     get loadingMap() {
       if (initializedRef.current) {
@@ -398,16 +436,29 @@ export function useStoreSlice<
   A extends DecoratedActions,
   P,
   DS,
-  Selector extends (s: S & DS, a: A, isLoading: IsLoadingFunc<A>) => any
+  Selector extends (ctx: StateListenerContext<S, DS, A>) => any
 >(store: StoreApi<S, A, P, DS>, slicerFunc: Selector, comparator: ComparatorFunction = null): ReturnType<Selector> {
   const [, forceRefresh] = useReducer((s) => 1 - s, 0);
-  const sliceRef = useRef<ReturnType<Selector>>(slicerFunc(store.state, store.actions, store.isLoading));
+
+  const sliceRef = useRef<ReturnType<Selector>>(null);
+  if (sliceRef.current === null) {
+    const s = store.state;
+    sliceRef.current = slicerFunc({
+      s,
+      state: s,
+      a: store.actions,
+      actions: store.actions,
+      loading: store.loading,
+      isLoading: store.isLoading,
+      abortAction: store.abortAction,
+    });
+  }
 
   useLayoutEffect(() => {
-    const unregister = store.addStateListener((s, ds, isLoading) => {
+    const unregister = store.addStateListener((ctx) => {
       let hasChanged = false;
 
-      const slice = slicerFunc({ ...s, ...ds }, store.actions, isLoading);
+      const slice = slicerFunc(ctx);
       const prevSlice = sliceRef.current;
       const compare = comparator || globalConfig.comparator;
 
@@ -444,7 +495,7 @@ export function useStore<S, A extends DecoratedActions, P, DS>(store: StoreApi<S
     return () => store.destroy();
   }, []);
   return {
-    ...useStoreSlice(store, (s, a, isLoading) => ({ isLoading, state: s, actions: a })),
+    ...useStoreSlice(store, (i) => i),
     abortAction: store.abortAction,
   };
 }
