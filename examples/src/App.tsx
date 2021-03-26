@@ -3,6 +3,7 @@ import ConflictPolicies from './ConflictPolicies';
 import Parallel from './Parallel';
 import { MyContainer } from './sample';
 import ShapesApp from './Shapes';
+import Slice from './Slice';
 import TodoContainer from './Todos';
 // import ConflictingActionsApp from './conflict/ConflictingActions';
 // import CounterContainer from './counter/Counter';
@@ -32,13 +33,18 @@ export default function App() {
 
       <section>
         <h1>Parallel actions</h1>
+        <Slice />
+      </section>
+
+      {/* <section>
+        <h1>Parallel actions</h1>
         <Parallel />
       </section>
 
       <section>
         <h1>Conflict policy</h1>
         <ConflictPolicies />
-      </section>
+      </section> */}
 
       {/* <section>
           <h1>Abort action</h1>

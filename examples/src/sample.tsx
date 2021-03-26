@@ -14,7 +14,7 @@ import { logDetailedEffects } from '../../src/middlewares';
 import { createStore, useStoreSlice, useStore, useBindStore } from '../../src';
 import { useRef } from 'react';
 import { immerizeActions } from './immerizeActions';
-import { FlashingBox } from './commons';
+import FlashingBox from './FlashingBox';
 
 type MyState = {
   list: string[];
