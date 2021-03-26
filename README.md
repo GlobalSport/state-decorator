@@ -168,7 +168,7 @@ export function SubComponet() {
 }
 ```
 
-[![Edit Slice](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/slices-v6-eg471?file=/src/SliceView.tsx)
+[![Edit Slice](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/slices-v6-eg471?file=/src/SliceView.tsx){:target="\_blank"}
 
 # React hooks
 
