@@ -163,7 +163,7 @@ export function Container(prop: Props) {
 // Another component deeper in the component tree
 export function SubComponet() {
   // Component will be refreshed if, and only if, 'text' is changed (actions are stable)
-  const { text, loadList } = useStoreSlice(store, (s, a) => ({ text: s.text, loadList: a.loadList }));
+  const { text, loadList } = useStoreSlice(store, ({ s, a }) => ({ text: s.text, loadList: a.loadList }));
   return <div>{text}</div>;
 }
 ```
