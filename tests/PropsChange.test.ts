@@ -223,4 +223,134 @@ describe('onPropsChange', () => {
 
     console.warn = oldLog;
   });
+
+  describe('multiple prop changes', () => {
+    it('2 props changes, effects cumulating + side effects (at the end)', () => {
+      const callback = jest.fn();
+      const callback2 = jest.fn();
+      const callback3 = jest.fn();
+
+      let count = 0;
+
+      type DerivedState = {
+        derived: string;
+      };
+
+      const options: StoreOptions<State, Actions, Props, DerivedState> = {
+        derivedState: {
+          derived: {
+            getDeps: ({ s }) => [s.prop1, s.prop2],
+            get: ({ s }) => `${s.prop1}&${s.prop2}`,
+          },
+        },
+        onPropsChange: [
+          {
+            getDeps: (p) => [p.input],
+            effects: ({ s, p }) => ({ ...s, prop1: p.input }),
+            sideEffects: ({ s, indices }) => {
+              callback(`${s.prop1}-${s.prop2}`, indices);
+            },
+          },
+          {
+            getDeps: (p) => [p.input2],
+            effects: ({ s, p }) => ({ ...s, prop2: p.input2 }),
+            sideEffects: ({ s }) => {
+              callback2(`${s.prop1}-${s.prop2}`);
+            },
+          },
+          {
+            getDeps: (p) => [p.input2, p.input],
+            effects: ({ s }) => ({ ...s, prop1: `${s.prop1}_2`, prop2: `${s.prop2}_2` }),
+            sideEffects: ({ s, indices }) => {
+              callback3(`${s.prop1}-${s.prop2}`, indices);
+            },
+          },
+        ],
+      };
+
+      const store = createStore(getInitialState, actionsImpl, options);
+
+      store.init({
+        input: '',
+        input2: '',
+      });
+
+      store.setProps({
+        input: 'test',
+        input2: '',
+      });
+
+      expect(store.state).toEqual({
+        prop1: 'test_2',
+        prop2: '_2',
+        derived: `test_2&_2`,
+      });
+
+      // side effects are executed after all effects
+      expect(callback).toHaveBeenCalledWith(`test_2-_2`, [0]);
+      expect(callback2).not.toHaveBeenCalled();
+      expect(callback3).toHaveBeenCalledWith(`test_2-_2`, [1]);
+    });
+
+    it('2 props changes (not effects/side effects)', () => {
+      const callback = jest.fn();
+      const callback2 = jest.fn();
+
+      let count = 0;
+
+      type DerivedState = {
+        derived: string;
+      };
+
+      const options: StoreOptions<State, Actions, Props, DerivedState> = {
+        derivedState: {
+          derived: {
+            getDeps: ({ s }) => [s.prop1, s.prop2],
+            get: ({ s }) => `${s.prop1}&${s.prop2}`,
+          },
+        },
+        onPropsChange: [
+          {
+            getDeps: (p) => [p.input],
+            sideEffects: ({ s }) => {
+              callback(`${s.prop1}-${s.prop2}`);
+            },
+          },
+          {
+            getDeps: (p) => [p.input2],
+            effects: ({ s, p }) => ({ ...s, prop2: p.input2 }),
+            sideEffects: ({ s }) => {
+              callback2(`${s.prop1}-${s.prop2}`);
+            },
+          },
+          {
+            getDeps: (p) => [p.input, p.input2],
+            effects: ({ s }) => ({ ...s, prop1: `${s.prop1}_2`, prop2: `${s.prop2}_2` }),
+          },
+        ],
+      };
+
+      const store = createStore(getInitialState, actionsImpl, options);
+
+      store.init({
+        input: '',
+        input2: '',
+      });
+
+      store.setProps({
+        input: 'test',
+        input2: '',
+      });
+
+      expect(store.state).toEqual({
+        prop1: '_2',
+        prop2: '_2',
+        derived: `_2&_2`,
+      });
+
+      // side effects are executed after all effects
+      expect(callback).toHaveBeenCalledWith(`_2-_2`);
+      expect(callback2).not.toHaveBeenCalled();
+    });
+  });
 });

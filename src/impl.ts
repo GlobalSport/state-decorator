@@ -35,6 +35,7 @@ import {
   ContextState,
   Middleware,
   MiddlewareFactory,
+  OnPropsChangeOptions,
 } from './types';
 
 export type SetStateFunc<S, A, P> = (
@@ -392,10 +393,12 @@ export function buildOnMountInvocationContext<S, A, P>(
 export function buildOnPropChangeEffects<S, P>(
   stateRef: Ref<S>,
   propsRef: Ref<P>,
-  indices: number[]
+  indices: number[],
+  index: number
 ): OnPropsChangeEffectsContext<S, P> {
   const res = buildInvocationContextBase(stateRef, propsRef) as OnPropsChangeEffectsContext<S, P>;
   res.indices = indices;
+  res.index = index;
   return res;
 }
 
@@ -979,43 +982,79 @@ export function onPropChange<S, P, A, DS>(
   setState: SetStateFunc<S, A, P>
 ) {
   const hasDerivedState = options?.derivedState != null;
-  let propChanged = false;
-  let newState: S;
 
-  const getDeps = options.onPropsChange?.getDeps;
-  if (getDeps) {
-    const compare = globalConfig.comparator;
+  if (options.onPropsChange == null) {
+    //    derived values must be updated from props
+    setState(undefined, undefined, 'onPropsChange', 'effects', false, null, true);
+    return;
+  }
 
-    const oldValues = getDeps(oldProps);
-    const newValues = getDeps(propsRef.current);
+  let onPropsChanges: OnPropsChangeOptions<S, A, P>[];
 
-    const indices: number[] = [];
-    if (oldValues.length !== newValues.length) {
-      console.warn('options.onPropsChange.getDeps returned array must be stable (same length)');
-      propChanged = true;
-    } else {
-      oldValues.forEach((v, i) => {
-        if (!compare(v, newValues[i])) {
-          propChanged = true;
-          indices.push(i);
+  if (Array.isArray(options.onPropsChange)) {
+    onPropsChanges = options.onPropsChange;
+  } else {
+    onPropsChanges = [options.onPropsChange];
+  }
+
+  let stateChanged = false;
+
+  const newStateRef = createRef(stateRef.current);
+  const sideEffects: { index: number; indices: any[]; ctx: OnPropsChangeEffectsContext<S, P> }[] = [];
+
+  const compare = globalConfig.comparator;
+
+  onPropsChanges.forEach((propsChange, index) => {
+    const getDeps = propsChange.getDeps;
+    if (getDeps) {
+      let propChanged = false;
+
+      const oldValues = getDeps(oldProps);
+      const newValues = getDeps(propsRef.current);
+
+      const indices: number[] = [];
+      if (oldValues.length !== newValues.length) {
+        console.warn('options.onPropsChange.getDeps returned array must be stable (same length)');
+        propChanged = true;
+      } else {
+        oldValues.forEach((v, i) => {
+          if (!compare(v, newValues[i])) {
+            propChanged = true;
+            indices.push(i);
+          }
+        });
+      }
+
+      if (propChanged) {
+        const ctx = buildOnPropChangeEffects(newStateRef, propsRef, indices, index);
+        const newState = propsChange.effects?.(ctx) ?? null;
+
+        if (newState != null) {
+          stateChanged = true;
+          newStateRef.current = newState;
+          setState(newStateRef.current, undefined, 'onPropsChange', 'effects', false, ctx, true);
         }
-      });
-    }
 
-    if (propChanged) {
-      const ctx = buildOnPropChangeEffects(stateRef, propsRef, indices);
-      newState = options.onPropsChange.effects?.(ctx) ?? null;
-      setState(newState, undefined, 'onPropsChange', 'effects', false, ctx, true);
-      options.onPropsChange.sideEffects?.(addStateToContext(addContextActions(ctx, actionsRef), stateRef));
-    } else {
-      if (hasDerivedState) {
-        // derived values must be updated from props
-        setState(undefined, undefined, 'onPropsChange', 'effects', false, null, true);
+        if (propsChange.sideEffects) {
+          sideEffects.push({ index, indices, ctx });
+        }
       }
     }
-  } else if (hasDerivedState) {
-    // derived values must be updated from props
+  });
+
+  if (!stateChanged && hasDerivedState) {
+    //    derived values must be updated from props
     setState(undefined, undefined, 'onPropsChange', 'effects', false, null, true);
+  }
+
+  if (sideEffects.length > 0) {
+    sideEffects.forEach((sideEffectInfo) => {
+      const onPropChange = onPropsChanges[sideEffectInfo.index];
+      onPropChange.sideEffects({
+        ...addStateToContext(addContextActions(sideEffectInfo.ctx, actionsRef), newStateRef),
+        indices: sideEffectInfo.indices,
+      });
+    });
   }
 }
 

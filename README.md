@@ -237,6 +237,8 @@ The action context contain all the data needed to implement the actions. It cont
 
 # React on props changes
 
+## Getting started
+
 ```typescript
 import { createStore } from 'state-decorator';
 
@@ -244,13 +246,47 @@ const store = createStore(getInitialState, actionsImpl, {
   onPropsChange: {
     // list of depedencies that should trigger effects & side effects if changed
     getDeps: (p) => [p.id],
-    // state changes
-    effects: ({ state, props }) => ({ ...state, selectedId: props.id }),
+    // state changes, indices contains the indices of dependencies that have changed
+    effects: ({ state, props, indices }) => ({ ...state, selectedId: props.id }),
     // other changes (use short aliases)
     sideEffects: ({ p, a }) => {
       a.loadItem(p.id);
     },
   },
+});
+```
+
+## Multiple props change configuration
+
+The store can manage several props change configurations to have a better granularity.
+
+- Effects are triggered in order and reuse previously computed state
+
+- Side effects are invoked after all effects using computed state
+
+```typescript
+import { createStore } from 'state-decorator';
+
+const store = createStore(getInitialState, actionsImpl, {
+  onPropsChange: [
+    {
+      getDeps: (p) => [p.id],
+      effects: ({ state, props, indices }) => ({ ...state, selectedId: props.id }),
+    },
+    {
+      getDeps: (p) => [p.otherId],
+      sideEffects: ({ p, a }) => {
+        a.loadOtherItem(p.id);
+      },
+    },
+    {
+      getDeps: (p) => [p.otherProp],
+      effects: ({ state, props, indices }) => ({ ...state, otherProp: props.otherProp }),
+      sideEffects: ({ p, a }) => {
+        a.otherSideEffect(p.otherProp);
+      },
+    },
+  ],
 });
 ```
 

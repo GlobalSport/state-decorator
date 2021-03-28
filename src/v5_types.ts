@@ -27,12 +27,6 @@ export type AdvancedSynchAction<S, F extends (...args: any[]) => any, A, P> = {
    */
   action: (state: S, args: Parameters<F>, props: P) => S | null;
   /**
-   * Debounces the action if this parameter is defined.
-   * @see #debounceSideEffectsTimeout
-   * @deprecated
-   */
-  debounceTimeout?: number;
-  /**
    * Debounces the side effects if this parameter is defined.
    */
   debounceSideEffectsTimeout?: number;
@@ -223,13 +217,6 @@ export type StateDecoratorOptions<S, A, P = {}> = {
    * Show logs in the console in development mode.
    */
   logEnabled?: boolean;
-
-  /**
-   * List of action names that are marked as loading at initial time.
-   * As a render is done before first actions can be trigerred, some actions can be marked as loading at
-   * initial time.
-   */
-  initialActionsMarkedLoading?: (keyof A)[];
 
   /**
    * Get a list of values that will be use as reference values.

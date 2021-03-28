@@ -23,6 +23,7 @@ describe('Optimistic', () => {
 
   type Props = {
     propIn: string;
+    propIn2: string;
   };
 
   const actions: StoreActions<State, Actions, Props> = {
@@ -85,7 +86,7 @@ describe('Optimistic', () => {
 
   it('works as expected (success, basic)', async () => {
     const store = createStore(getInitialState, actions, options);
-    store.init({ propIn: '' });
+    store.init({ propIn: '', propIn2: '' });
 
     const p = store.actions.setOptimisticSuccess('value');
 
@@ -116,7 +117,7 @@ describe('Optimistic', () => {
 
   it('works as expected (failure, basic)', async () => {
     const store = createStore(getInitialState, actions, options);
-    store.init({ propIn: '' });
+    store.init({ propIn: '', propIn2: '' });
 
     const p = store.actions.setOptimisticFail('value');
 
@@ -147,7 +148,7 @@ describe('Optimistic', () => {
 
   it('works as expected (extra effects before failure)', () => {
     const store = createStore(getInitialState, actions, options);
-    store.init({ propIn: '' });
+    store.init({ propIn: '', propIn2: '' });
 
     const p = store.actions.setOptimisticFail('value');
 
@@ -182,7 +183,7 @@ describe('Optimistic', () => {
 
   it('works as expected (fail, onPropsChange)', () => {
     const store = createStore(getInitialState, actions, options);
-    store.init({ propIn: '' });
+    store.init({ propIn: '', propIn2: '' });
 
     const p = store.actions.setOptimisticFail('value');
 
@@ -200,6 +201,7 @@ describe('Optimistic', () => {
 
     store.setProps({
       propIn: 'propChanged',
+      propIn2: '',
     });
 
     return p.then(() => {
@@ -215,9 +217,59 @@ describe('Optimistic', () => {
     });
   });
 
+  it('works as expected (fail, 2 onPropsChanges)', () => {
+    const options: StoreOptions<State, Actions, Props, any> = {
+      onPropsChange: [
+        {
+          getDeps: (p) => [p.propIn],
+          effects: ({ s, p }) => ({ ...s, propProps: p.propIn }),
+        },
+        {
+          getDeps: (p) => [p.propIn2],
+          effects: ({ s, p }) => ({ ...s, propProps: s.propProps + '_' + p.propIn2 }),
+        },
+      ],
+    };
+
+    const store = createStore(getInitialState, actions, options);
+
+    store.init({ propIn: '', propIn2: '' });
+
+    const p = store.actions.setOptimisticFail('value');
+
+    expect(store.loading).toBeFalsy();
+
+    expect(store.state).toEqual({
+      propProps: '',
+      propSync: '',
+      propSimpleSync: '',
+      propAsync: '',
+      propAsyncParallel: {},
+      propOptimistic: 'value',
+      propError: '',
+    });
+
+    store.setProps({
+      propIn: 'propChanged',
+      propIn2: 'propChanged2',
+    });
+
+    return p.then(() => {
+      expect(store.state).toEqual({
+        propProps: 'propChanged_propChanged2',
+        propSimpleSync: '',
+        propSync: '',
+        propAsync: '',
+        propAsyncParallel: {},
+        propOptimistic: '', // cancelled
+        propError: 'value',
+      });
+    });
+  });
+
   it('works as expected (fail, parallel promises)', () => {
     const store = createStore(getInitialState, actions, options);
-    store.init({ propIn: '' });
+    store.init({ propIn: '', propIn2: '' });
 
     const p = store.actions.setAsyncParallel('value1', 'k1', true, 200);
 

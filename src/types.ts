@@ -347,6 +347,7 @@ export type StoreActions<S, A extends DecoratedActions, P = {}, FxRes = S> = {
 
 export type OnPropsChangeEffectsContext<S, P> = ContextBase<S, P> & {
   indices: number[];
+  index: number;
 };
 
 export type OnPropsChangeSideEffectsContext<S, P, A> = OnPropsChangeEffectsContext<S, P> & {
@@ -361,17 +362,19 @@ type DerivedStateOption<S, P, DS> = {
   };
 };
 
+export type OnPropsChangeOptions<S, A, P> = {
+  getDeps: (p: P) => any[];
+  effects?: (ctx: OnPropsChangeEffectsContext<S, P>) => S;
+  sideEffects?: (ctx: OnPropsChangeSideEffectsContext<S, P, A>) => void;
+};
+
 export type StoreOptions<S, A, P, DS = S> = {
   /**
    * The state decorator name. Use in debug traces to identify the useStateDecorator instance.
    */
   name?: string;
 
-  onPropsChange?: {
-    getDeps: (p: P) => any[];
-    effects?: (ctx: OnPropsChangeEffectsContext<S, P>) => S;
-    sideEffects?: (ctx: OnPropsChangeSideEffectsContext<S, P, A>) => void;
-  };
+  onPropsChange?: OnPropsChangeOptions<S, A, P> | OnPropsChangeOptions<S, A, P>[];
 
   /**
    * The callback function called if an asynchronous function succeeded and a success messsage is defined.
