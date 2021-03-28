@@ -326,7 +326,10 @@ export function optimisticActions<S, A extends DecoratedActions, P>(
         };
 
         if (action.actionName === 'onPropsChange') {
-          state = (storeContext.options.onPropsChange.effects as any)(ctx);
+          const onPropsChanges = Array.isArray(storeContext.options.onPropsChange)
+            ? storeContext.options.onPropsChange
+            : [storeContext.options.onPropsChange];
+          state = (onPropsChanges[ctx.index].effects as any)(ctx);
         } else if (isSimpleSyncAction(storeContext.actions[action.actionName])) {
           state = (storeContext.actions[action.actionName] as any)(ctx);
         } else {
