@@ -9,8 +9,18 @@ import type {
 import isEqual from 'fast-deep-equal';
 import { CloneFunction, globalConfig, isSimpleSyncAction } from './impl';
 
+function getNoopMiddleware<S, A extends DecoratedActions, P>(): Middleware<S, A, P> {
+  const middleware: Middleware<S, A, P> = {
+    init: () => {},
+    destroy: null,
+    effects: () => null,
+  };
+
+  return middleware;
+}
+
 export function logEffects<S, A extends DecoratedActions, P>(
-  log: (msg: string) => void = console.log
+  log: (...msg: any[]) => void = console.log
 ): MiddlewareFactory<S, A, P> {
   const f = () => {
     const logger = log;
@@ -18,14 +28,22 @@ export function logEffects<S, A extends DecoratedActions, P>(
 
     const middleware: Middleware<S, A, P> = {
       init: (storeContext) => {
-        storeName = storeContext.options?.name ? `[${storeContext.options?.name}] ` : '';
+        storeName = storeContext.options?.name ? `[${storeContext.options?.name}]` : '';
       },
       destroy: null,
       effects: (action, oldState, newState, loading: boolean) => {
         if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') {
-          logger(`
-            ${storeName}${action.name} ${action.type} ${newState === null ? 'no effect' : `new state: ${newState}`}
-            ${action.isAsync ? (action.type === 'preEffects' ? 'Promise cancelled' : `loading: ${loading}`) : ''}`);
+          logger(
+            storeName,
+            action.name,
+            action.type,
+            newState === null ? 'no effect' : newState,
+            action.isAsync
+              ? action.type === 'preEffects' && !loading
+                ? 'Promise cancelled'
+                : `loading: ${loading}`
+              : ''
+          );
         }
         return null;
       },
@@ -123,7 +141,9 @@ export function logDetailedEffects<S, A extends DecoratedActions, P>(
       };
 
       const middleware: Middleware<S, A, P> = {
-        init: null,
+        init: (storeContext) => {
+          storeName = storeContext.options?.name ? `[${storeContext.options?.name}]` : '';
+        },
         destroy: null,
         effects: (action, oldState, newState, loading) => {
           const getStr = (v: any) => {
@@ -194,14 +214,7 @@ export function logDetailedEffects<S, A extends DecoratedActions, P>(
       return middleware;
     }
 
-    const middleware: Middleware<S, A, P> = {
-      init: (storeContext) => {
-        storeName = storeContext.options?.name ? `[${storeContext.options?.name}]` : '';
-      },
-      destroy: null,
-      effects: () => null,
-    };
-
+    const middleware = getNoopMiddleware<S, A, P>();
     return middleware;
   };
 }
@@ -447,4 +460,79 @@ export function optimisticActions<S, A extends DecoratedActions, P>(
     return middleware;
   }
   return getMiddleWare;
+}
+
+export function devtools<S, A extends DecoratedActions, P>(): MiddlewareFactory<S, A, P> {
+  const getMiddleware = () => {
+    let extension: any;
+    try {
+      extension = (window as any).__REDUX_DEVTOOLS_EXTENSION__ || (window as any).top.__REDUX_DEVTOOLS_EXTENSION__;
+    } catch {}
+
+    if (!extension) {
+      return getNoopMiddleware<S, A, P>();
+    }
+
+    let devtools: any;
+    let unsubscribe: () => void;
+
+    const middleware: Middleware<S, A, P> = {
+      init(storeContext) {
+        devtools = extension.connect({ name: storeContext.options?.name ?? 'StateDecorator' });
+        devtools.init(storeContext.state);
+        let savedState: S = null;
+        const initialState: S = storeContext.state;
+
+        unsubscribe = devtools.subscribe((message: any) => {
+          if (message.type === 'DISPATCH' && message.state && message.payload?.type !== 'ROLLBACK') {
+            const newState = JSON.parse(message.state);
+            storeContext.setState(newState);
+          } else if (message.payload?.type === 'COMMIT') {
+            savedState = storeContext.state;
+          } else if (message.payload?.type === 'ROLLBACK') {
+            if (savedState != null) {
+              storeContext.setState(savedState);
+            }
+          } else if (message.payload?.type === 'RESET') {
+            storeContext.setState(initialState);
+          }
+        });
+      },
+
+      effects(ctx, oldState, newState) {
+        if (newState != null) {
+          const cleanCtx: any = {
+            ...ctx.context,
+          };
+
+          delete cleanCtx.a;
+          delete cleanCtx.s;
+          delete cleanCtx.p;
+          delete cleanCtx.res;
+          delete cleanCtx.err;
+
+          devtools.send(
+            {
+              type: `${ctx.name} ${ctx.type}`,
+              args: cleanCtx.args,
+              context: cleanCtx,
+            },
+            newState
+          );
+        }
+
+        return null; // no op on state
+      },
+
+      destroy() {
+        unsubscribe();
+        devtools.disconnect();
+        devtools = null;
+      },
+    };
+
+    return middleware;
+  };
+
+  return getMiddleware;
 }

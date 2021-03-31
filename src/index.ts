@@ -60,6 +60,7 @@ import {
   Middleware,
   AbortActionCallback,
   MiddlewareFactory,
+  MiddlewareStoreContext,
 } from './types';
 
 export {
@@ -190,6 +191,13 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
     }
   }
 
+  /** Middleware only: sets the internal state, recompute derived state and notify listeners */
+  function setInternalState(s: S) {
+    stateRef.current = s;
+    computeDerivedValues(stateRef, propsRef, derivedStateRef, options);
+    notifyStateListeners(stateRef.current, derivedStateRef.current.state);
+  }
+
   function init(p: P) {
     if (!initializedRef.current) {
       propsRef.current = p;
@@ -206,19 +214,22 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
 
       // init middlewares
       middlewaresRef.current = [];
+      const ctx: MiddlewareStoreContext<S, A, P> = {
+        options,
+        get state() {
+          return stateRef.current;
+        },
+        actions: actionsImpl,
+        setState: setInternalState,
+      };
       const mapper = (m: MiddlewareFactory<S, A, P>) => {
-        middlewaresRef.current.push(m());
+        const middleware = m();
+        middlewaresRef.current.push(middleware);
+        middleware.init?.(ctx);
       };
       globalConfig.defaultMiddlewares?.forEach(mapper);
       storeMiddlewares?.forEach(mapper);
       // end init
-
-      middlewaresRef.current.forEach((m) => {
-        m.init?.({
-          options,
-          actions: actionsImpl,
-        });
-      });
 
       if (options?.onMount) {
         options.onMount(buildOnMountInvocationContext(stateRef, propsRef, actionsRef));
@@ -424,6 +435,11 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
 //
 // =====================================
 
+type useStoreSlice<S, A, P, DS, SLICE> = (
+  store: StoreApi<S, A, P, DS>,
+  slicer: (ctx: StateListenerContext<S, DS, A>) => SLICE
+) => SLICE;
+
 /**
  * A react hook to get a state slice. Will be refresh if, and only if, one property of the slice has changed
  * @param store The store to listen to.
@@ -431,16 +447,14 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
  * @param comparator An optional function to compare if slice property has changed (shallow test by default)
  * @returns The state slice.
  */
-export function useStoreSlice<
-  S,
-  A extends DecoratedActions,
-  P,
-  DS,
-  Selector extends (ctx: StateListenerContext<S, DS, A>) => any
->(store: StoreApi<S, A, P, DS>, slicerFunc: Selector, comparator: ComparatorFunction = null): ReturnType<Selector> {
+export function useStoreSlice<S, A extends DecoratedActions, P, DS, SLICE>(
+  store: StoreApi<S, A, P, DS>,
+  slicerFunc: (ctx: StateListenerContext<S, DS, A>) => SLICE,
+  comparator: ComparatorFunction = null
+): SLICE {
   const [, forceRefresh] = useReducer((s) => 1 - s, 0);
 
-  const sliceRef = useRef<ReturnType<Selector>>(null);
+  const sliceRef = useRef<SLICE>(null);
   if (sliceRef.current === null) {
     const s = store.state;
     sliceRef.current = slicerFunc({
@@ -490,6 +504,10 @@ export function useStoreSlice<
  * @returns The state, actions and isLoading function.
  */
 export function useStore<S, A extends DecoratedActions, P, DS>(store: StoreApi<S, A, P, DS>, props: P = null) {
+  // access to store in debugger
+  const storeRef = useRef(store);
+  storeRef;
+
   store.setProps(props);
   useEffect(() => {
     return () => store.destroy();
@@ -513,6 +531,10 @@ export function useStore<S, A extends DecoratedActions, P, DS>(store: StoreApi<S
  * @param props The parent component props
  */
 export function useBindStore<S, A extends DecoratedActions, P, DS>(store: StoreApi<S, A, P, DS>, props: P = null) {
+  // access to store in debugger
+  const storeRef = useRef(store);
+  storeRef;
+
   store.setProps(props);
   useEffect(() => {
     return () => store.destroy();

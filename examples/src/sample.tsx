@@ -10,8 +10,8 @@
 
 import React, { useState } from 'react';
 import { StoreActions } from '../../src/types';
-import { logDetailedEffects } from '../../src/middlewares';
-import { createStore, useStoreSlice, useStore, useBindStore } from '../../src';
+import { logDetailedEffects, devtools, logEffects } from '../../src/middlewares';
+import { createStore, useStoreSlice, useBindStore } from '../../src';
 import { useRef } from 'react';
 import { immerizeActions } from './immerizeActions';
 import FlashingBox from './FlashingBox';
@@ -161,6 +161,7 @@ export const myStore = createStore(
   (p) => ({ list: [p.init.toString()], prop1: '', prop2: '', prop3: '' }),
   myActions,
   {
+    name: 'StateDecorator sample',
     onMount: ({ a }) => {
       a.loadList();
     },
@@ -171,7 +172,7 @@ export const myStore = createStore(
       },
     },
   },
-  [logDetailedEffects()]
+  [logEffects(), devtools()]
 );
 
 export function MyContainer() {
@@ -269,7 +270,7 @@ function LoadList() {
   return (
     <FlashingBox>
       <div>Load the list and put first item in prop1 as side effect</div>
-      <button disabled={loading} onClick={loadList}>
+      <button disabled={loading} onClick={() => loadList()}>
         {loading ? 'loading...' : 'load list'}
       </button>
     </FlashingBox>
@@ -285,7 +286,7 @@ function LoadFail() {
   return (
     <FlashingBox>
       <div>Asynchronous load and fail and set "error" to prop2 as side effect</div>
-      <button disabled={loading} onClick={load}>
+      <button disabled={loading} onClick={() => load()}>
         {loading ? 'loading...' : 'load'}
       </button>
     </FlashingBox>
@@ -300,7 +301,7 @@ function LoadCancel() {
   return (
     <FlashingBox>
       <div>Asynchronous action, promise cancel (return null)</div>
-      <button disabled={loading} onClick={load}>
+      <button disabled={loading} onClick={() => load()}>
         {loading ? 'loading...' : 'load'}
       </button>
     </FlashingBox>

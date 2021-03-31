@@ -621,25 +621,54 @@ function Container(p: ContainerProps) {
 
 # Debug actions
 
-To debug actions, add a log middleware to the store.
+To debug actions, add a middleware to the store.
+
+## Concise logger
 
 ```typescript
 import { logEffects } from 'state-decorator/middlewares';
 
 function Container(props: Props) {
-  const { state, actions } = useLocalStore(getInitialState, actionsImpl, props, {}, [logEffects()]);
+  const { state, actions } = useLocalStore(getInitialState, actionsImpl, props, { name: 'My Store' }, [logEffects()]);
   return <div />;
 }
 ```
 
-There are two middlewares available:
+By default the `console.log` function is used but you can pass any function that has the same signature e.g:
 
-- Concise log:
-  `import { logEffects } from 'state-decorator/middlewares';`
-- Detailed log:
-  `import { logDetailedEffects } from 'state-decorator/middlewares';`
+```typescript
+function logger(...args: any[]) {
+  // implementation...
+}
 
-Example of console log:
+const logMiddleware = logEffects(logger);
+
+const store = createStore(getInitialState, actionsImpl, props, options, [logMiddleware]);
+```
+
+Example:
+
+```
+[StateDecorator sample] loadList effects {list: Array(10), prop1: "", prop2: "", prop3: ""} loading: false
+middlewares.ts:36 [StateDecorator sample] setProp1 effects {list: Array(10), prop1: "92", prop2: "", prop3: ""}
+```
+
+## Detailed Logger
+
+```typescript
+import { logDetailedEffects } from 'state-decorator/middlewares';
+
+function Container(props: Props) {
+  const { state, actions } = useLocalStore(getInitialState, actionsImpl, props, { name: 'My Store' }, [
+    logDetailedEffects(),
+  ]);
+  return <div />;
+}
+```
+
+Like concise logger, by default the `console` is used but you can pass any object implementing `log, group, groupCollapsed, groupEnd` functions.
+
+Example:
 
 ```
  onCalendarTimeRangeChange
@@ -651,6 +680,19 @@ Example of console log:
  ▼ Diff
  ║ calendarStartDate : null => 2018-08-12T22:00:00.000Z
  ║ calendarEndDate : null => 2018-08-19T22:00:00.000Z
+```
+
+## Redux devtools
+
+You can connect any StateDecorator store to [Chrome Redux devtools extension](https://chrome.google.com/webstore/detail/redux-devtools/lmhkpmbekcpmknklioeibfkpmmfibljd?hl=en) by adding the `devtools` middleware to the store.
+
+```typescript
+import { devtools } from 'state-decorator/middlewares';
+
+function Container(props: Props) {
+  const { state, actions } = useLocalStore(getInitialState, actionsImpl, props, { name: 'My Store' }, [devtools()]);
+  return <div />;
+}
 ```
 
 # Unit testing
