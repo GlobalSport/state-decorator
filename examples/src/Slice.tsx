@@ -1,5 +1,7 @@
 import React from 'react';
-import { useBindStore, StoreActions, createStore } from '../../dist';
+
+import { useBindStore, StoreActions, createStore, useStoreSlice } from '../../src/';
+import { devtools } from '../../src/middlewares';
 import SliceView from './SliceView';
 
 // Types
@@ -28,7 +30,7 @@ function getTimeoutPromise<C>(timeout: number, result: C = null): Promise<C> {
   });
 }
 
-const actionsImpl: StoreActions<State, Actions> = {
+const actionsImpl: StoreActions<State, Actions, {}> = {
   setValue1: {
     getPromise: ({ args: [v] }) => getTimeoutPromise(500, v),
     effects: ({ s, res }) => ({ ...s, value1: res }),
@@ -39,7 +41,7 @@ const actionsImpl: StoreActions<State, Actions> = {
   },
 };
 
-export const store = createStore(getInitialState, actionsImpl);
+export const store = createStore(getInitialState, actionsImpl, { name: 'Slice store' }, [devtools()]);
 
 function Slice() {
   useBindStore(store);

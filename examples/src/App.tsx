@@ -20,10 +20,10 @@ import TodoContainer from './Todos';
 export default function App() {
   return (
     <div>
-      {/* <section>
+      <section>
         <h1>Share state</h1>
         <MyContainer />
-      </section> */}
+      </section>
       {/* <section>
         <h1>Todo</h1>
         <TodoContainer />
@@ -31,10 +31,10 @@ export default function App() {
 
       {/* <ShapesApp /> */}
 
-      <section>
-        <h1>Parallel actions</h1>
+      {/* <section>
+        <h1>Slices</h1>
         <Slice />
-      </section>
+      </section> */}
 
       {/* <section>
         <h1>Parallel actions</h1>

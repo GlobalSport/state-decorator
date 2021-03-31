@@ -186,6 +186,8 @@ export type MiddlewareActionContext<S, A, P> = {
 
 export type MiddlewareStoreContext<S, A extends DecoratedActions, P> = {
   actions: StoreActions<S, A, P>;
+  state: S;
+  setState: (s: S) => void;
   options: StoreOptions<S, A, P, any>;
 };
 export type MiddlewareFactory<S, A extends DecoratedActions, P> = () => Middleware<S, A, P>;
@@ -368,7 +370,7 @@ export type OnPropsChangeOptions<S, A, P> = {
   sideEffects?: (ctx: OnPropsChangeSideEffectsContext<S, P, A>) => void;
 };
 
-export type StoreOptions<S, A, P, DS = S> = {
+export type StoreOptions<S, A, P = {}, DS = S> = {
   /**
    * The state decorator name. Use in debug traces to identify the useStateDecorator instance.
    */

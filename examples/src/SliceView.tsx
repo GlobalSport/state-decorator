@@ -1,6 +1,6 @@
-import React, { Fragment } from 'react';
+import React from 'react';
 
-import { useStoreSlice } from '../../dist';
+import { useStoreSlice } from '../../src';
 
 import FlashingBox from './FlashingBox';
 import { store } from './Slice';
@@ -71,7 +71,7 @@ function Value2() {
     isLoading: isLoading('setValue2'),
   }));
 
-  return <Value title="Value 1" value={value} isLoading={isLoading} />;
+  return <Value title="Value 2" value={value} isLoading={isLoading} />;
 }
 
 function SliceView() {
