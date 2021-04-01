@@ -1052,7 +1052,7 @@ const parallelActions: StoreActions<State, Actions> = {
 };
 ```
 
-[![Edit Parallel](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/conflictpolicy-rgqhq?fontsize=14&hidenavigation=1&module=%2Fsrc%2FParallel.tsx&theme=dark)
+[![Edit Parallel](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/conflictpolicy-v6-fhqco?file=/src/Parallel.tsx)
 
 # Visual Studio Code user snippet
 
