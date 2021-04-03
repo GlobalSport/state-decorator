@@ -1,5 +1,5 @@
 import { StoreActions, StoreOptions, createStore, ConflictPolicy } from '../src';
-import { logEffects, logDetailedEffects, Logger } from '../src/middlewares';
+import { logEffects, logDetailedEffects, Logger, devtools } from '../src/middlewares';
 
 function getFailedTimeoutPromise(timeout: number, err: Error = null, id: string): Promise<string> {
   return new Promise((_, rej) => {
@@ -128,5 +128,200 @@ describe('middlewares', () => {
     expect(logger.group).toHaveBeenCalled();
     expect(logger.groupEnd).toHaveBeenCalled();
     expect(logger.groupCollapsed).toHaveBeenCalled();
+
+    store.destroy();
+  });
+
+  describe('devtools', () => {
+    afterEach(() => {
+      (window as any).__REDUX_DEVTOOLS_EXTENSION__ = null;
+    });
+    it('', () => {
+      type ReduxMessage = {
+        type: string;
+        state: any;
+        payload?: {
+          type: string;
+        };
+      };
+
+      const reduxDevTools = {
+        listener: null,
+        init: jest.fn(),
+        connect() {
+          return this;
+        },
+        disconnect: jest.fn(),
+        dispatch(msg: ReduxMessage) {
+          this.listener(msg);
+        },
+        unsubscribe: jest.fn(),
+        subscribe(listener: (msg: ReduxMessage) => any) {
+          this.listener = listener;
+          return this.unsubscribe;
+        },
+        send: jest.fn(),
+      };
+
+      (window as any).__REDUX_DEVTOOLS_EXTENSION__ = reduxDevTools;
+
+      const store = createStore(getInitialState, actions, { name: 'store' }, [devtools()]);
+
+      // INIT
+      store.init({
+        propIn: '',
+      });
+
+      expect(reduxDevTools.init).toHaveBeenCalledWith({
+        propProps: '',
+        propSync: '',
+        propSimpleSync: '',
+        propAsync: '',
+        propAsyncParallel: {},
+        propOptimistic: '',
+        propError: '',
+      });
+
+      // STORE => DEVTOOLS
+
+      store.actions.setSimpleSync('value');
+
+      expect(reduxDevTools.send).toHaveBeenCalledWith(
+        {
+          type: 'setSimpleSync effects',
+          args: ['value'],
+          context: {
+            args: ['value'],
+            state: {
+              propProps: '',
+              propSync: '',
+              propSimpleSync: '',
+              propAsync: '',
+              propAsyncParallel: {},
+              propOptimistic: '',
+              propError: '',
+            },
+            props: {
+              propIn: '',
+            },
+          },
+        },
+        {
+          // new state
+          propProps: '',
+          propSync: '',
+          propSimpleSync: 'value',
+          propAsync: '',
+          propAsyncParallel: {},
+          propOptimistic: '',
+          propError: '',
+        }
+      );
+
+      // DEVTOOLS => STORE
+
+      reduxDevTools.dispatch({
+        type: 'DISPATCH',
+        state: JSON.stringify({
+          propProps: 'test',
+          propSync: 'test',
+          propSimpleSync: 'test',
+          propAsync: '',
+          propAsyncParallel: {},
+          propOptimistic: '',
+          propError: '',
+        }),
+      });
+
+      expect(store.state).toEqual({
+        propProps: 'test',
+        propSync: 'test',
+        propSimpleSync: 'test',
+        propAsync: '',
+        propAsyncParallel: {},
+        propOptimistic: '',
+        propError: '',
+      });
+
+      // RESET
+
+      reduxDevTools.dispatch({
+        payload: {
+          type: 'RESET',
+        },
+        type: 'RESET',
+        state: null,
+      });
+
+      expect(store.state).toEqual(getInitialState());
+
+      // COMMIT / REVERT
+
+      store.actions.setSimpleSync('value');
+
+      expect(store.state).toEqual({
+        // new state
+        propProps: '',
+        propSync: '',
+        propSimpleSync: 'value',
+        propAsync: '',
+        propAsyncParallel: {},
+        propOptimistic: '',
+        propError: '',
+      });
+
+      reduxDevTools.dispatch({
+        payload: {
+          type: 'COMMIT',
+        },
+        type: 'COMMIT',
+        state: null,
+      });
+
+      store.actions.setSimpleSync('other');
+
+      expect(store.state).toEqual({
+        // new state
+        propProps: '',
+        propSync: '',
+        propSimpleSync: 'other',
+        propAsync: '',
+        propAsyncParallel: {},
+        propOptimistic: '',
+        propError: '',
+      });
+
+      reduxDevTools.dispatch({
+        payload: {
+          type: 'ROLLBACK',
+        },
+        type: 'ROLLBACK',
+        state: null,
+      });
+
+      expect(store.state).toEqual({
+        // new state
+        propProps: '',
+        propSync: '',
+        propSimpleSync: 'value',
+        propAsync: '',
+        propAsyncParallel: {},
+        propOptimistic: '',
+        propError: '',
+      });
+
+      store.destroy();
+
+      expect(reduxDevTools.disconnect).toHaveBeenCalled();
+      expect(reduxDevTools.unsubscribe).toHaveBeenCalled();
+    });
+
+    it('extension not present', () => {
+      const store = createStore(getInitialState, actions, { name: 'store' }, [devtools()]);
+      store.init({
+        propIn: '',
+      });
+      store.destroy();
+    });
   });
 });
