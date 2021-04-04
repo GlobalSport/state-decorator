@@ -405,7 +405,7 @@ To cancel effects just return **null** instead of new state in **effects**.
 ```typescript
 action: {
   preEffects: (ctx)        => ctx.state,    // state changes before promise
-  optimisticEffects: (ctx) => ctx.state,    // optimistic state changes before promise, will be reverted if promise fails
+  optimisticEffects: (ctx) => ctx.state,    // optimistic state changes before promise, will be reverted if promise fails. Be sure to install optimistic middleware !
   getPromise: (ctx)        => Promise.resolve(), // promise provider
   effects: (ctx)           => ctx.state,       // state changes if success
   errorEffects: (ctx)      => ctx.state,  // state changes if error
@@ -531,6 +531,17 @@ The following properties action are used:
 - **isTriggerRetryError**: A function that returns if the passed error will trigger a retry or if the action fails directly. Default function is returning _true_ for _TypeError_ instances.
 
 ## Optimistic actions
+
+⚠ If you are using optimistic effects, make sure to set the optimisticActions middleware to you store using **setGlobalConfig** or on your store. ⚠
+
+```typescript
+import { setGlobalConfig } from 'state-decorator';
+import { optimisticActions } from 'state-decorator/middlewares';
+
+setGlobalConfig({
+  defaultMiddlewares: [optimisticActions()],
+});
+```
 
 An optimistic action assumes that the action will, most of the time, succeed. So it will apply the effects as soon as the asynchronous action is called (as opposite to the regular effects which are applied when the promise is resolved).
 
@@ -911,6 +922,10 @@ You can new store in new code.
 | --------------------- | ------------ |
 | StateDecoratorActions | StoreActions |
 | StateDecoratorOptions | StoreOptions |
+
+#### Optimistic actions
+
+If you are using optimistic effects, make sure to set the **optimisticActions** middleware to you store using **setGlobalConfig** or on your store.
 
 ### Hooks
 

@@ -1,5 +1,7 @@
 import React from 'react';
-import useLocalStore, { IsLoadingFunc, StoreActions } from '../../src';
+import { createStore, IsLoadingFunc, StoreActions, useStore } from '../../src';
+import { optimisticActions as optimisticActionsMiddleware } from '../../src/middlewares';
+
 import OptimisticView from './OptimisticView';
 import { Status } from './types';
 
@@ -44,14 +46,13 @@ export const optimisticActions: StoreActions<State, Actions> = {
   resetValue: (s) => ({ ...s, value: 'Initial value', status: 'paused' }),
 };
 
+const store = createStore(getInitialState, optimisticActions, { notifyError: () => {} }, [
+  optimisticActionsMiddleware(),
+]);
+
 // Container that is managing the state using usetateDecorator hook
 const CounterContainer = () => {
-  const { state, actions, isLoading } = useLocalStore(
-    getInitialState,
-    optimisticActions,
-    {},
-    { notifyError: () => {} }
-  );
+  const { state, actions, isLoading } = useStore(store);
 
   return <OptimisticView {...state} {...actions} isLoading={isLoading} />;
 };

@@ -22,7 +22,7 @@ const OptimisticView = function OptimisticView(props: OptimisticViewProps) {
     <Box>
       <Typography variant="h6">Optimistic actions</Typography>
       <Typography variant="caption">
-        ⚠ The optimistic middleware must be set on your store
+        ⚠ The <code>optimisticActions</code> middleware must be set on your store.
         <br />
         When the optimistic asynchronous action is called it's behaving like a synchronous actions unless the promise
         fails and the the effects is reverted.
