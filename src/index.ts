@@ -94,16 +94,49 @@ export type IsLoadingFunc<A> = (...props: (keyof A | [keyof A, string])[]) => bo
 type StateListenerUnregister = () => void;
 
 export type StoreApi<S, A, P, DS = {}> = {
+  /**
+   * The current store state (with derived state if any).
+   */
   readonly state: S & DS;
+  /**
+   * The store decorator (ie. ready to use) actions.
+   */
   readonly actions: A;
+  /**
+   * A boolean that indicates that at least one asynchronous action is loading.
+   */
   readonly loading: boolean;
+  /**
+   * A map of loading actions map (computed on property access)
+   */
   readonly loadingMap: LoadingMap<A>;
+  /**
+   * A map of parallel loading actions map (computed on property access)
+   */
   readonly loadingParallelMap: LoadingParallelMap<A>;
+  /**
+   * Initializes the store with the specified props
+   */
   init: (p: P) => void;
+  /**
+   * Update the store with the specified props
+   */
   setProps: (p: P) => void;
+  /**
+   * Destroy the store
+   */
   destroy: () => void;
+  /**
+   * Abort an asynchronous action marked as abortable.
+   */
   abortAction: (actionName: keyof A, promiseId?: string) => boolean;
+  /**
+   * Add a store state change listener
+   */
   addStateListener: (listener: StateListener<S, DS, A>) => StateListenerUnregister;
+  /**
+   * A function that takes a list of action names or a tuple of [action name, promiseId] and returns <code>true</code> if any action is loading.
+   */
   isLoading: IsLoadingFunc<A>;
 };
 
