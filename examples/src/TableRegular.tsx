@@ -8,7 +8,7 @@ import MTableRow from '@material-ui/core/TableRow';
 import DeleteIcon from '@material-ui/icons/Delete';
 import ArrowUpIcon from '@material-ui/icons/ArrowUpward';
 import ArrowDownIcon from '@material-ui/icons/ArrowDownward';
-import { useStore } from '../../src';
+import { useStore, useStoreSlice } from '../../src';
 import FlashingBox, { useFlashingNode } from './FlashingBox';
 import Box from '@material-ui/core/Box';
 import Button from '@material-ui/core/Button';
@@ -79,7 +79,8 @@ function Toolbar(p: ToolbarProps) {
 }
 
 function TableApp() {
-  const { state, actions } = useStore(store);
+  // not using useStore because store is shared
+  const { state, actions } = useStoreSlice(store, (i) => i);
 
   return (
     <FlashingBox>

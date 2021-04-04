@@ -72,7 +72,7 @@ export default function RequestStatus(p: RequestStatusProps) {
     default:
       content = (
         <React.Fragment>
-          <CircularProgress variant="static" size={size} value={((seconds / 1000) * 100) / duration} />
+          <CircularProgress variant="determinate" size={size} value={((seconds / 1000) * 100) / duration} />
           <Box
             position="absolute"
             left={0}
