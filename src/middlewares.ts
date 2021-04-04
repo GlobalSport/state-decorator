@@ -526,7 +526,6 @@ export function devtools<S, A extends DecoratedActions, P>(): MiddlewareFactory<
 
       destroy() {
         unsubscribe();
-        devtools.disconnect();
         devtools = null;
       },
     };

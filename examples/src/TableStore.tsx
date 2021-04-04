@@ -88,6 +88,5 @@ const actionsImpl: StoreActions<State, Actions> = {
     }),
 };
 
-export const store = createStore(getInitialState, actionsImpl, {
-  derivedState: {},
-});
+export const store = createStore(getInitialState, actionsImpl);
+store.init({});

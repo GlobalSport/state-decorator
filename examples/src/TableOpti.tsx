@@ -8,7 +8,7 @@ import MTableRow from '@material-ui/core/TableRow';
 import DeleteIcon from '@material-ui/icons/Delete';
 import ArrowUpIcon from '@material-ui/icons/ArrowUpward';
 import ArrowDownIcon from '@material-ui/icons/ArrowDownward';
-import { useBindStore, useStoreSlice } from '../../src';
+import { useStoreSlice } from '../../src';
 import FlashingBox, { useFlashingNode } from './FlashingBox';
 import Box from '@material-ui/core/Box';
 import Button from '@material-ui/core/Button';
@@ -83,8 +83,6 @@ function Toolbar() {
 }
 
 function TableApp() {
-  useBindStore(store);
-
   return (
     <FlashingBox>
       <Toolbar />

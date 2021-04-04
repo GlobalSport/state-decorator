@@ -77,7 +77,7 @@ function Value2() {
 function SliceView() {
   const styles = useStyles({});
   return (
-    <Box mb={2} p={2} className={styles.box}>
+    <Box>
       <Typography variant="h6">Slices</Typography>
       <Typography variant="caption">
         Each component is using only a slice of the state and is refreshed only if slice changed (flashing when is
@@ -101,11 +101,6 @@ function SliceView() {
 const useStyles = makeStyles((theme) => ({
   btn: {
     marginRight: theme.spacing(2),
-  },
-
-  box: {
-    border: '1px solid #ccc',
-    borderRadius: 5,
   },
 }));
 

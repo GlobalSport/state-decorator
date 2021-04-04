@@ -275,26 +275,28 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
   }
 
   function destroy() {
-    propsRef.current = null;
-    stateRef.current = null;
-    loadingMapRef.current = null;
-    promisesRef.current = null;
-    conflictActionsRef.current = null;
-    derivedStateRef.current = null;
+    if (initializedRef.current) {
+      propsRef.current = null;
+      stateRef.current = null;
+      loadingMapRef.current = null;
+      promisesRef.current = null;
+      conflictActionsRef.current = null;
+      derivedStateRef.current = null;
 
-    Object.keys(timeoutRef.current).forEach((name) => {
-      clearTimeout(timeoutRef.current[name]);
-    });
+      Object.keys(timeoutRef.current).forEach((name) => {
+        clearTimeout(timeoutRef.current[name]);
+      });
 
-    timeoutRef.current = null;
-    stateListeners = {};
-    initializedRef.current = false;
+      timeoutRef.current = null;
+      stateListeners = {};
+      initializedRef.current = false;
 
-    middlewaresRef.current.forEach((m) => {
-      m.destroy?.();
-    });
+      middlewaresRef.current.forEach((m) => {
+        m.destroy?.();
+      });
 
-    middlewaresRef.current = [];
+      middlewaresRef.current = [];
+    }
   }
 
   function setState(

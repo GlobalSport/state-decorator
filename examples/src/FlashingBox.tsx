@@ -20,9 +20,12 @@ export default function FlashingBox(p: FlashingBoxProps) {
 
   useEffect(() => {
     node.current.style.outline = '2px solid red';
-    setTimeout(() => {
+    let id = setTimeout(() => {
       node.current.style.outline = styles.outline.toString();
     }, 500);
+    return () => {
+      clearTimeout(id);
+    };
   }, [countRef.current]);
 
   return (
@@ -38,8 +41,11 @@ export function useFlashingNode(node: MutableRefObject<any>, color = 'red') {
 
   useEffect(() => {
     node.current.style.outline = `2px solid ${color}`;
-    setTimeout(() => {
+    let id = setTimeout(() => {
       node.current.style.outline = styles.outline.toString();
     }, 500);
+    return () => {
+      clearTimeout(id);
+    };
   }, [countRef.current]);
 }
