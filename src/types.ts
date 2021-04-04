@@ -81,7 +81,7 @@ export type SyncAction<S, F extends (...args: any[]) => any, A, P, FxRes = S> = 
   /**
    * The action to execute.
    */
-  effects?: (ctx: EffectsInvocationContext<S, F, P>) => FxRes | null;
+  effects: (ctx: EffectsInvocationContext<S, F, P>) => FxRes | null;
 
   /**
    * Debounces the action if this parameter is defined.
@@ -190,10 +190,22 @@ export type MiddlewareStoreContext<S, A extends DecoratedActions, P> = {
   setState: (s: S) => void;
   options: StoreOptions<S, A, P, any>;
 };
+
 export type MiddlewareFactory<S, A extends DecoratedActions, P> = () => Middleware<S, A, P>;
 
+/**
+ * A state change middleware.
+ * Allow to listen and change a state change on the fly.
+ */
 export type Middleware<S, A extends DecoratedActions, P> = {
+  /**
+   * Initializes the middleware. Called when the store is initializing.
+   */
   init: (storeContext: MiddlewareStoreContext<S, A, P>) => void;
+
+  /**
+   * Invoked on a state change has occurred and returns a new state or <code>null</code> if unchanged.
+   */
   effects: (
     actionContext: MiddlewareActionContext<S, A, P>,
     oldState: S,
@@ -203,6 +215,10 @@ export type Middleware<S, A extends DecoratedActions, P> = {
     state: S;
     loading: boolean;
   };
+
+  /**
+   * Destroys the middleware. Called when the store is being destroyed.
+   */
   destroy: () => void;
 };
 
