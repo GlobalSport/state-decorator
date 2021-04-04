@@ -4,6 +4,8 @@ import Parallel from './Parallel';
 import { MyContainer } from './sample';
 import ShapesApp from './Shapes';
 import Slice from './Slice';
+import TableApp from './TableOpti';
+import TableApp2 from './TableRegular';
 import TodoContainer from './Todos';
 // import ConflictingActionsApp from './conflict/ConflictingActions';
 // import CounterContainer from './counter/Counter';
@@ -20,9 +22,14 @@ import TodoContainer from './Todos';
 export default function App() {
   return (
     <div>
-      <section>
+      {/* <section>
         <h1>Share state</h1>
         <MyContainer />
+      </section>       */}
+      <section>
+        <h1>Table state</h1>
+        <TableApp />
+        <TableApp2 />
       </section>
       {/* <section>
         <h1>Todo</h1>

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import { MutableRefObject } from 'react';
 
 type FlashingBoxProps = {
   children: any;
@@ -29,4 +30,16 @@ export default function FlashingBox(p: FlashingBoxProps) {
       {p.children}
     </div>
   );
+}
+
+export function useFlashingNode(node: MutableRefObject<any>, color = 'red') {
+  const countRef = useRef(0);
+  countRef.current++;
+
+  useEffect(() => {
+    node.current.style.outline = `2px solid ${color}`;
+    setTimeout(() => {
+      node.current.style.outline = styles.outline.toString();
+    }, 500);
+  }, [countRef.current]);
 }
