@@ -106,7 +106,7 @@ describe('middlewares', () => {
     await store.actions.setAsync('v3');
     await store.actions.setAsyncParallel('v3', 'k1', true, 10);
 
-    expect(logger).toHaveBeenCalledTimes(6);
+    expect(logger).toHaveBeenCalledTimes(7);
   });
   it('logDetailedEffects', async () => {
     let logger: Logger = {
@@ -151,7 +151,6 @@ describe('middlewares', () => {
         connect() {
           return this;
         },
-        disconnect: jest.fn(),
         dispatch(msg: ReduxMessage) {
           this.listener(msg);
         },
@@ -312,7 +311,6 @@ describe('middlewares', () => {
 
       store.destroy();
 
-      expect(reduxDevTools.disconnect).toHaveBeenCalled();
       expect(reduxDevTools.unsubscribe).toHaveBeenCalled();
     });
 

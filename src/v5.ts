@@ -14,7 +14,7 @@ import type {
   StoreActions,
   StoreOptions,
   StoreAction,
-  Middleware,
+  MiddlewareFactory,
 } from './types';
 
 import { createStore, StoreApi, setGlobalConfig, ConflictPolicy } from './index';
@@ -87,12 +87,6 @@ function convertV5Actions<S, A extends DecoratedActions, P>(
         effects: (ctx: EffectsInvocationContext<S, any, P>) =>
           sourceAction.action(ctx.s, ctx.args as Parameters<A[keyof A]>, ctx.p),
       };
-
-      if (sourceAction.debounceTimeout) {
-        console.warn(
-          `Warning: ${actionName} debounceTimeout is not supported anymore, you may to use debounceSideEffectsTimeout.`
-        );
-      }
 
       if (sourceAction.onActionDone) {
         action.sideEffects = ({ s, p, args, a, notifyWarning }: SideEffectsInvocationContext<S, any, P, A>) => {
@@ -211,7 +205,6 @@ function convertV5Options<S, P, A>(sourceOptions: StateDecoratorOptions<S, A, P>
     'onPropsChangeReducer',
     'getPropsRefValues',
     'onMount',
-    'initialActionsMarkedLoading',
   ];
 
   keys.forEach((prop) => {
@@ -241,7 +234,8 @@ function useStateDecorator<S, A extends DecoratedActions, P>(
   getInitialState: (props: P) => S,
   actions: StateDecoratorActions<S, A, P>,
   props: P,
-  options: StateDecoratorOptions<S, A, P> = {}
+  options: StateDecoratorOptions<S, A, P> = {},
+  middlewares?: MiddlewareFactory<S, A, P>[]
 ) {
   const [, forceRefresh] = useReducer((s) => 1 - s, 0);
 
@@ -258,12 +252,12 @@ function useStateDecorator<S, A extends DecoratedActions, P>(
 
   const storeRef = useRef<StoreApi<S, A, P>>();
   if (storeRef.current == null) {
-    let middlewares: Middleware<S, A, P>[] = null;
+    const middlewareFactories: MiddlewareFactory<S, A, P>[] = middlewares;
     if (options.logEnabled) {
-      middlewares = [logDetailedEffects()];
+      middlewareFactories.push(logDetailedEffects());
     }
 
-    storeRef.current = createStore(getInitialState, actionsRef.current, optionsRef.current, middlewares);
+    storeRef.current = createStore(getInitialState, actionsRef.current, optionsRef.current, middlewareFactories);
   }
 
   storeRef.current.setProps(props);
@@ -437,6 +431,7 @@ export function testV6SyncAction<S, F extends (...args: any[]) => any, A, P>(
         p,
         state: s,
         props: p,
+        promiseId: null,
       });
 
     test(decoratedAction);
@@ -465,6 +460,7 @@ export function testV6AdvancedSyncAction<S, F extends (...args: any[]) => any, A
           props: p,
           res: null,
           result: null,
+          promiseId: null,
         }),
 
       onActionDone: (s, args, p, a, notifyWarning) => {
@@ -479,6 +475,7 @@ export function testV6AdvancedSyncAction<S, F extends (...args: any[]) => any, A
           actions: a,
           res: null,
           result: null,
+          promiseId: null,
         });
       },
     };
@@ -520,6 +517,7 @@ export function testV6AsyncAction<S, F extends (...args: any[]) => any, A, P>(
             state: s,
             props: p,
             actions: a,
+            promiseId: null,
           });
         }
         return null;
@@ -536,6 +534,7 @@ export function testV6AsyncAction<S, F extends (...args: any[]) => any, A, P>(
             state: s,
             props: p,
             actions: a,
+            promiseId: null,
           });
         }
         return null;
@@ -551,6 +550,7 @@ export function testV6AsyncAction<S, F extends (...args: any[]) => any, A, P>(
               state: s,
               props: p,
               result: res,
+              promiseId: null,
             })
           : null,
 
@@ -562,6 +562,7 @@ export function testV6AsyncAction<S, F extends (...args: any[]) => any, A, P>(
               p,
               state: s,
               props: p,
+              promiseId: null,
             })
           : null,
       optimisticReducer: (s, args, p) =>
