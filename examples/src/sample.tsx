@@ -9,9 +9,9 @@
  */
 
 import React, { useState } from 'react';
-import { StoreActions } from '../../src/types';
-import { logDetailedEffects, devtools, logEffects } from '../../src/middlewares';
-import { createStore, useStoreSlice, useBindStore } from '../../src';
+import { StoreActions } from '../../dist/types';
+import { logDetailedEffects, devtools, logEffects } from '../../dist/middlewares';
+import { createStore, useStoreSlice, useBindStore } from '../../dist';
 import { useRef } from 'react';
 import { immerizeActions } from './immerizeActions';
 import FlashingBox from './FlashingBox';

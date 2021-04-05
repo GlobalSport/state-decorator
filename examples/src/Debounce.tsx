@@ -1,5 +1,5 @@
 import React from 'react';
-import useLocalStore, { StoreActions } from '../../src';
+import useLocalStore, { StoreActions } from '../../dist';
 import DebounceView from './DebounceView';
 
 // Types

@@ -19,12 +19,17 @@ const config = (entries, outDir) => {
       filename: isDevEnv ? `[name].bundle.js` : `[name].bundle.[chunkhash].js`,
     },
 
-    devtool: isDevEnv ? 'source-maps' : false,
+    devtool: isDevEnv ? 'source-map' : false,
 
     performance: { hints: false },
 
     module: {
       rules: [
+        {
+          test: /\.js$/,
+          use: ['source-map-loader'],
+          enforce: 'pre',
+        },
         {
           test: /\.tsx?$/,
           include: INCLUDE_PATTERNS,
