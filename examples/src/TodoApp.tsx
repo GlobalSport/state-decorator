@@ -21,7 +21,7 @@ import TextField from '@material-ui/core/TextField';
 
 import { Card, Typography } from '@material-ui/core';
 import produce from 'immer';
-import useLocalStore, { StoreActions } from '../../src';
+import useLocalStore, { StoreActions } from '../../dist';
 
 const useStyles = makeStyles((theme) => ({
   body: {

@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { useStoreSlice } from '../../src';
+import { useStoreSlice } from '../../dist';
 
 import FlashingBox from './FlashingBox';
 import { store } from './Slice';

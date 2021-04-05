@@ -2,8 +2,8 @@ import React, { Fragment, memo } from 'react';
 import { useRef } from 'react';
 import { useEffect } from 'react';
 import { useCallback } from 'react';
-import { createStore, useStore, useStoreSlice, StoreApi, useBindStore } from '../../src';
-import { StoreActions } from '../../src/types';
+import { createStore, useStore, useStoreSlice, StoreApi, useBindStore } from '../../dist';
+import { StoreActions } from '../../dist/types';
 import { immerizeActions } from './immerizeActions';
 
 type Shape = {

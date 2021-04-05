@@ -1,5 +1,5 @@
 import React from 'react';
-import useLocalStore, { StoreActions, AbortActionCallback, ConflictPolicy } from '../../src';
+import useLocalStore, { StoreActions, AbortActionCallback, ConflictPolicy } from '../../dist';
 
 import { Status } from './types';
 import ParallelAbortView from './ParallelAbortView';
