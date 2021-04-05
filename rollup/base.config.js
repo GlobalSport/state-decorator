@@ -36,7 +36,7 @@ export default function (input, outDir, externals = []) {
       }),
       commonjs(),
       // terser is doing some optims that is doing some crashes...
-      // terser(),
+      terser(),
       // visualizer(),
     ],
   };
