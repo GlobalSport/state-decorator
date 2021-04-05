@@ -16,6 +16,9 @@ import { useRef } from 'react';
 import { immerizeActions } from './immerizeActions';
 import FlashingBox from './FlashingBox';
 
+import Typography from '@material-ui/core/Typography';
+import Box from '@material-ui/core/Box';
+
 type MyState = {
   list: string[];
   prop1: string;
@@ -172,20 +175,28 @@ export const myStore = createStore(
       },
     },
   },
-  [logEffects(), devtools()]
+  [logDetailedEffects(), devtools()]
 );
 
-export function MyContainer() {
+export default function MyContainer() {
   const [show, setShow] = useState(true);
 
   return (
-    <FlashingBox>
-      <div>
-        <div>Root</div>
-        <button onClick={(e) => setShow(!show)}>{show ? 'unmount ' : 'mount'}</button>
-      </div>
-      {show && <StateContainer init={42} />}
-    </FlashingBox>
+    <Box>
+      <Typography variant="h6">State sharing</Typography>
+      <Typography variant="caption">
+        The state is contained in the root and each sub component uses a slice. Flashing means re-render.
+        <br />
+        Open devtools console and redux dev tools if installed to see state changes.
+      </Typography>
+      <FlashingBox>
+        <Box mt={2}>
+          <div>Root</div>
+          <button onClick={(e) => setShow(!show)}>{show ? 'unmount ' : 'mount'}</button>
+        </Box>
+        {show && <StateContainer init={42} />}
+      </FlashingBox>
+    </Box>
   );
 }
 

@@ -8,6 +8,7 @@ import useStateDecorator, {
 } from '../src/v5';
 import { getFailedTimeoutPromise, getTimeoutPromise } from './utils';
 import { renderHook, act } from '@testing-library/react-hooks';
+import { optimisticActions } from '../src/middlewares';
 
 describe('v5 compatibility layer', () => {
   type State = {
@@ -162,7 +163,7 @@ describe('v5 compatibility layer', () => {
 
   it('useStateDecorator hook works as expected', async () => {
     const { result, rerender } = renderHook(
-      (props) => useStateDecorator(getInitialState, v5actions, props as any, v5options),
+      (props) => useStateDecorator(getInitialState, v5actions, props as any, v5options, [optimisticActions()]),
       { initialProps: { propIn: '', callback: jest.fn() } }
     );
     expect(result.current.state).toEqual({
@@ -192,7 +193,10 @@ describe('v5 compatibility layer', () => {
 
     expect(result.current.state.propAsync).toEqual('boom');
 
-    await act(async () => result.current.actions.setAsyncParallel('v4', 'k1', false, 50));
+    await act(async () => {
+      debugger;
+      return result.current.actions.setAsyncParallel('v4', 'k1', false, 50);
+    });
 
     expect(result.current.state.propAsyncParallel).toEqual({ k1: 'v4' });
 

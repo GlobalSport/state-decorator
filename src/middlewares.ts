@@ -29,6 +29,8 @@ export function logEffects<S, A extends DecoratedActions, P>(
     const middleware: Middleware<S, A, P> = {
       init: (storeContext) => {
         storeName = storeContext.options?.name ? `[${storeContext.options?.name}]` : '';
+        const newState = storeContext.state;
+        logger(storeName, 'initialState', newState);
       },
       destroy: null,
       effects: (action, oldState, newState, loading: boolean) => {
@@ -140,19 +142,24 @@ export function logDetailedEffects<S, A extends DecoratedActions, P>(
         return res;
       };
 
+      const getStr = (v: any) => {
+        if (typeof v === 'string') {
+          return `"${v}"`;
+        }
+        return v;
+      };
+
       const middleware: Middleware<S, A, P> = {
         init: (storeContext) => {
           storeName = storeContext.options?.name ? `[${storeContext.options?.name}]` : '';
+          const newState = storeContext.state;
+          logger.group(storeName, 'initialState');
+          const keys = Object.keys(newState) as (keyof S)[];
+          keys.forEach((prop) => void console.log(prop, ':', getStr(newState[prop])));
+          logger.groupEnd();
         },
         destroy: null,
         effects: (action, oldState, newState, loading) => {
-          const getStr = (v: any) => {
-            if (typeof v === 'string') {
-              return `"${v}"`;
-            }
-            return v;
-          };
-
           const args: any[] = action.context?.args;
 
           const params: string[] = [storeName, action.name.toString()];

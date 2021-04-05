@@ -7,7 +7,7 @@ import Debounce from './Debounce';
 import Optimistic from './Optimistic';
 import Abort from './Abort';
 import ParallelAbort from './ParallelAbort';
-
+import StateSharing from './sample';
 import Tabs from '@material-ui/core/Tabs';
 import Tab from '@material-ui/core/Tab';
 import Box from '@material-ui/core/Box';
@@ -73,6 +73,7 @@ export default function App() {
           <Tab label="Optimistic" />
           <Tab label="Abort" />
           <Tab label="Debounce" />
+          <Tab label="State sharing" />
         </Tabs>
         <Box flex={1} className={classes.content}>
           <TabPanel tabId={tabId} index={0} classes={classes}>
@@ -96,6 +97,9 @@ export default function App() {
           </TabPanel>
           <TabPanel tabId={tabId} index={6} classes={classes}>
             <Debounce />
+          </TabPanel>
+          <TabPanel tabId={tabId} index={7} classes={classes}>
+            <StateSharing />
           </TabPanel>
         </Box>
       </Paper>
