@@ -28,9 +28,11 @@ export function logEffects<S, A extends DecoratedActions, P>(
 
     const middleware: Middleware<S, A, P> = {
       init: (storeContext) => {
-        storeName = storeContext.options?.name ? `[${storeContext.options?.name}]` : '';
-        const newState = storeContext.state;
-        logger(storeName, 'initialState', newState);
+        if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') {
+          storeName = storeContext.options?.name ? `[${storeContext.options?.name}]` : '';
+          const newState = storeContext.state;
+          logger(storeName, 'initialState', newState);
+        }
       },
       destroy: null,
       effects: (action, oldState, newState, loading: boolean) => {
