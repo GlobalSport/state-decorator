@@ -186,7 +186,7 @@ Overrides configuration to set properties that will be used by all stores.
 ```typescript
 // all parameters are optional
 setGlobalConfig({
-  // Used to clone state and props when managing optimistic reducer and conflicting actions.
+  // Used to clone state and props when managing optimistic conflicting actions.
   clone: defaultCloneFunc,
   // Compare to objets and returns if they are equal (slices).
   comparator: shallow,
@@ -411,12 +411,12 @@ action: {
   errorEffects: (ctx)      => ctx.state,  // state changes if error
   sideEffects: (ctx)       => { /* side effect code if success */ },
   errorSideEffects: (ctx)  => { /* side effect code if failure */ },
-  getSuccessMessage: (ctx) => 'Success' // if a notifySuccess is set locally or globally
-  getErrorMessage: (ctx)   => 'Error'   // if a notifyError is set locally or globally
+  getSuccessMessage: (ctx) => 'Success', // if a notifySuccess is set locally or globally
+  getErrorMessage: (ctx)   => 'Error',   // if a notifyError is set locally or globally
 
   abortable: true,                           // inject a abort signal in the promise invocation context and allow to abort promise
   conflictPolicy: ConflictPolicy.KEEP_LAST, // behavior if action is called while a promise is ongoing
-  getPromiseId: (args) => null              // parallel actions promise identifier (see conflicting actions)
+  getPromiseId: (args) => null,             // parallel actions promise identifier (see conflicting actions)
   retryCount: 1,
   retryDelaySeed: 1000,
 }
@@ -459,12 +459,14 @@ The loading state of asynchronous actions is automatically computed.
 ```typescript
 const { isLoading, loading } = useLocalStore(getInitialState, actionsImpl);
 
-// accepts 1+ arguments
-// will return true if one of the actions is loading
+// loading is set to true is at least one asynchronous action is ongoing.
+
+// isLoading is a function that accepts 1+ arguments
+// It returns true, if at least one of the specified actions is loading.
 const isOneLoading = isLoading('action1', 'action2', ['parallelAction', 'promiseId']);
 ```
 
-## Success / error notification
+## Success / error notifications
 
 A notification function can be called when the asynchronous action succeeded or failed.
 
@@ -532,7 +534,9 @@ The following properties action are used:
 
 ## Optimistic actions
 
-⚠ If you are using optimistic effects, make sure to set the optimisticActions middleware to you store using **setGlobalConfig** or on your store. ⚠
+⚠ If you are using optimistic effects, make sure to set the **optimisticActions** middleware to your store.⚠
+
+Using global configuration (for all stores):
 
 ```typescript
 import { setGlobalConfig } from 'state-decorator';
@@ -541,6 +545,15 @@ import { optimisticActions } from 'state-decorator/middlewares';
 setGlobalConfig({
   defaultMiddlewares: [optimisticActions()],
 });
+```
+
+On a specific store:
+
+```typescript
+import { createStore } from 'state-decorator';
+import { optimisticActions } from 'state-decorator/middlewares';
+
+const store = createStore(getInitialState, actionsImpl, options, [optimisticActions()],
 ```
 
 An optimistic action assumes that the action will, most of the time, succeed. So it will apply the effects as soon as the asynchronous action is called (as opposite to the regular effects which are applied when the promise is resolved).
@@ -566,6 +579,8 @@ const actions: StoreActions<State, Actions> = {
   },
 };
 ```
+
+[![Edit Optimistic actions](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/optimistic-actions-v6-mvsoh?file=/src/Optimistic.tsx)
 
 **Notes**:
 
@@ -925,7 +940,7 @@ You can new store in new code.
 
 #### Optimistic actions
 
-If you are using optimistic effects, make sure to set the **optimisticActions** middleware to you store using **setGlobalConfig** or on your store.
+If you are using optimistic effects, make sure to set the **optimisticActions** middleware to your store, see [Optimistic actions](#optimistic-actions).
 
 ### Hooks
 
