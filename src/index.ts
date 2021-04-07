@@ -539,6 +539,8 @@ export function useStoreSlice<S, A extends DecoratedActions, P, DS, SLICE>(
  * @returns The state, actions and isLoading function.
  */
 export function useStore<S, A extends DecoratedActions, P, DS>(store: StoreApi<S, A, P, DS>, props: P = null) {
+  const [, forceRefresh] = useReducer((s) => 1 - s, 0);
+
   // access to store in debugger
   const storeRef = useRef(store);
   storeRef;
@@ -547,9 +549,21 @@ export function useStore<S, A extends DecoratedActions, P, DS>(store: StoreApi<S
   useEffect(() => {
     return () => store.destroy();
   }, []);
+
+  useLayoutEffect(() => {
+    const unregister = storeRef.current.addStateListener(() => {
+      forceRefresh();
+    });
+    return unregister;
+  }, []);
+
   return {
-    ...useStoreSlice(store, (i) => i),
+    state: store.state,
+    actions: store.actions,
+    loading: store.loading,
     abortAction: store.abortAction,
+    loadingMap: store.loadingMap,
+    loadingParallelMap: store.loadingParallelMap,
   };
 }
 
