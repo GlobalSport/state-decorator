@@ -277,6 +277,7 @@ function useStateDecorator<S, A extends DecoratedActions, P>(
     loading: store.loading,
     loadingMap: store.loadingMap,
     loadingParallelMap: store.loadingParallelMap,
+    abortAction: store.abortAction,
   };
 }
 
