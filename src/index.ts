@@ -561,6 +561,7 @@ export function useStore<S, A extends DecoratedActions, P, DS>(store: StoreApi<S
     state: store.state,
     actions: store.actions,
     loading: store.loading,
+    isLoading: store.isLoading,
     abortAction: store.abortAction,
     loadingMap: store.loadingMap,
     loadingParallelMap: store.loadingParallelMap,
