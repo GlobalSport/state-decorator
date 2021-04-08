@@ -940,7 +940,7 @@ setGlobalConfig({
 
 ### Incompatibilities
 
-- _initialActionsMarkedLoading_ is removed as it's no longer needed. If you initial actions are invoked in the _onMount_ they will be marked as loading.
+- _initialActionsMarkedLoading_ is removed as it's no longer needed. If your initial actions are invoked in _onMount_ they will be marked as loading.
 - _debounceTimeout_ is removed, it can be replaced using _debounceSideEffectsTimeout_ but the behavior is different: only the side effects are debounced and not effects + side effects.
 
 ## Step 2: Migrate code but keep v5 tests
