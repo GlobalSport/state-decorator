@@ -67,7 +67,7 @@ import {
 export {
   DecoratedActions,
   StoreActions,
-  InternalLoadingMap as LoadingMap,
+  LoadingMap,
   StoreOptions,
   LoadingParallelMap,
   AsyncActionPromise as AsynchActionPromise,
