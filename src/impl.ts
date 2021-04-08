@@ -667,7 +667,8 @@ function processPromiseFailed<S, F extends (...args: any[]) => any, A extends De
       msg = action.getErrorMessage(ctx);
     }
 
-    if (!msg && globalConfig.getErrorMessage) {
+    // do not trigger a default error message if the error is already managed by error effects
+    if (!msg && !errorHandled && globalConfig.getErrorMessage) {
       msg = globalConfig.getErrorMessage(error);
     }
 
