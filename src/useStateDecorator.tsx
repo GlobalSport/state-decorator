@@ -690,7 +690,7 @@ export function sendRequest<S, F extends (...args: any[]) => any, A extends Deco
           msg = asyncAction.errorMessage;
         }
 
-        if (!msg && defaultGetErrorMessage) {
+        if (!msg && !errorHandled && defaultGetErrorMessage) {
           msg = defaultGetErrorMessage(error, args, propsRef.current);
         }
 
