@@ -61,6 +61,7 @@ import {
   AbortActionCallback,
   MiddlewareFactory,
   MiddlewareStoreContext,
+  LoadingProps,
 } from './types';
 
 export {
@@ -87,6 +88,7 @@ export {
   GlobalConfig,
   Middleware,
   setGlobalConfig,
+  LoadingProps,
   AbortActionCallback,
 };
 

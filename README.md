@@ -1045,7 +1045,7 @@ Choose one of _useLocalStore_, _useStore_, _useBindStore_ or _useStoreSlice_.
 ```diff
 - import { testSyncAction, testAsyncAction } from 'state-decorator';
 
-+ import { testV6SyncAction, testV6AsyncAction } from 'state-decorator/v5';
++ import { testV6SyncAction, testV6AsyncAction } from 'state-decorator/v5_tests';
 ```
 
 ## Step 3: Complete migration
