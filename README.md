@@ -927,6 +927,13 @@ You can new store in new code.
 +import useStateDecorator, { StateDecoratorActions } from 'state-decorator/v5';
 ```
 
+If you are using optimistic effects, make sure to set the **optimisticActions** middleware to your store, see [Optimistic actions](#optimistic-actions).
+
+### Incompatibilities
+
+- _initialActionsMarkedLoading_ is removed as it's no longer needed. If you initial actions are invoked in the _onMount_ they will be marked as loading.
+- _debounceTimeout_ is removed, it can be replaced using _debounceSideEffectsTimeout_ but the behavior is different: only the side effects are debounced and not effects + sideffects.
+
 ## Step 2: Migrate code but keep v5 tests
 
 ### Code
@@ -1022,7 +1029,7 @@ Choose one of _useLocalStore_, _useStore_, _useBindStore_ or _useStoreSlice_.
 
 ```diff
 - const options: StateDecoratorOptions<S, A, P> = {
--   getPropsRef: (p) => [],
+-   getPropsRefValues: (p) => [],
 -   onPropsChangeReducer: (s, p, indices) => ({ ...s /* new state */ }),
 -   onPropsChange: (s, p, a, indices) => {
 -     /* side effects */

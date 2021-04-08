@@ -540,7 +540,7 @@ export function useStoreSlice<S, A extends DecoratedActions, P, DS, SLICE>(
  * @param props The parent component props
  * @returns The state, actions and isLoading function.
  */
-export function useStore<S, A extends DecoratedActions, P, DS>(store: StoreApi<S, A, P, DS>, props: P = null) {
+export function useStore<S, A extends DecoratedActions, P, DS = {}>(store: StoreApi<S, A, P, DS>, props: P = null) {
   const [, forceRefresh] = useReducer((s) => 1 - s, 0);
 
   // access to store in debugger
@@ -582,7 +582,7 @@ export function useStore<S, A extends DecoratedActions, P, DS>(store: StoreApi<S
  * @param store The store to listen to.
  * @param props The parent component props
  */
-export function useBindStore<S, A extends DecoratedActions, P, DS>(store: StoreApi<S, A, P, DS>, props: P = null) {
+export function useBindStore<S, A extends DecoratedActions, P, DS = {}>(store: StoreApi<S, A, P, DS>, props: P = null) {
   // access to store in debugger
   const storeRef = useRef(store);
   storeRef;
@@ -602,7 +602,7 @@ export function useBindStore<S, A extends DecoratedActions, P, DS>(store: StoreA
  * @param options The store options.
  * @returns The state, actions and isLoading function.
  */
-export function useLocalStore<S, A extends DecoratedActions, P, DS>(
+export function useLocalStore<S, A extends DecoratedActions, P, DS = {}>(
   getInitialState: (p: P) => S,
   actionImpl: StoreActions<S, A, P>,
   props?: P,
