@@ -1,7 +1,7 @@
 import { ConflictPolicy, StoreActions, StoreOptions } from '../src';
 import useStateDecorator, { StateDecoratorActions, StateDecoratorOptions } from '../src/v5';
 
-import { testV6AdvancedSyncAction, testV6AsyncAction, testV6SyncAction } from '../src/v5_tests';
+import { testV6AdvancedSyncAction, testV6AsyncAction, testV6SyncAction } from '../src/v5_test';
 import { getFailedTimeoutPromise, getTimeoutPromise } from './utils';
 import { renderHook, act } from '@testing-library/react-hooks';
 import { optimisticActions } from '../src/middlewares';
