@@ -927,7 +927,16 @@ You can new store in new code.
 +import useStateDecorator, { StateDecoratorActions } from 'state-decorator/v5';
 ```
 
-If you are using optimistic effects, make sure to set the **optimisticActions** middleware to your store, see [Optimistic actions](#optimistic-actions).
+If you are using optimistic effects, make sure to set the **optimisticActions** middleware as a default middleware, see [Optimistic actions](#optimistic-actions).
+
+```typescript
+import { setGlobalConfig } from 'state-decorator';
+import { optimisticActions } from 'state-decorator/middlewares';
+
+setGlobalConfig({
+  defaultMiddlewares: [optimisticActions()],
+});
+```
 
 ### Incompatibilities
 
@@ -947,7 +956,7 @@ If you are using optimistic effects, make sure to set the **optimisticActions** 
 
 #### Optimistic actions
 
-If you are using optimistic effects, make sure to set the **optimisticActions** middleware to your store, see [Optimistic actions](#optimistic-actions).
+If you are using optimistic effects, make sure to set the **optimisticActions** middleware to your stores, see [Optimistic actions](#optimistic-actions).
 
 ### Hooks
 
