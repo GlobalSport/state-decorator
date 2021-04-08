@@ -932,7 +932,7 @@ If you are using optimistic effects, make sure to set the **optimisticActions** 
 ### Incompatibilities
 
 - _initialActionsMarkedLoading_ is removed as it's no longer needed. If you initial actions are invoked in the _onMount_ they will be marked as loading.
-- _debounceTimeout_ is removed, it can be replaced using _debounceSideEffectsTimeout_ but the behavior is different: only the side effects are debounced and not effects + sideffects.
+- _debounceTimeout_ is removed, it can be replaced using _debounceSideEffectsTimeout_ but the behavior is different: only the side effects are debounced and not effects + side effects.
 
 ## Step 2: Migrate code but keep v5 tests
 
@@ -1052,7 +1052,7 @@ Choose one of _useLocalStore_, _useStore_, _useBindStore_ or _useStoreSlice_.
 ```diff
 - import { testSyncAction, testAsyncAction } from 'state-decorator';
 
-+ import { testV6SyncAction, testV6AsyncAction } from 'state-decorator/v5_tests';
++ import { testV6SyncAction, testV6AsyncAction } from 'state-decorator/v5_test';
 ```
 
 ## Step 3: Complete migration
