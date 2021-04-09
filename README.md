@@ -1064,7 +1064,7 @@ Choose one of _useLocalStore_, _useStore_, _useBindStore_ or _useStoreSlice_.
 + import { testV6SyncAction, testV6AsyncAction } from 'state-decorator/v5_test';
 ```
 
-## Step 3: Complete migration
+## Step 3 (optional): Migrate tests
 
 🎊 Congratulations! 🎊
 
