@@ -219,6 +219,14 @@ export type StateDecoratorOptions<S, A, P = {}> = {
   logEnabled?: boolean;
 
   /**
+   * List of action names that are marked as loading at initial time.
+   * As a render is done before first actions can be trigerred, some actions can be marked as loading at
+   * initial time.
+   * @deprecated
+   */
+  initialActionsMarkedLoading?: (keyof A)[];
+
+  /**
    * Get a list of values that will be use as reference values.
    * If they are different (shallow compare), onPropsChangeReducer then onPropsChange will be called.
    */

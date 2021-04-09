@@ -821,7 +821,7 @@ export function isLoadingImpl<A, K extends keyof A>(loadingMap: InternalLoadingM
 //
 // ------------------------------
 
-export const DEFAULT_PROMISE_ID = 'StateDecoratorDefault';
+export const DEFAULT_PROMISE_ID = '__def__';
 
 /** @internal */
 export function areSameArgs(args1: any[], args2: any[]): boolean {

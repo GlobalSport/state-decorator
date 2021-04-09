@@ -137,6 +137,7 @@ describe('v5 compatibility layer', () => {
   };
 
   const v5options: StateDecoratorOptions<State, Actions, Props> = {
+    initialActionsMarkedLoading: ['setSync'],
     notifyError: jest.fn(),
     notifySuccess: jest.fn(),
     onMount: jest.fn(),
@@ -162,6 +163,8 @@ describe('v5 compatibility layer', () => {
       (props) => useStateDecorator(getInitialState, v5actions, props as any, v5options, [optimisticActions()]),
       { initialProps: { propIn: '', callback: jest.fn() } }
     );
+
+    expect(result.current.loadingMap['setSync']).toBeTruthy();
     expect(result.current.state).toEqual({
       propProps: '',
       propSync: '',
@@ -190,7 +193,6 @@ describe('v5 compatibility layer', () => {
     expect(result.current.state.propAsync).toEqual('boom');
 
     await act(async () => {
-      debugger;
       return result.current.actions.setAsyncParallel('v4', 'k1', false, 50);
     });
 

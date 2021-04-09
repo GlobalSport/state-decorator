@@ -1,4 +1,4 @@
-import type {
+import {
   SyncAction as NewAdvancedSyncAction,
   AsyncActionPromise as NewAsynchActionPromise,
   DecoratedActions,
@@ -14,6 +14,7 @@ import type {
   StoreActions,
   StoreOptions,
   MiddlewareFactory,
+  InternalLoadingMap,
 } from './types';
 
 import { createStore, StoreApi, setGlobalConfig, ConflictPolicy } from './index';
@@ -49,6 +50,7 @@ export {
 
 import { useEffect, useLayoutEffect, useReducer, useRef } from 'react';
 import { logDetailedEffects } from './middlewares';
+import { DEFAULT_PROMISE_ID } from './impl';
 
 function isAsyncActionPromise<S, F extends (...args: any[]) => any, A, P>(
   action: StateDecoratorAction<S, F, A, P>
@@ -232,6 +234,7 @@ function convertV5Options<S, P, A>(sourceOptions: StateDecoratorOptions<S, A, P>
     'onPropsChangeReducer',
     'getPropsRefValues',
     'onMount',
+    'initialActionsMarkedLoading',
   ];
 
   keys.forEach((prop) => {
@@ -252,6 +255,16 @@ function convertV5Options<S, P, A>(sourceOptions: StateDecoratorOptions<S, A, P>
       sideEffects: ({ s, p, a, indices }: OnPropsChangeSideEffectsContext<S, P, A>) =>
         sourceOptions.onPropsChange == null ? null : sourceOptions.onPropsChange(s, p, a, indices),
     };
+  }
+
+  if (sourceOptions.initialActionsMarkedLoading) {
+    opts.initialLoadingMap = sourceOptions.initialActionsMarkedLoading.reduce<InternalLoadingMap<A>>(
+      (acc, actionName) => {
+        acc[actionName] = { [DEFAULT_PROMISE_ID]: true };
+        return acc;
+      },
+      {}
+    );
   }
 
   return opts;

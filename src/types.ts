@@ -392,6 +392,15 @@ export type StoreOptions<S, A, P = {}, DS = S> = {
    */
   name?: string;
 
+  /**
+   * For v5 compatibility layer
+   * @internal
+   */
+  initialLoadingMap?: InternalLoadingMap<A>;
+
+  /**
+   * One or several configurations of inbound properties change managements.
+   */
   onPropsChange?: OnPropsChangeOptions<S, A, P> | OnPropsChangeOptions<S, A, P>[];
 
   /**
