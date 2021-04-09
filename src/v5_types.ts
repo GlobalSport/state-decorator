@@ -30,6 +30,12 @@ export type AdvancedSynchAction<S, F extends (...args: any[]) => any, A, P> = {
    * Debounces the side effects if this parameter is defined.
    */
   debounceSideEffectsTimeout?: number;
+
+  /**
+   * Debounces the action if this parameter is defined.
+   */
+  debounceTimeout?: number;
+
   /**
    * Action to call when the action is done. Used to trigger other actions (even asynchronous),
    */

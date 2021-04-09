@@ -375,6 +375,9 @@ action: {
   sideEffects: (ctx) => {
     // side effect code
   },
+  // debounce effect and side effects if > 0
+  debounceTimeout: 0,
+
   // debounce side effects if > 0
   debounceSideEffectsTimeout: 0,
 }
@@ -386,6 +389,8 @@ Example:
 const actions: StoreActions<State, Actions> = {
   setText: {
     effects: ({ s, args: [newText] }) => ({ ...s, text: newText }),
+    // use either debounceTimeout or debounceSideEffectsTimeout
+    // debounceTimeout: 5000,
     debounceSideEffectsTimeout: 5000,
     sideEffects: ({ a }) => {
       a.saveDocument();
@@ -938,11 +943,6 @@ setGlobalConfig({
 });
 ```
 
-### Incompatibilities
-
-- _initialActionsMarkedLoading_ is removed as it's no longer needed. If your initial actions are invoked in _onMount_ they will be marked as loading.
-- _debounceTimeout_ is removed, it can be replaced using _debounceSideEffectsTimeout_ but the behavior is different: only the side effects are debounced and not effects + side effects.
-
 ## Step 2: Migrate code but keep v5 tests
 
 ### Code
@@ -970,7 +970,6 @@ Choose one of _useLocalStore_, _useStore_, _useBindStore_ or _useStoreSlice_.
 | ----------------- | ----------------- |
 | action            | effects           |
 | onActionDone      | sideEffects       |
-| debounceTimeout   | **Removed**       |
 | preReducer        | preEffects        |
 | optimisticReducer | optimisticEffects |
 | reducer           | effects           |
