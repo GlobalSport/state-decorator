@@ -148,6 +148,7 @@ function convertV5Actions<S, A extends DecoratedActions, P>(
         'isTriggerRetryError',
         'rejectPromiseOnError',
         'retryCount',
+        'debounceTimeout',
         'debounceSideEffectsTimeout',
         'retryDelaySeed',
       ].forEach((prop) => {

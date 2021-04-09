@@ -35,6 +35,7 @@ type MyActions = {
   setProp1: (item: string) => void;
   setProp2: (item: string) => void;
   setProp3: (item: string) => void;
+  setProp3Debounced: (item: string) => void;
   resetProp3: () => void;
   loadList: () => Promise<string[]>;
   loadAndFail: () => Promise<any>;
@@ -69,9 +70,18 @@ const myActions: StoreActions<MyState, MyActions, MyProps> = {
     }),
     sideEffects: ({ a }) => {
       a.loadList();
-      a.resetProp3();
     },
     debounceSideEffectsTimeout: 1000,
+  },
+  setProp3Debounced: {
+    effects: ({ s, args: [v] }) => ({
+      ...s,
+      prop3: v,
+    }),
+    sideEffects: ({ a }) => {
+      a.loadList();
+    },
+    debounceTimeout: 500,
   },
   loadList: {
     getPromise: () => {
@@ -103,62 +113,6 @@ const myActions: StoreActions<MyState, MyActions, MyProps> = {
     effects: ({ s }) => ({ ...s, prop2: 'test' }),
   },
 };
-
-const myActionsImmer = immerizeActions<MyState, MyActions, MyProps>({
-  addItem: ({ s, args: [param] }) => {
-    s.list.push(param);
-  },
-  setProp1: ({ s, args: [v] }) => {
-    s.prop1 = v;
-  },
-  setProp2: ({ s, args: [v] }) => {
-    s.prop2 = v;
-  },
-  resetProp3: ({ s }) => {
-    s.prop3 = '';
-  },
-  setProp3: {
-    effects: ({ s, args: [v] }) => {
-      s.prop3 = v;
-    },
-    sideEffects: ({ a }) => {
-      a.loadList();
-      a.resetProp3();
-    },
-    debounceSideEffectsTimeout: 1000,
-  },
-  loadList: {
-    getPromise: () => {
-      const res = new Array(10).fill(null);
-      res.forEach((_, index) => {
-        res[index] = `${Math.floor(Math.random() * 100)}`;
-      });
-
-      return new Promise((resolve) => {
-        setTimeout(resolve, 1000, res);
-      });
-    },
-    effects: ({ s, res: list }) => {
-      s.list = list;
-    },
-    sideEffects: ({ s, a }) => {
-      a.setProp1(s.list[0]);
-    },
-  },
-  loadAndFail: {
-    getPromise: () =>
-      new Promise((_, reject) => {
-        setTimeout(reject, 1000, new Error('boom'));
-      }),
-    errorEffects: ({ s, err }) => {
-      s.prop2 = err.message;
-    },
-  },
-  loadCancel: {
-    getPromise: () => null,
-    effects: ({ s }) => ({ ...s, prop2: 'This value is never set' }),
-  },
-});
 
 export const myStore = createStore(
   (p) => ({ list: [p.init.toString()], prop1: '', prop2: '', prop3: '' }),
@@ -236,6 +190,7 @@ const Child2 = React.memo(function Child2() {
       <Prop2 />
       <LoadList />
       <Prop3 />
+      <Prop3Debounced />
       <LoadFail />
       <LoadCancel />
     </FlashingBox>
@@ -333,6 +288,7 @@ function Prop2() {
     </FlashingBox>
   );
 }
+
 function Prop3() {
   const slice = useStoreSlice(myStore, ({ s, a }) => ({ item: s.prop3, setItem: a.setProp3 }));
 
@@ -340,6 +296,22 @@ function Prop3() {
     <FlashingBox>
       <div>
         <div>After a debounce timeout, loadList as side effect</div>
+        <div>prop3: {slice.item}</div>
+      </div>
+      <div>
+        <input value={slice.item} onChange={(e) => slice.setItem(e.target.value)} />
+      </div>
+    </FlashingBox>
+  );
+}
+
+function Prop3Debounced() {
+  const slice = useStoreSlice(myStore, ({ s, a }) => ({ item: s.prop3, setItem: a.setProp3Debounced }));
+
+  return (
+    <FlashingBox>
+      <div>
+        <div>Debounced the effects and not only the side effects</div>
         <div>prop3: {slice.item}</div>
       </div>
       <div>

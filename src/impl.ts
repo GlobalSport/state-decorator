@@ -509,6 +509,40 @@ export function decorateSimpleSyncAction<S, F extends (...args: any[]) => any, A
 }
 
 /** @internal */
+function executeSyncActionImpl<S, F extends (...args: any[]) => any, A extends DecoratedActions, P>(
+  actionName: keyof A,
+  action: SyncAction<S, F, A, P>,
+  stateRef: Ref<S>,
+  propsRef: Ref<P>,
+  actionsRef: Ref<A>,
+  timeoutMap: Ref<TimeoutMap<A>>,
+  options: StoreOptions<S, A, P, any>,
+  setState: SetStateFunc<S, A, P>,
+  args: Parameters<F>
+) {
+  const ctx = buildEffectsInvocationContext(stateRef, propsRef, args, undefined);
+  const newState = action.effects(ctx);
+  setState(newState, undefined, actionName, 'effects', false, ctx, false);
+
+  if (newState !== null) {
+    if (action.debounceSideEffectsTimeout > 0) {
+      const timeout = timeoutMap.current[actionName];
+
+      if (timeout) {
+        clearTimeout(timeout);
+      }
+
+      timeoutMap.current[actionName] = setTimeout(() => {
+        action.sideEffects(addSideEffectsContext(ctx, stateRef, actionsRef, options.notifyWarning));
+        delete timeoutMap.current[actionName];
+      }, action.debounceSideEffectsTimeout);
+    } else if (action.sideEffects) {
+      action.sideEffects(addSideEffectsContext(ctx, stateRef, actionsRef, options.notifyWarning));
+    }
+  }
+}
+
+/** @internal */
 export function decorateSyncAction<S, F extends (...args: any[]) => any, A extends DecoratedActions, P>(
   actionName: keyof A,
   action: SyncAction<S, F, A, P>,
@@ -520,25 +554,19 @@ export function decorateSyncAction<S, F extends (...args: any[]) => any, A exten
   setState: SetStateFunc<S, A, P>
 ) {
   return (...args: Parameters<F>) => {
-    const ctx = buildEffectsInvocationContext(stateRef, propsRef, args, undefined);
-    const newState = action.effects(ctx);
-    setState(newState, undefined, actionName, 'effects', false, ctx, false);
+    if (action.debounceTimeout) {
+      const timeout = timeoutMap.current[actionName];
 
-    if (newState !== null) {
-      if (action.debounceSideEffectsTimeout > 0) {
-        const timeout = timeoutMap.current[actionName];
-
-        if (timeout) {
-          clearTimeout(timeout);
-        }
-
-        timeoutMap.current[actionName] = setTimeout(() => {
-          action.sideEffects(addSideEffectsContext(ctx, stateRef, actionsRef, options.notifyWarning));
-          delete timeoutMap.current[actionName];
-        }, action.debounceSideEffectsTimeout);
-      } else if (action.sideEffects) {
-        action.sideEffects(addSideEffectsContext(ctx, stateRef, actionsRef, options.notifyWarning));
+      if (timeout) {
+        clearTimeout(timeout);
       }
+
+      timeoutMap.current[actionName] = setTimeout(() => {
+        delete timeoutMap.current[actionName];
+        executeSyncActionImpl(actionName, action, stateRef, propsRef, actionsRef, timeoutMap, options, setState, args);
+      }, action.debounceTimeout);
+    } else {
+      executeSyncActionImpl(actionName, action, stateRef, propsRef, actionsRef, timeoutMap, options, setState, args);
     }
   };
 }

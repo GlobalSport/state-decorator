@@ -86,6 +86,11 @@ export type SyncAction<S, F extends (...args: any[]) => any, A, P, FxRes = S> = 
   /**
    * Debounces the action if this parameter is defined.
    */
+  debounceTimeout?: number;
+
+  /**
+   * Debounces the action side effects if this parameter is defined.
+   */
   debounceSideEffectsTimeout?: number;
 
   /**
