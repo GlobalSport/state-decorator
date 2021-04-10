@@ -419,7 +419,13 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
 
   function isAnyLoading() {
     if (initializedRef.current) {
-      return Object.keys(loadingMapRef.current).length > 0;
+      const loadingMap = loadingMapRef.current;
+      return (
+        Object.keys(loadingMap).find((actionName) => {
+          const promises = loadingMap[actionName];
+          return Object.keys(promises).find((pId) => !!promises[pId]);
+        }) != null
+      );
     }
     return null;
   }
@@ -451,7 +457,7 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
         const map = loadingMapRef.current;
         const keys = Object.keys(map) as (keyof A)[];
         return keys.reduce<LoadingMap<A>>((acc, actionName) => {
-          acc[actionName] = !!map[actionName];
+          acc[actionName] = Object.keys(map[actionName]).find((pId) => !!map[actionName][pId]) != null;
           return acc;
         }, {});
       }
