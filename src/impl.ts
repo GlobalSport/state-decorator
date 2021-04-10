@@ -306,12 +306,8 @@ export function buildLoadingMap<A>(
   }
   const res = {
     ...source,
-    [actionName]: { ...source[actionName] },
+    [actionName]: { ...source[actionName], [promiseId]: false },
   };
-  delete res[actionName][promiseId];
-  if (Object.keys(res[actionName]).length === 0) {
-    delete res[actionName];
-  }
   return res;
 }
 
