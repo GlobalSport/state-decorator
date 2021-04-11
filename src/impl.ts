@@ -1008,8 +1008,10 @@ export function onPropChange<S, P, A, DS>(
   const hasDerivedState = options?.derivedState != null;
 
   if (options.onPropsChange == null) {
-    //    derived values must be updated from props
-    setState(undefined, undefined, 'onPropsChange', 'effects', false, null, true);
+    if (options?.derivedState != null) {
+      //    derived values must be updated from props
+      setState(undefined, undefined, 'onPropsChange', 'effects', false, null, true);
+    }
     return;
   }
 

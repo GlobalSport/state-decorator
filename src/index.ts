@@ -495,7 +495,7 @@ export function useStoreSlice<S, A extends DecoratedActions, P, DS, SLICE>(
   slicerFunc: (ctx: StateListenerContext<S, DS, A>) => SLICE,
   comparator: ComparatorFunction = null
 ): SLICE {
-  const [, forceRefresh] = useReducer((s) => 1 - s, 0);
+  const [, forceRefresh] = useReducer((s) => (s > 100 ? 0 : s + 1), 0);
 
   const sliceRef = useRef<SLICE>(null);
   if (sliceRef.current === null) {
@@ -547,7 +547,7 @@ export function useStoreSlice<S, A extends DecoratedActions, P, DS, SLICE>(
  * @returns The state, actions and isLoading function.
  */
 export function useStore<S, A extends DecoratedActions, P, DS = {}>(store: StoreApi<S, A, P, DS>, props: P = null) {
-  const [, forceRefresh] = useReducer((s) => 1 - s, 0);
+  const [, forceRefresh] = useReducer((s) => (s > 100 ? 0 : s + 1), 0);
 
   // access to store in debugger
   const storeRef = useRef(store);

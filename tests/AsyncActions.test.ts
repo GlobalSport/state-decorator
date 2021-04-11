@@ -120,6 +120,10 @@ describe('Async action', () => {
       expect(notifyError).not.toHaveBeenCalled();
     });
 
+    const { loading, loadingMap } = store;
+    expect(loading).toBe(true);
+    expect(loadingMap.successAction).toBe(true);
+
     expect(listener).toHaveBeenCalledTimes(2);
 
     expect(store.state).toEqual({
