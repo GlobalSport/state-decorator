@@ -87,10 +87,21 @@ describe('Async action', () => {
     const notifySuccess = jest.fn();
     const notifyError = jest.fn();
 
-    const store = createStore(getInitialState, actionsImpl, {
+    const getPromise = jest.fn(() => Promise.resolve('resolved'));
+
+    const actions: StoreActions<State, Actions, Props> = {
+      ...actionsImpl,
+      successAction: {
+        ...baseAction,
+        getPromise,
+      },
+    };
+
+    const store = createStore(getInitialState, actions, {
       notifySuccess,
       notifyError,
     });
+
     store.addStateListener(listener);
     store.setProps({
       callback,
@@ -118,6 +129,14 @@ describe('Async action', () => {
       });
       expect(notifySuccess).toHaveBeenCalledWith('yosh');
       expect(notifyError).not.toHaveBeenCalled();
+    });
+
+    const stateToTest = (getPromise.mock.calls[0] as any)[0].s;
+
+    expect(stateToTest).toEqual({
+      prop1: 'pre',
+      prop2: '',
+      error: '',
     });
 
     const { loading, loadingMap } = store;
@@ -181,7 +200,7 @@ describe('Async action', () => {
     return promise;
   });
 
-  it('cancelled action', () => {
+  it('cancelled action NO PRE', () => {
     const listener = jest.fn();
 
     const callback = jest.fn();
@@ -556,5 +575,59 @@ describe('Async action', () => {
     abortAction('successAction');
 
     return promise;
+  });
+
+  it('cascading pre effects', () => {
+    type State = {
+      value: string;
+    };
+
+    type Actions = {
+      masterAction: () => Promise<string>;
+      childAction: () => Promise<string>;
+    };
+
+    const actionsImpl: StoreActions<State, Actions> = {
+      masterAction: {
+        preEffects: ({ s }) => ({ ...s, value: 'preMaster' }),
+        getPromise: ({ s, a }) => {
+          expect(s.value).toEqual('preMaster');
+          return a.childAction();
+        },
+        effects: ({ s }) => {
+          expect(s.value).toEqual('preChild');
+          return s;
+        },
+      },
+      childAction: {
+        preEffects: ({ s }) => ({ ...s, value: 'preChild' }),
+        getPromise: ({ s }) => {
+          expect(s.value).toEqual('preChild');
+          return Promise.resolve('');
+        },
+        effects: ({ s }) => {
+          expect(s.value).toEqual('preChild');
+          return s;
+        },
+      },
+    };
+
+    const store = createStore(() => ({ value: '' }), actionsImpl);
+    store.init(null);
+
+    const stateListener = jest.fn();
+    store.addStateListener(stateListener);
+
+    const p = store.actions.masterAction().then(() => {
+      expect(store.state.value).toEqual('preChild');
+    });
+
+    // preEffect of child action
+    expect(stateListener.mock.calls[0][0].s.value).toEqual('preChild');
+
+    // notify of master action but childAction was called setting the state.
+    expect(stateListener.mock.calls[1][0].s.value).toEqual('preChild');
+
+    return p;
   });
 });
