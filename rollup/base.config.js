@@ -35,7 +35,7 @@ export default function (input, outDir, externals = []) {
         preferBuiltins: false,
       }),
       commonjs(),
-      // terser(),
+      terser(),
       // visualizer(),
     ],
   };
