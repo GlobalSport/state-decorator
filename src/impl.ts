@@ -768,9 +768,17 @@ export function decorateAsyncAction<S, F extends (...args: any[]) => any, A exte
     }
 
     let newState = null;
+    let hasChanged = false;
+
     const ctx = buildInvocationContext(stateRef, propsRef, args, promiseId);
     if (action.preEffects) {
       newState = action.preEffects(ctx);
+
+      // apply internal state change for calls to other actions in the getPromise
+      if (newState) {
+        hasChanged = true;
+        stateRef.current = newState;
+      }
     }
 
     const { abortable, retryCount, retryDelaySeed, isTriggerRetryError } = action;
@@ -800,7 +808,7 @@ export function decorateAsyncAction<S, F extends (...args: any[]) => any, A exte
     }
 
     setState(
-      newState,
+      p == null && !hasChanged ? undefined : stateRef.current,
       p == null ? undefined : buildLoadingMap(loadingMapRef.current, actionName, promiseId, true),
       actionName,
       'preEffects',

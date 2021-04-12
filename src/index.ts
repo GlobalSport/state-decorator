@@ -336,7 +336,7 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
       actionCtx
     );
 
-    if (newState != null && newState !== stateRef.current) {
+    if (newState != null) {
       hasChanged = true;
       stateRef.current = newState;
     }
