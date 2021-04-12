@@ -238,7 +238,10 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
       propsRef.current = p;
       initializedRef.current = true;
       stateRef.current = getInitialState(p);
-      loadingMapRef.current = options?.initialLoadingMap ?? {};
+      loadingMapRef.current = (Object.keys(actionsImpl) as (keyof A)[]).reduce<InternalLoadingMap<A>>((acc, name) => {
+        acc[name] = options?.initialLoadingMap?.[name] ?? {};
+        return acc;
+      }, {});
       timeoutRef.current = {};
       promisesRef.current = {};
       conflictActionsRef.current = {};
