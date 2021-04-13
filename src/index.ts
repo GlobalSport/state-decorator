@@ -373,7 +373,14 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
   actionsRef.current = keys.reduce<A>((acc, actionName) => {
     const action = actionsImpl[actionName];
     if (isSimpleSyncAction(action)) {
-      acc[actionName] = decorateSimpleSyncAction(actionName, action, stateRef, propsRef, setState) as any;
+      acc[actionName] = decorateSimpleSyncAction(
+        actionName,
+        action,
+        stateRef,
+        propsRef,
+        initializedRef,
+        setState
+      ) as any;
     } else if (isAsyncAction(action)) {
       acc[actionName] = decorateAsyncAction({
         actionName,
@@ -395,6 +402,7 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
         stateRef,
         propsRef,
         actionsRef,
+        initializedRef,
         timeoutRef,
         options,
         setState
@@ -552,21 +560,19 @@ export function useStoreSlice<S, A extends DecoratedActions, P, DS, SLICE>(
 export function useStore<S, A extends DecoratedActions, P, DS = {}>(store: StoreApi<S, A, P, DS>, props: P = null) {
   const [, forceRefresh] = useReducer((s) => (s > 100 ? 0 : s + 1), 0);
 
-  // access to store in debugger
   const storeRef = useRef(store);
-  storeRef;
 
   store.setProps(props);
-  useEffect(() => {
-    return () => store.destroy();
-  }, []);
 
-  useLayoutEffect(() => {
-    const unregister = storeRef.current.addStateListener(() => {
-      forceRefresh();
-    });
-    return unregister;
-  }, []);
+  useLayoutEffect(
+    () =>
+      storeRef.current.addStateListener(() => {
+        forceRefresh();
+      }),
+    []
+  );
+
+  useEffect(() => () => store.destroy(), []);
 
   return {
     state: store.state,
@@ -593,8 +599,7 @@ export function useStore<S, A extends DecoratedActions, P, DS = {}>(store: Store
  */
 export function useBindStore<S, A extends DecoratedActions, P, DS = {}>(store: StoreApi<S, A, P, DS>, props: P = null) {
   // access to store in debugger
-  const storeRef = useRef(store);
-  storeRef;
+  useRef(store);
 
   store.setProps(props);
   useEffect(() => {
