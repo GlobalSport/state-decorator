@@ -495,9 +495,15 @@ export function decorateSimpleSyncAction<S, F extends (...args: any[]) => any, A
   action: SimpleSyncAction<S, F, P>,
   stateRef: Ref<S>,
   propsRef: Ref<P>,
+  initializedRef: Ref<boolean>,
   setState: SetStateFunc<S, A, P>
 ) {
   return (...args: Parameters<F>) => {
+    // store was destroyed
+    if (!initializedRef.current) {
+      return;
+    }
+
     const ctx = buildInvocationContext(stateRef, propsRef, args);
     const newState = action(ctx);
     setState(newState, null, actionName, 'effects', false, ctx, false);
@@ -545,11 +551,17 @@ export function decorateSyncAction<S, F extends (...args: any[]) => any, A exten
   stateRef: Ref<S>,
   propsRef: Ref<P>,
   actionsRef: Ref<A>,
+  initializedRef: Ref<boolean>,
   timeoutMap: Ref<TimeoutMap<A>>,
   options: StoreOptions<S, A, P, any>,
   setState: SetStateFunc<S, A, P>
 ) {
   return (...args: Parameters<F>) => {
+    // store was destroyed
+    if (!initializedRef.current) {
+      return;
+    }
+
     if (action.debounceTimeout) {
       const timeout = timeoutMap.current[actionName];
 

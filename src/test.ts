@@ -237,6 +237,7 @@ export function createMockStoreAction<S, A extends DecoratedActions, F extends (
           action as any,
           stateRef,
           propsRef,
+          createRef(true),
           setState
         )(...((args as any) as Parameters<A[keyof A]>));
 
@@ -249,6 +250,7 @@ export function createMockStoreAction<S, A extends DecoratedActions, F extends (
           stateRef,
           propsRef,
           actionsRef as any,
+          createRef(true),
           null,
           options,
           setState

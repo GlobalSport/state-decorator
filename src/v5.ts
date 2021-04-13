@@ -278,7 +278,7 @@ function useStateDecorator<S, A extends DecoratedActions, P>(
   options: StateDecoratorOptions<S, A, P> = {},
   middlewares?: MiddlewareFactory<S, A, P>[]
 ) {
-  const [, forceRefresh] = useReducer((s) => 1 - s, 0);
+  const [, forceRefresh] = useReducer((s) => (s > 100 ? 0 : s + 1), 0);
 
   const actionsRef = useRef<StoreActions<S, A, P>>();
   const optionsRef = useRef<StoreOptions<S, A, P, {}>>();
@@ -303,12 +303,13 @@ function useStateDecorator<S, A extends DecoratedActions, P>(
 
   storeRef.current.setProps(props);
 
-  useLayoutEffect(() => {
-    const unregister = storeRef.current.addStateListener(() => {
-      forceRefresh();
-    });
-    return unregister;
-  }, []);
+  useLayoutEffect(
+    () =>
+      storeRef.current.addStateListener(() => {
+        forceRefresh();
+      }),
+    []
+  );
 
   const store = storeRef.current;
 

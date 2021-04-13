@@ -1,4 +1,4 @@
-import { createStore } from '../src';
+import { createStore, StoreActions } from '../src';
 
 function getTimeoutPromise<C>(timeout: number, result: C = null): Promise<C> {
   return new Promise((res) => {
@@ -81,43 +81,72 @@ describe('Lifecycle', () => {
     };
 
     type Action = {
-      setProp: (p: string) => void;
+      setPropSimpleSync: (p: string) => void;
+      setPropSync: (p: string) => void;
+      setPropAsync: (p: string) => void;
     };
-    it('Call store if not initialized', () => {
-      const store = createStore<State, Action, any>(() => ({ prop: '' }), {
-        setProp: {
-          getPromise: () => getTimeoutPromise(100, 'test'),
-          effects: ({ s, args: [p] }) => ({ ...s, prop: p }),
-        },
-      });
 
-      store.actions.setProp('test');
+    const actionsImpl: StoreActions<State, Action> = {
+      setPropSync: { effects: ({ s, args: [p] }) => ({ ...s, prop: p + s.prop }) },
+      setPropSimpleSync: ({ s, args: [p] }) => ({ ...s, prop: p + s.prop }),
+      setPropAsync: {
+        getPromise: () => getTimeoutPromise(100, 'test'),
+        effects: ({ s, args: [p] }) => ({ ...s, prop: p + s.prop }),
+      },
+    };
+
+    it('Call store if not initialized (async)', () => {
+      const store = createStore<State, Action, any>(() => ({ prop: '' }), actionsImpl);
+
+      store.actions.setPropAsync('test');
     });
 
-    it('Call store if not destroyed', () => {
-      const store = createStore<State, Action, any>(() => ({ prop: '' }), {
-        setProp: {
-          effects: ({ s, args: [p] }) => ({ ...s, prop: p }),
-        },
-      });
+    it('Call store if not initialized (sync)', () => {
+      const store = createStore<State, Action, any>(() => ({ prop: '' }), actionsImpl);
+
+      store.actions.setPropSync('test');
+    });
+
+    it('Call store if not initialized (simple sync)', () => {
+      const store = createStore<State, Action, any>(() => ({ prop: '' }), actionsImpl);
+
+      store.actions.setPropSimpleSync('test');
+    });
+
+    it('Call store if destroyed (asynchronous)', () => {
+      const store = createStore<State, Action, any>(() => ({ prop: '' }), actionsImpl);
 
       store.init({});
 
       store.destroy();
 
-      store.actions.setProp('test');
+      store.actions.setPropAsync('test');
     });
-
-    it('Call store if not destroyed after call', () => {
-      const store = createStore<State, Action, any>(() => ({ prop: '' }), {
-        setProp: {
-          effects: ({ s, args: [p] }) => ({ ...s, prop: p }),
-        },
-      });
+    it('Call store if destroyed (sync)', () => {
+      const store = createStore<State, Action, any>(() => ({ prop: '' }), actionsImpl);
 
       store.init({});
 
-      store.actions.setProp('test');
+      store.destroy();
+
+      store.actions.setPropSync('test');
+    });
+    it('Call store if destroyed (simple sync)', () => {
+      const store = createStore<State, Action, any>(() => ({ prop: '' }), actionsImpl);
+
+      store.init({});
+
+      store.destroy();
+
+      store.actions.setPropSimpleSync('test');
+    });
+
+    it('Call store if not destroyed after call', () => {
+      const store = createStore<State, Action, any>(() => ({ prop: '' }), actionsImpl);
+
+      store.init({});
+
+      store.actions.setPropAsync('test');
 
       store.destroy();
     });
