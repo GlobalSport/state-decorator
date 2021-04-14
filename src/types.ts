@@ -429,6 +429,11 @@ export type StoreOptions<S, A, P = {}, DS = S> = {
   onMount?: (ctx: OnMountInvocationContext<S, A, P>) => void;
 
   /**
+   * Callback on store destruction.
+   */
+  onUnmount?: (ctx: OnMountInvocationContext<S, A, P>) => Promise<any> | void;
+
+  /**
    * Compute derived state
    */
   derivedState?: DerivedStateOption<S, P, DS>;

@@ -281,6 +281,8 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
 
   function destroy() {
     if (initializedRef.current) {
+      options?.onUnmount?.(buildOnMountInvocationContext(stateRef, propsRef, actionsRef));
+
       propsRef.current = null;
       stateRef.current = null;
       loadingMapRef.current = null;
