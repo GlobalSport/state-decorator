@@ -489,6 +489,14 @@ function addSideEffectsContext<S, T extends { s: S; state: S }, A>(
   return res;
 }
 
+function notInitWarning<A>(actionName: keyof A) {
+  if (process.env.NODE_ENV === 'development') {
+    console.warn(
+      `[state-decorator] ${actionName} action was called while store is not initialized or destroyed, this is probably a leak`
+    );
+  }
+}
+
 /** @internal */
 export function decorateSimpleSyncAction<S, F extends (...args: any[]) => any, A extends DecoratedActions, P>(
   actionName: keyof A,
@@ -501,6 +509,7 @@ export function decorateSimpleSyncAction<S, F extends (...args: any[]) => any, A
   return (...args: Parameters<F>) => {
     // store was destroyed
     if (!initializedRef.current) {
+      notInitWarning(actionName);
       return;
     }
 
@@ -559,6 +568,7 @@ export function decorateSyncAction<S, F extends (...args: any[]) => any, A exten
   return (...args: Parameters<F>) => {
     // store was destroyed
     if (!initializedRef.current) {
+      notInitWarning(actionName);
       return;
     }
 
@@ -755,6 +765,7 @@ export function decorateAsyncAction<S, F extends (...args: any[]) => any, A exte
 
   return (...args: Parameters<F>): Promise<any> => {
     if (!initializedRef.current) {
+      notInitWarning(actionName);
       return null;
     }
 
