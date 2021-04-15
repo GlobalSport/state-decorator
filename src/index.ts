@@ -622,11 +622,12 @@ export function useLocalStore<S, A extends DecoratedActions, P, DS = {}>(
   getInitialState: (p: P) => S,
   actionImpl: StoreActions<S, A, P>,
   props?: P,
-  options?: StoreOptions<S, A, P, DS>
+  options?: StoreOptions<S, A, P, DS>,
+  middlewares?: MiddlewareFactory<S, A, P>[]
 ) {
   const storeRef = useRef<StoreApi<S, A, P, DS>>();
   if (storeRef.current == null) {
-    storeRef.current = createStore(getInitialState, actionImpl, options);
+    storeRef.current = createStore(getInitialState, actionImpl, options, middlewares);
   }
 
   return useStore(storeRef.current, props);
