@@ -289,7 +289,7 @@ export function createMockStoreAction<S, A extends DecoratedActions, F extends (
         }) as any)(...((args as any) as Parameters<A[keyof A]>));
       }
 
-      return promise
+      return (promise || Promise.resolve())
         .catch(() => Promise.resolve())
         .then(() => {
           loadingMapRef.current = {};
