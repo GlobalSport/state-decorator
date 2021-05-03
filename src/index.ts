@@ -142,13 +142,11 @@ export type StoreApi<S, A, P, DS = {}> = {
   isLoading: IsLoadingFunc<A>;
 };
 
-export type StateListenerContext<S, DS, A> = Pick<
-  StoreApi<S, A, any, DS>,
-  'state' | 'actions' | 'loading' | 'isLoading' | 'abortAction'
-> & {
-  s: S & DS;
-  a: A;
-};
+export type StateListenerContext<S, DS, A> = S &
+  DS &
+  A &
+  Pick<StoreApi<S, A, any, DS>, 'loading' | 'loadingMap' | 'isLoading' | 'abortAction'>;
+
 export type StateListener<S, DS, A> = (ctx: StateListenerContext<S, DS, A>) => void;
 
 // =============================
@@ -200,13 +198,12 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
     };
 
     const ctx: StateListenerContext<S, DS, A> = {
-      s,
+      ...s,
+      ...actionsRef.current,
       isLoading,
       abortAction,
-      state: s,
-      a: actionsRef.current,
-      actions: actionsRef.current,
       loading: isAnyLoading(),
+      loadingMap: getLoadingMap(),
     };
 
     Object.keys(stateListeners).forEach((listenerId) => {
@@ -443,6 +440,18 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
     return null;
   }
 
+  function getLoadingMap() {
+    if (initializedRef.current) {
+      const map = loadingMapRef.current;
+      const keys = Object.keys(map) as (keyof A)[];
+      return keys.reduce<LoadingMap<A>>((acc, actionName) => {
+        acc[actionName] = Object.keys(map[actionName]).find((pId) => !!map[actionName][pId]) != null;
+        return acc;
+      }, {});
+    }
+    return null;
+  }
+
   return {
     setProps,
     addStateListener,
@@ -466,15 +475,7 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
       return isAnyLoading();
     },
     get loadingMap() {
-      if (initializedRef.current) {
-        const map = loadingMapRef.current;
-        const keys = Object.keys(map) as (keyof A)[];
-        return keys.reduce<LoadingMap<A>>((acc, actionName) => {
-          acc[actionName] = Object.keys(map[actionName]).find((pId) => !!map[actionName][pId]) != null;
-          return acc;
-        }, {});
-      }
-      return null;
+      return getLoadingMap();
     },
     get loadingParallelMap() {
       if (initializedRef.current) {
@@ -514,13 +515,13 @@ export function useStoreSlice<S, A extends DecoratedActions, P, DS, SLICE>(
   if (sliceRef.current === null) {
     const s = store.state;
     sliceRef.current = slicerFunc({
-      s,
-      state: s,
-      a: store.actions,
+      ...s,
+      ...store.actions,
       actions: store.actions,
       loading: store.loading,
       isLoading: store.isLoading,
       abortAction: store.abortAction,
+      loadingMap: store.loadingMap,
     });
   }
 
@@ -634,3 +635,31 @@ export function useLocalStore<S, A extends DecoratedActions, P, DS = {}>(
 }
 
 export default useLocalStore;
+
+// ------------- UTILS
+
+/**
+ * Creates a new object by picking properties to the object passed a first parameter
+ * @param obj Object to pick properties from
+ * @param props Property names
+ * @returns a new object containing only picked properties
+ */
+export function pick<T, K extends keyof T>(obj: T, ...props: K[]): Pick<T, K> {
+  return props.reduce((acc, p) => {
+    if (obj.hasOwnProperty(p)) {
+      acc[p] = obj[p];
+    }
+    return acc;
+  }, {} as any);
+}
+
+/**
+ * Returns a function that creates a new object by picking properties to the object passed as first parameter.
+ * To be used in conjunction of <code>useStoreSlice</code> like in example:
+ *   const s = useStoreSlice(myStore, slice('list', 'addItem'));
+ * @param props Property names
+ * @returns a function to pick property from an passed object.
+ */
+export function slice<T, K extends keyof T>(...props: K[]): (obj: T) => Pick<T, K> {
+  return (store: T) => pick(store, ...props);
+}

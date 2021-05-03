@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { useStoreSlice } from '../../dist';
+import { slice, useStoreSlice } from '../../dist';
 
 import FlashingBox from './FlashingBox';
 import { store } from './Slice';
@@ -14,15 +14,15 @@ import Typography from '@material-ui/core/Typography';
 import { makeStyles } from '@material-ui/core/styles';
 
 function Buttons() {
-  const { actions } = useStoreSlice(store, ({ actions }) => ({ actions }));
+  const a = useStoreSlice(store, slice('setValue1', 'setValue2'));
 
   return (
     <FlashingBox>
       <Box>
-        <Button variant="outlined" onClick={() => actions.setValue1('test1')}>
+        <Button variant="outlined" onClick={() => a.setValue1('test1')}>
           Set Value 1 to "test1"
         </Button>
-        <Button variant="outlined" onClick={() => actions.setValue2('test2')}>
+        <Button variant="outlined" onClick={() => a.setValue2('test2')}>
           Set Value 2 to "test2"
         </Button>
       </Box>
@@ -57,18 +57,18 @@ function Value(p: ValueProps) {
 }
 
 function Value1() {
-  const { value, isLoading } = useStoreSlice(store, ({ s, isLoading }) => ({
+  const { value, isLoading } = useStoreSlice(store, (s) => ({
     value: s.value1,
-    isLoading: isLoading('setValue1'),
+    isLoading: s.isLoading('setValue1'),
   }));
 
   return <Value title="Value 1" value={value} isLoading={isLoading} />;
 }
 
 function Value2() {
-  const { value, isLoading } = useStoreSlice(store, ({ s, isLoading }) => ({
+  const { value, isLoading } = useStoreSlice(store, (s) => ({
     value: s.value2,
-    isLoading: isLoading('setValue2'),
+    isLoading: s.isLoading('setValue2'),
   }));
 
   return <Value title="Value 2" value={value} isLoading={isLoading} />;

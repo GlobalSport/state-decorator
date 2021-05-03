@@ -161,10 +161,21 @@ export function Container(prop: Props) {
 }
 
 // Another component deeper in the component tree
-export function SubComponet() {
+export function SubComponent() {
   // Component will be refreshed if, and only if, 'text' is changed (actions are stable)
-  const { text, loadList } = useStoreSlice(store, ({ s, a }) => ({ text: s.text, loadList: a.loadList }));
-  return <div>{text}</div>;
+  const s = useStoreSlice(store, (s) => ({ text: s.text, loadList: s.loadList }));
+  return <div>{s.text}</div>;
+}
+```
+
+A provided `slice` function allows to be even more concise:
+
+```typescript
+import { slice, useStoreSlice } from 'state-decorator';
+export function SubComponetn() {
+  // Component will be refreshed if, and only if, 'text' is changed (actions are stable)
+  const s = useStoreSlice(store, slice('text', 'loadList'));
+  return <div>{s.text}</div>;
 }
 ```
 

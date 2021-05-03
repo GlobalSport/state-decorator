@@ -80,11 +80,11 @@ function Toolbar(p: ToolbarProps) {
 
 function TableApp() {
   // not using useStore because store is shared
-  const { state, actions } = useStoreSlice(store, (i) => i);
+  const s = useStoreSlice(store, (i) => i);
 
   return (
     <FlashingBox>
-      <Toolbar insertRow={actions.insertRow} />
+      <Toolbar insertRow={s.insertRow} />
       <MTable>
         <MTableHead>
           <MTableRow>
@@ -94,7 +94,7 @@ function TableApp() {
             <MTableCell></MTableCell>
           </MTableRow>
         </MTableHead>
-        <TableBody {...state} {...actions} />
+        <TableBody {...s} />
       </MTable>
     </FlashingBox>
   );

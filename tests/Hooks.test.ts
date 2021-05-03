@@ -53,9 +53,9 @@ describe('react hooks', () => {
     store.init({});
 
     const { result } = renderHook(() =>
-      useStoreSlice(store, ({ s, a }) => ({
-        res: s.prop1,
-        set: a.setProp1,
+      useStoreSlice(store, (ctx) => ({
+        res: ctx.prop1,
+        set: ctx.setProp1,
       }))
     );
 
