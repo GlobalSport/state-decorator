@@ -20,6 +20,7 @@ describe('createMockStore', () => {
   type Props = {
     prop: string;
     prop2: string;
+    onMount: () => void;
   };
 
   type DerivedState = {
@@ -66,20 +67,23 @@ describe('createMockStore', () => {
         get: ({ s, p }) => [s.prop1, s.prop2, s.prop3, s.prop4, p.prop].join(','),
       },
     },
+    onMount: ({ a, p }) => {
+      a.setProp1('onMount1');
+      p.onMount();
+    },
   };
 
-  const store = createMockStore(
-    () => ({
+  function getInitialState(): State {
+    return {
       prop1: '',
       prop2: 0,
       prop3: '',
       prop4: '',
       error: '',
-    }),
-    actionsImpl,
-    { prop: '', prop2: '' },
-    options
-  );
+    };
+  }
+
+  const store = createMockStore(getInitialState, actionsImpl, { prop: '', prop2: '', onMount: null }, options);
 
   it('allows to set state correctly', () => {
     store.test((s) => {
@@ -147,10 +151,11 @@ describe('createMockStore', () => {
       expect(props).toEqual({
         prop: '',
         prop2: '',
+        onMount: null,
       });
     });
 
-    const newStore = store.setProps({
+    const newStore = store.setPartialProps({
       prop: 'a',
       prop2: '',
     });
@@ -170,6 +175,7 @@ describe('createMockStore', () => {
       expect(props).toEqual({
         prop: 'a',
         prop2: '',
+        onMount: null,
       });
     });
 
@@ -192,6 +198,7 @@ describe('createMockStore', () => {
       expect(props).toEqual({
         prop: 'a',
         prop2: '',
+        onMount: null,
       });
     });
 
@@ -213,6 +220,7 @@ describe('createMockStore', () => {
       .onPropsChange({
         prop: 'new_prop',
         prop2: '',
+        onMount: null,
       })
       .test((res) => {
         expect(res.actions.setProp1).toHaveBeenCalled();
@@ -471,13 +479,14 @@ describe('createMockStore', () => {
     });
   });
 
-  it('allows to props on store mock action', async () => {
+  it('allows to set props on store mock action', async () => {
     const action = store.getAction('setProp1');
 
     const action2 = action
       .setProps({
         prop: 'p',
         prop2: '',
+        onMount: null,
       })
       .test((s) => {
         expect(s).toEqual({
@@ -531,6 +540,55 @@ describe('createMockStore', () => {
         error: '',
         concat: ',0,,,', // derived state is included
       });
+    });
+  });
+
+  describe('onMount', () => {
+    it('allows to test onMount on store', () => {
+      store.onMount(
+        {
+          prop: '',
+          prop2: '',
+          onMount: jest.fn(),
+        },
+        (p, a) => {
+          expect(p.onMount).toHaveBeenCalled();
+          expect(a.setProp1).toHaveBeenCalledWith('onMount1');
+        }
+      );
+    });
+
+    it('fails if no onMount is set on options', () => {
+      const store = createMockStore(
+        getInitialState,
+        actionsImpl,
+        {
+          prop: '',
+          prop2: '',
+          onMount: jest.fn(),
+        },
+        null
+      );
+
+      try {
+        store.onMount(
+          {
+            prop: '',
+            prop2: '',
+            onMount: jest.fn(),
+          },
+          (p, a) => {
+            expect(p.onMount).toHaveBeenCalled();
+            expect(a.setProp1).toHaveBeenCalledWith('onMount1');
+          }
+        );
+
+        throw new Error('failed');
+      } catch (e) {
+        if (e.message === 'failed') {
+          throw new Error('failed');
+        }
+      }
     });
   });
 });

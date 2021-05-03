@@ -51,6 +51,7 @@ type MockStore<S, A extends DecoratedActions, P, DS> = {
   setPartialProps: (props: Partial<P>) => MockStore<S, A, P, DS>;
 
   test: (f: (state: S & DS, props: P) => void) => MockStore<S, A, P, DS>;
+  onMount: (props: P, testFunction: (props: P, actions: MockActions<A, any>) => void) => MockStore<S, A, P, DS>;
 
   onPropsChange: (props: P) => MockResultWithTest<S, A, P, DS>;
 
@@ -88,6 +89,30 @@ export function createMockStore<S, A extends DecoratedActions, P = {}, DS = {}>(
   return {
     test(f) {
       f(getState(), propsRef.current);
+      return this;
+    },
+    onMount(propsIn, f) {
+      const actionsRef = getActionsRef(actions);
+
+      if (options?.onMount == null) {
+        throw new Error("There's no onMount set on store options");
+      }
+
+      const p = propsIn || props;
+      const a = actionsRef.current as any;
+      const s = stateRef.current;
+
+      options.onMount({
+        s,
+        p,
+        a,
+        state: s,
+        props: p,
+        actions: a,
+      });
+
+      f(p, a);
+
       return this;
     },
     setState(s) {
