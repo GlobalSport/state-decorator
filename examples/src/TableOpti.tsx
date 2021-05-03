@@ -8,7 +8,7 @@ import MTableRow from '@material-ui/core/TableRow';
 import DeleteIcon from '@material-ui/icons/Delete';
 import ArrowUpIcon from '@material-ui/icons/ArrowUpward';
 import ArrowDownIcon from '@material-ui/icons/ArrowDownward';
-import { useStoreSlice } from '../../dist';
+import { pick, slice, useStoreSlice } from '../../dist';
 import FlashingBox, { useFlashingNode } from './FlashingBox';
 import Box from '@material-ui/core/Box';
 import Button from '@material-ui/core/Button';
@@ -23,10 +23,12 @@ type TableRowProps = {
 
 // memo for id
 const TableRow = memo(function TableRow(p: TableRowProps) {
-  const { row, actions } = useStoreSlice(store, ({ s, actions }) => ({
-    actions,
+  const s = useStoreSlice(store, (s) => ({
+    ...pick(s, 'editValue', 'moveRow', 'deleteRow'),
     row: s.rowMap[p.id],
   }));
+
+  const { row } = s;
 
   const ref = useRef();
 
@@ -37,17 +39,17 @@ const TableRow = memo(function TableRow(p: TableRowProps) {
       <MTableCell>{row.id}</MTableCell>
       {['col1', 'col2'].map((col) => (
         <MTableCell key={col}>
-          <TextField label={col} value={row[col]} onChange={(e) => actions.editValue(row.id, col, e.target.value)} />
+          <TextField label={col} value={row[col]} onChange={(e) => s.editValue(row.id, col, e.target.value)} />
         </MTableCell>
       ))}
       <MTableCell>
-        <IconButton size="small" onClick={() => actions.moveRow(row.id, false)}>
+        <IconButton size="small" onClick={() => s.moveRow(row.id, false)}>
           <ArrowDownIcon />
         </IconButton>
-        <IconButton size="small" onClick={() => actions.moveRow(row.id, true)}>
+        <IconButton size="small" onClick={() => s.moveRow(row.id, true)}>
           <ArrowUpIcon />
         </IconButton>
-        <IconButton size="small" onClick={() => actions.deleteRow(row.id)}>
+        <IconButton size="small" onClick={() => s.deleteRow(row.id)}>
           <DeleteIcon />
         </IconButton>
       </MTableCell>
@@ -57,7 +59,7 @@ const TableRow = memo(function TableRow(p: TableRowProps) {
 
 function TableBody() {
   // rows is updated only on add / delete / reorder
-  const { rows } = useStoreSlice(store, ({ s }) => ({ rows: s.rows }));
+  const { rows } = useStoreSlice(store, slice('rows'));
 
   const ref = useRef();
 
@@ -73,11 +75,11 @@ function TableBody() {
 }
 
 function Toolbar() {
-  const { actions } = useStoreSlice(store, ({ actions }) => ({ actions }));
+  const s = useStoreSlice(store, slice('insertRow'));
 
   return (
     <Box>
-      <Button onClick={() => actions.insertRow()}>Add</Button>
+      <Button onClick={() => s.insertRow()}>Add</Button>
     </Box>
   );
 }

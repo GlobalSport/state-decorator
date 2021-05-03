@@ -623,10 +623,10 @@ describe('Async action', () => {
     });
 
     // preEffect of child action
-    expect(stateListener.mock.calls[0][0].s.value).toEqual('preChild');
+    expect(stateListener.mock.calls[0][0].value).toEqual('preChild');
 
     // notify of master action but childAction was called setting the state.
-    expect(stateListener.mock.calls[1][0].s.value).toEqual('preChild');
+    expect(stateListener.mock.calls[1][0].value).toEqual('preChild');
 
     return p;
   });

@@ -11,7 +11,7 @@
 import React, { useState } from 'react';
 import { StoreActions } from '../../dist/types';
 import { logDetailedEffects, devtools, logEffects } from '../../dist/middlewares';
-import { createStore, useStoreSlice, useBindStore } from '../../dist';
+import { createStore, useStoreSlice, useBindStore, slice, pick } from '../../dist';
 import { useRef } from 'react';
 import { immerizeActions } from './immerizeActions';
 import FlashingBox from './FlashingBox';
@@ -139,7 +139,7 @@ export default function MyContainer() {
     <Box>
       <Typography variant="h6">State sharing</Typography>
       <Typography variant="caption">
-        The state is contained in the root and each sub component uses a slice. Flashing means re-render.
+        The state is contained in the root and each sub component uses a s. Flashing means re-render.
         <br />
         Open devtools console and redux dev tools if installed to see state changes.
       </Typography>
@@ -163,7 +163,7 @@ export function StateContainer(props: MyProps) {
 export function StateView() {
   const logNodeRef = useRef<HTMLDivElement>();
 
-  const { state } = useStoreSlice(myStore, (i) => i);
+  const state = useStoreSlice(myStore, (i) => i);
   return (
     <FlashingBox>
       <div style={{ display: 'flex' }}>
@@ -198,39 +198,39 @@ const Child2 = React.memo(function Child2() {
 });
 
 function List() {
-  const slice = useStoreSlice(myStore, ({ s, a }) => ({ list: s.list, addItem: a.addItem }));
+  const s = useStoreSlice(myStore, slice('list', 'addItem'));
 
   return (
     <FlashingBox>
       <div>
-        <div>list: [{slice.list.join(', ')}]</div>
+        <div>list: [{s.list.join(', ')}]</div>
       </div>
       <div>
-        <InputButton buttonLabel="Add to list" onAction={(item) => slice.addItem(item)} />
+        <InputButton buttonLabel="Add to list" onAction={(item) => s.addItem(item)} />
       </div>
     </FlashingBox>
   );
 }
 
 function Prop1() {
-  const slice = useStoreSlice(myStore, ({ s, a }) => ({ item: s.prop1, setItem: a.setProp1 }));
+  const s = useStoreSlice(myStore, slice('prop1', 'setProp1'));
 
   return (
     <FlashingBox>
       <div>
-        <div>prop1: {slice.item}</div>
+        <div>prop1: {s.prop1}</div>
       </div>
       <div>
-        <InputButton buttonLabel="Set Item" onAction={(item) => slice.setItem(item)} />
+        <InputButton buttonLabel="Set Item" onAction={(item) => s.setProp1(item)} />
       </div>
     </FlashingBox>
   );
 }
 
 function LoadList() {
-  const { loading, loadList } = useStoreSlice(myStore, ({ a, isLoading }) => ({
-    loadList: a.loadList,
-    loading: isLoading('loadList'),
+  const { loadList, loading } = useStoreSlice(myStore, (s) => ({
+    loadList: s.loadList,
+    loading: s.isLoading('loadList'),
   }));
 
   return (
@@ -244,30 +244,30 @@ function LoadList() {
 }
 
 function LoadFail() {
-  const { loading, load } = useStoreSlice(myStore, ({ a, isLoading }) => ({
-    load: a.loadAndFail,
-    loading: isLoading('loadAndFail'),
+  const { loadAndFail, loading } = useStoreSlice(myStore, (s) => ({
+    loadAndFail: s.loadAndFail,
+    loading: s.isLoading('loadAndFail'),
   }));
 
   return (
     <FlashingBox>
       <div>Asynchronous load and fail and set "error" to prop2 as side effect</div>
-      <button disabled={loading} onClick={() => load()}>
+      <button disabled={loading} onClick={() => loadAndFail()}>
         {loading ? 'loading...' : 'load'}
       </button>
     </FlashingBox>
   );
 }
 function LoadCancel() {
-  const { loading, load } = useStoreSlice(myStore, ({ a, isLoading }) => ({
-    load: a.loadCancel,
-    loading: isLoading('loadCancel'),
+  const { loadCancel, loading } = useStoreSlice(myStore, (s) => ({
+    loadCancel: s.loadCancel,
+    loading: s.isLoading('loadCancel'),
   }));
 
   return (
     <FlashingBox>
       <div>Asynchronous action, promise cancel (return null)</div>
-      <button disabled={loading} onClick={() => load()}>
+      <button disabled={loading} onClick={() => loadCancel()}>
         {loading ? 'loading...' : 'load'}
       </button>
     </FlashingBox>
@@ -275,47 +275,51 @@ function LoadCancel() {
 }
 
 function Prop2() {
-  const slice = useStoreSlice(myStore, ({ s, a }) => ({ item: s.prop2, setItem: a.setProp2 }));
+  // all are identical
+  // const s = useStoreSlice(myStore, ({ s, a }) => ({ item: s.prop2, setItem: a.setProp2 }));
+  // const s = useStoreSlice(myStore, (s) => ({ item: s.prop2, setItem: s.setProp2 }));
+  // const s = useStoreSlice(myStore, (s) => pick(s, 'prop2', 'setProp2'));
+  const s = useStoreSlice(myStore, slice('prop2', 'setProp2'));
 
   return (
     <FlashingBox>
       <div>
-        <div>prop2: {slice.item}</div>
+        <div>prop2: {s.prop2}</div>
       </div>
       <div>
-        <InputButton buttonLabel="Set Item" onAction={(item) => slice.setItem(item)} />
+        <InputButton buttonLabel="Set Item" onAction={(item) => s.setProp2(item)} />
       </div>
     </FlashingBox>
   );
 }
 
 function Prop3() {
-  const slice = useStoreSlice(myStore, ({ s, a }) => ({ item: s.prop3, setItem: a.setProp3 }));
+  const s = useStoreSlice(myStore, slice('prop3', 'setProp3'));
 
   return (
     <FlashingBox>
       <div>
         <div>After a debounce timeout, loadList as side effect</div>
-        <div>prop3: {slice.item}</div>
+        <div>prop3: {s.prop3}</div>
       </div>
       <div>
-        <input value={slice.item} onChange={(e) => slice.setItem(e.target.value)} />
+        <input value={s.prop3} onChange={(e) => s.setProp3(e.target.value)} />
       </div>
     </FlashingBox>
   );
 }
 
 function Prop3Debounced() {
-  const slice = useStoreSlice(myStore, ({ s, a }) => ({ item: s.prop3, setItem: a.setProp3Debounced }));
+  const s = useStoreSlice(myStore, slice('prop3', 'setProp3Debounced'));
 
   return (
     <FlashingBox>
       <div>
         <div>Debounced the effects and not only the side effects</div>
-        <div>prop3: {slice.item}</div>
+        <div>prop3: {s.prop3}</div>
       </div>
       <div>
-        <input value={slice.item} onChange={(e) => slice.setItem(e.target.value)} />
+        <input value={s.prop3} onChange={(e) => s.setProp3Debounced(e.target.value)} />
       </div>
     </FlashingBox>
   );
