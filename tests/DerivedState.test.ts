@@ -24,9 +24,15 @@ describe('Derived state', () => {
     setOther: (p: number) => void;
   };
 
-  const actionsImpl: StoreActions<State, Actions, any> = {
-    setList: ({ s, args: [list] }) => ({ ...s, list }),
-    setFilter: ({ s, args: [filter] }) => ({ ...s, filter }),
+  const actionsImpl: StoreActions<State, Actions, any, DerivedState> = {
+    setList: ({ s, args: [list], ds }) => {
+      expect(ds).toBeDefined();
+      return { ...s, list };
+    },
+    setFilter: ({ s, ds, args: [filter] }) => {
+      expect(ds).toBeDefined();
+      return { ...s, filter };
+    },
     setOther: ({ s, args: [other] }) => ({ ...s, other }),
   };
 

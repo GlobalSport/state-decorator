@@ -109,16 +109,16 @@ function convertV5Actions<S, A extends DecoratedActions, P>(
     const sourceAction = sourceActions[actionName];
 
     if (isSyncAction(sourceAction)) {
-      acc[actionName] = (ctx: InvocationContext<S, any, P>) =>
+      acc[actionName] = (ctx: InvocationContext<S, any, any, P>) =>
         sourceAction(ctx.s, ctx.args as Parameters<A[keyof A]>, ctx.p);
     } else if (isAdvancedSyncAction(sourceAction)) {
-      const action: NewAdvancedSyncAction<S, any, A, P> = {
-        effects: (ctx: EffectsInvocationContext<S, any, P>) =>
+      const action: NewAdvancedSyncAction<S, any, A, P, any> = {
+        effects: (ctx: EffectsInvocationContext<S, any, any, P>) =>
           sourceAction.action(ctx.s, ctx.args as Parameters<A[keyof A]>, ctx.p),
       };
 
       if (sourceAction.onActionDone) {
-        action.sideEffects = ({ s, p, args, a, notifyWarning }: SideEffectsInvocationContext<S, any, P, A>) => {
+        action.sideEffects = ({ s, p, args, a, notifyWarning }: SideEffectsInvocationContext<S, any, any, P, A>) => {
           sourceAction.onActionDone(s, args as Parameters<A[keyof A]>, p, a, notifyWarning);
         };
       }
@@ -129,14 +129,14 @@ function convertV5Actions<S, A extends DecoratedActions, P>(
 
       if (isAsyncActionPromiseGet(sourceAction)) {
         asyncAction = {
-          getPromise: ({ s, p, a, args, abortSignal }: GetPromiseInvocationContext<S, any, P, A>) =>
+          getPromise: ({ s, p, a, args, abortSignal }: GetPromiseInvocationContext<S, any, any, P, A>) =>
             sourceAction.promiseGet(args as Parameters<A[keyof A]>, s, p, a, abortSignal),
           retryCount: 3,
           conflictPolicy: ConflictPolicy.REUSE,
         };
       } else {
         asyncAction = {
-          getPromise: ({ s, p, a, args, abortSignal }: GetPromiseInvocationContext<S, any, P, A>) =>
+          getPromise: ({ s, p, a, args, abortSignal }: GetPromiseInvocationContext<S, any, any, P, A>) =>
             sourceAction.promise(args as Parameters<A[keyof A]>, s, p, a, abortSignal),
         };
       }
@@ -175,27 +175,34 @@ function convertV5Actions<S, A extends DecoratedActions, P>(
       }
 
       if (sourceAction.preReducer) {
-        asyncAction.preEffects = ({ s, p, args }: InvocationContext<S, any, P>) =>
+        asyncAction.preEffects = ({ s, p, args }: InvocationContext<S, any, any, P>) =>
           sourceAction.preReducer(s, args as Parameters<A[keyof A]>, p);
       }
 
       if (sourceAction.optimisticReducer) {
-        asyncAction.optimisticEffects = ({ s, p, args }: InvocationContext<S, any, P>) =>
+        asyncAction.optimisticEffects = ({ s, p, args }: InvocationContext<S, any, any, P>) =>
           sourceAction.optimisticReducer(s, args as Parameters<A[keyof A]>, p);
       }
 
       if (sourceAction.reducer) {
-        asyncAction.effects = ({ s, res, p, args }: EffectsInvocationContext<S, any, P>) =>
+        asyncAction.effects = ({ s, res, p, args }: EffectsInvocationContext<S, any, any, P>) =>
           sourceAction.reducer(s, res as PromiseResult<ReturnType<A[keyof A]>>, args as Parameters<A[keyof A]>, p);
       }
 
       if (sourceAction.errorReducer) {
-        asyncAction.errorEffects = ({ s, err, p, args }: ErrorEffectsInvocationContext<S, any, P>) =>
+        asyncAction.errorEffects = ({ s, err, p, args }: ErrorEffectsInvocationContext<S, any, any, P>) =>
           sourceAction.errorReducer(s, err, args as Parameters<A[keyof A]>, p);
       }
 
       if (sourceAction.onDone) {
-        asyncAction.sideEffects = ({ s, res, p, args, a, notifyWarning }: SideEffectsInvocationContext<S, any, P, A>) =>
+        asyncAction.sideEffects = ({
+          s,
+          res,
+          p,
+          args,
+          a,
+          notifyWarning,
+        }: SideEffectsInvocationContext<S, any, any, P, A>) =>
           sourceAction.onDone(
             s,
             res as PromiseResult<ReturnType<A[keyof A]>>,
@@ -214,7 +221,7 @@ function convertV5Actions<S, A extends DecoratedActions, P>(
           args,
           a,
           notifyWarning,
-        }: ErrorSideEffectsInvocationContext<S, any, P, A>) =>
+        }: ErrorSideEffectsInvocationContext<S, any, any, P, A>) =>
           sourceAction.onFail(s, err, args as Parameters<A[keyof A]>, p, a, notifyWarning);
       }
 
@@ -251,7 +258,7 @@ function convertV5Options<S, P, A>(sourceOptions: StateDecoratorOptions<S, A, P>
   if (sourceOptions.getPropsRefValues) {
     opts.onPropsChange = {
       getDeps: sourceOptions.getPropsRefValues,
-      effects: ({ s, p, indices }: OnPropsChangeEffectsContext<S, P>) =>
+      effects: ({ s, p, indices }: OnPropsChangeEffectsContext<S, any, P>) =>
         sourceOptions.onPropsChangeReducer ? sourceOptions.onPropsChangeReducer(s, p, indices) : null,
       sideEffects: ({ s, p, a, indices }: OnPropsChangeSideEffectsContext<S, P, A>) =>
         sourceOptions.onPropsChange == null ? null : sourceOptions.onPropsChange(s, p, a, indices),

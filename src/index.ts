@@ -164,7 +164,7 @@ export type StateListener<S, DS, A> = (ctx: StateListenerContext<S, DS, A>) => v
  */
 export function createStore<S, A extends DecoratedActions, P, DS = {}>(
   getInitialState: (p: P) => S,
-  actionsImpl: StoreActions<S, A, P>,
+  actionsImpl: StoreActions<S, A, P, DS>,
   options: StoreOptions<S, A, P, DS> = {},
   storeMiddlewares: MiddlewareFactory<S, A, P>[] = null
 ): StoreApi<S, A, P, DS> {
@@ -219,7 +219,7 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
     if (!initializedRef.current) {
       init(p);
     } else {
-      onPropChange(stateRef, propsRef, oldProps, actionsRef, options, setState);
+      onPropChange(stateRef, derivedStateRef, propsRef, oldProps, actionsRef, options, setState);
     }
   }
 
@@ -267,7 +267,7 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
       // end init
 
       if (options?.onMount) {
-        options.onMount(buildOnMountInvocationContext(stateRef, propsRef, actionsRef));
+        options.onMount(buildOnMountInvocationContext(stateRef, derivedStateRef, propsRef, actionsRef));
       }
 
       computeDerivedValues(stateRef, propsRef, derivedStateRef, options);
@@ -278,7 +278,7 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
 
   function destroy() {
     if (initializedRef.current) {
-      options?.onUnmount?.(buildOnMountInvocationContext(stateRef, propsRef, actionsRef));
+      options?.onUnmount?.(buildOnMountInvocationContext(stateRef, derivedStateRef, propsRef, actionsRef));
 
       propsRef.current = null;
       stateRef.current = null;
@@ -376,6 +376,7 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
         actionName,
         action,
         stateRef,
+        derivedStateRef,
         propsRef,
         initializedRef,
         setState
@@ -384,6 +385,7 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
       acc[actionName] = decorateAsyncAction({
         actionName,
         stateRef,
+        derivedStateRef,
         propsRef,
         loadingMapRef,
         actionsRef,
@@ -399,6 +401,7 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
         actionName,
         action,
         stateRef,
+        derivedStateRef,
         propsRef,
         actionsRef,
         initializedRef,
@@ -621,7 +624,7 @@ export function useBindStore<S, A extends DecoratedActions, P, DS = {}>(store: S
  */
 export function useLocalStore<S, A extends DecoratedActions, P, DS = {}>(
   getInitialState: (p: P) => S,
-  actionImpl: StoreActions<S, A, P>,
+  actionImpl: StoreActions<S, A, P, DS>,
   props?: P,
   options?: StoreOptions<S, A, P, DS>,
   middlewares?: MiddlewareFactory<S, A, P>[]

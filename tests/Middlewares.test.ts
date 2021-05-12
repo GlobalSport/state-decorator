@@ -200,6 +200,7 @@ describe('middlewares', () => {
               propOptimistic: '',
               propError: '',
             },
+            derived: null,
             props: {
               propIn: '',
             },

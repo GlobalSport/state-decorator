@@ -130,6 +130,8 @@ export function createMockStore<S, A extends DecoratedActions, P = {}, DS = {}>(
     onPropsChange(newProps) {
       const newStateRef = createRef(stateRef.current);
       const newPropsRef = createRef(newProps);
+      const derivedStateRef = createRef<DerivedState<DS>>({ state: null, deps: {} });
+      computeDerivedValues(newStateRef, newPropsRef, derivedStateRef, options);
 
       const setState: SetStateFunc<S, A, P> = (newStateIn, newLoadingMap, actionName, actionType, isAsync) => {
         if (newStateIn != null) {
@@ -139,7 +141,7 @@ export function createMockStore<S, A extends DecoratedActions, P = {}, DS = {}>(
 
       const actionsRef = getActionsRef(actions);
 
-      onPropChange(newStateRef, newPropsRef, propsRef.current, actionsRef as any, options, setState);
+      onPropChange(newStateRef, derivedStateRef, newPropsRef, propsRef.current, actionsRef as any, options, setState);
 
       const res = {
         state: getState(newStateRef, newPropsRef),
@@ -241,6 +243,8 @@ export function createMockStoreAction<S, A extends DecoratedActions, F extends (
     },
     call(...args) {
       const newStateRef = createRef<S>(stateRef.current);
+      const derivedStateRef = createRef<DerivedState<DS>>({ state: null, deps: {} });
+      computeDerivedValues(newStateRef, propsRef, derivedStateRef, options);
 
       // create mock action to test side effects
       const actionsRef = getActionsRef(actions);
@@ -261,6 +265,7 @@ export function createMockStoreAction<S, A extends DecoratedActions, F extends (
           actionName,
           action as any,
           stateRef,
+          derivedStateRef,
           propsRef,
           createRef(true),
           setState
@@ -273,6 +278,7 @@ export function createMockStoreAction<S, A extends DecoratedActions, F extends (
           // force no debouncing to trigger side effects directly
           { ...action, debounceSideEffectsTimeout: 0 },
           stateRef,
+          derivedStateRef,
           propsRef,
           actionsRef as any,
           createRef(true),
@@ -302,6 +308,7 @@ export function createMockStoreAction<S, A extends DecoratedActions, F extends (
         promise = (decorateAsyncAction({
           actionName,
           stateRef,
+          derivedStateRef,
           propsRef,
           loadingMapRef,
           promisesRef,

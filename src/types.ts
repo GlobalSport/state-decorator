@@ -66,22 +66,22 @@ export enum ConflictPolicy {
   REUSE = 'reuse',
 }
 
-export type PromiseProvider<S, F extends (...args: any[]) => any, A, P> = (
-  ctx: GetPromiseInvocationContext<S, F, P, A>
+export type PromiseProvider<S, DS, F extends (...args: any[]) => any, A, P> = (
+  ctx: GetPromiseInvocationContext<S, DS, F, P, A>
 ) => ReturnType<F> | null;
 
 /**
  * Simple form of a synchronous action.
  */
-export type SimpleSyncAction<S, F extends (...args: any[]) => any, P, FxRes = S> = (
-  ctx: InvocationContext<S, F, P>
+export type SimpleSyncAction<S, F extends (...args: any[]) => any, P, DS, FxRes = S> = (
+  ctx: InvocationContext<S, DS, F, P>
 ) => FxRes | null;
 
-export type SyncAction<S, F extends (...args: any[]) => any, A, P, FxRes = S> = {
+export type SyncAction<S, F extends (...args: any[]) => any, A, P, DS, FxRes = S> = {
   /**
    * The action to execute.
    */
-  effects: (ctx: EffectsInvocationContext<S, F, P>) => FxRes | null;
+  effects: (ctx: EffectsInvocationContext<S, DS, F, P>) => FxRes | null;
 
   /**
    * Debounces the action if this parameter is defined.
@@ -96,7 +96,7 @@ export type SyncAction<S, F extends (...args: any[]) => any, A, P, FxRes = S> = 
   /**
    * Action to call when the action is done. Used to trigger other actions (even asynchronous),
    */
-  sideEffects?: (ctx: SideEffectsInvocationContext<S, F, P, A>) => void;
+  sideEffects?: (ctx: SideEffectsInvocationContext<S, DS, F, P, A>) => void;
 };
 
 /**
@@ -107,8 +107,8 @@ export type SyncAction<S, F extends (...args: any[]) => any, A, P, FxRes = S> = 
  */
 export type AbortActionCallback<A> = (actionName: keyof A, promiseId?: string) => boolean;
 
-export type GetErrorMessage<S, F extends (...args: any[]) => any, P> = (
-  ctx: ErrorMessageInvocationContext<S, F, P>
+export type GetErrorMessage<S, DS, F extends (...args: any[]) => any, P> = (
+  ctx: ErrorMessageInvocationContext<S, DS, F, P>
 ) => string;
 
 export type ContextState<S> = {
@@ -116,12 +116,17 @@ export type ContextState<S> = {
   s: S;
 };
 
+export type ContextDerivedStateState<DS> = {
+  derived: DS;
+  ds: DS;
+};
+
 export type ContextBase<S, P> = ContextState<S> & {
-  state: S;
-  s: S;
   props: P;
   p: P;
 };
+
+export type ContextWithDerived<S, DS, P> = ContextBase<S, P> & ContextDerivedStateState<DS>;
 
 export type InvocationContextActions<A> = {
   actions: A;
@@ -132,39 +137,47 @@ export type WarningNotifyFunc = {
   notifyWarning?: NotifyFunc;
 };
 
-export type InvocationContext<S, F extends (...args: any[]) => any, P> = ContextBase<S, P> & {
+export type InvocationContext<S, DS, F extends (...args: any[]) => any, P> = ContextWithDerived<S, DS, P> & {
   args: Parameters<F>;
   promiseId: string;
 };
 
-export type EffectsInvocationContext<S, F extends (...args: any[]) => any, P> = InvocationContext<S, F, P> & {
+export type EffectsInvocationContext<S, DS, F extends (...args: any[]) => any, P> = InvocationContext<S, DS, F, P> & {
   result: PromiseResult<ReturnType<F>>;
   res: PromiseResult<ReturnType<F>>;
 };
 
-export type GetPromiseInvocationContext<S, F extends (...args: any[]) => any, P, A> = InvocationContextActions<A> &
-  InvocationContext<S, F, P> & {
+export type GetPromiseInvocationContext<S, DS, F extends (...args: any[]) => any, P, A> = InvocationContextActions<A> &
+  InvocationContext<S, DS, F, P> & {
     abortSignal: AbortSignal;
   };
 
-export type ErrorEffectsInvocationContext<S, F extends (...args: any[]) => any, P> = InvocationContext<S, F, P> & {
+export type ErrorEffectsInvocationContext<S, DS, F extends (...args: any[]) => any, P> = InvocationContext<
+  S,
+  DS,
+  F,
+  P
+> & {
   error: Error;
   err: Error;
 };
 
-export type SuccessMessageInvocationContext<S, F extends (...args: any[]) => any, P> = EffectsInvocationContext<
+export type SuccessMessageInvocationContext<S, DS, F extends (...args: any[]) => any, P> = EffectsInvocationContext<
   S,
+  DS,
   F,
   P
 >;
-export type ErrorMessageInvocationContext<S, F extends (...args: any[]) => any, P> = ErrorEffectsInvocationContext<
+export type ErrorMessageInvocationContext<S, DS, F extends (...args: any[]) => any, P> = ErrorEffectsInvocationContext<
   S,
+  DS,
   F,
   P
 >;
 
-export type SideEffectsInvocationContext<S, F extends (...args: any[]) => any, P, A> = EffectsInvocationContext<
+export type SideEffectsInvocationContext<S, DS, F extends (...args: any[]) => any, P, A> = EffectsInvocationContext<
   S,
+  DS,
   F,
   P
 > &
@@ -173,10 +186,11 @@ export type SideEffectsInvocationContext<S, F extends (...args: any[]) => any, P
 
 export type ErrorSideEffectsInvocationContext<
   S,
+  DS,
   F extends (...args: any[]) => any,
   P,
   A
-> = ErrorEffectsInvocationContext<S, F, P> & InvocationContextActions<A> & WarningNotifyFunc;
+> = ErrorEffectsInvocationContext<S, DS, F, P> & InvocationContextActions<A> & WarningNotifyFunc;
 
 export type OnMountInvocationContext<S, A, P> = ContextBase<S, P> & InvocationContextActions<A>;
 
@@ -186,11 +200,11 @@ export type MiddlewareActionContext<S, A, P> = {
   name: keyof A;
   type: EffectsType;
   isAsync: boolean;
-  context: InvocationContext<S, any, P>;
+  context: InvocationContext<S, any, any, P>;
 };
 
 export type MiddlewareStoreContext<S, A extends DecoratedActions, P> = {
-  actions: StoreActions<S, A, P>;
+  actions: StoreActions<S, A, P, any, any>;
   state: S;
   setState: (s: S) => void;
   options: StoreOptions<S, A, P, any>;
@@ -227,7 +241,7 @@ export type Middleware<S, A extends DecoratedActions, P> = {
   destroy: () => void;
 };
 
-export type AsyncActionBase<S, F extends (...args: any[]) => any, A, P, FxRes = S> = {
+export type AsyncActionBase<S, F extends (...args: any[]) => any, A, P, DS, FxRes = S> = {
   /**
    * This action can be aborted. An abortSignal will be injected to the <code>promise</code> / <code>promiseGet</code>.
    */
@@ -236,22 +250,22 @@ export type AsyncActionBase<S, F extends (...args: any[]) => any, A, P, FxRes = 
   /**
    * A function that provides the success message to pass to the notifySuccess function passed as property to the StateDecorator.
    */
-  getSuccessMessage?: (ctx: SuccessMessageInvocationContext<S, F, P>) => string;
+  getSuccessMessage?: (ctx: SuccessMessageInvocationContext<S, DS, F, P>) => string;
 
   /**
    * A function that provides the error message to pass to the notifyError function passed as property to the StateDecorator.
    */
-  getErrorMessage?: GetErrorMessage<S, F, P>;
+  getErrorMessage?: GetErrorMessage<S, DS, F, P>;
 
   /**
    * If set, called with the result of the promise to update the current state.
    */
-  effects?: (ctx: EffectsInvocationContext<S, F, P>) => FxRes | null;
+  effects?: (ctx: EffectsInvocationContext<S, DS, F, P>) => FxRes | null;
 
   /**
    * If set, called with the error of the promise to update the current state.
    */
-  errorEffects?: (ctx: ErrorEffectsInvocationContext<S, F, P>) => FxRes | null;
+  errorEffects?: (ctx: ErrorEffectsInvocationContext<S, DS, F, P>) => FxRes | null;
 
   /**
    * Whether reject the promise instead of handling it.
@@ -267,7 +281,7 @@ export type AsyncActionBase<S, F extends (...args: any[]) => any, A, P, FxRes = 
    * @param actions The actions available
    * @param notifyWarning If specified, a notify function to indicate that the action is a semi success (use successMessage / getSuccessMessage otherwise).
    */
-  sideEffects?: (ctx: SideEffectsInvocationContext<S, F, P, A>) => void;
+  sideEffects?: (ctx: SideEffectsInvocationContext<S, DS, F, P, A>) => void;
 
   /**
    * Handle side effects when the request failed.
@@ -277,19 +291,19 @@ export type AsyncActionBase<S, F extends (...args: any[]) => any, A, P, FxRes = 
    * @param actions The actions available
    * @param notifyWarning If specified, a notify function to indicate that the action is a semi failure (use errorMessage / getErrorMessage otherwise).
    */
-  errorSideEffects?: (ctx: ErrorSideEffectsInvocationContext<S, F, P, A>) => void;
+  errorSideEffects?: (ctx: ErrorSideEffectsInvocationContext<S, DS, F, P, A>) => void;
 
   /**
    * Retrieve the state to set as current data before the promise is resolved.
    * If the there's no reducer, this data will be used after the promise is done.
    */
-  preEffects?: (ctx: InvocationContext<S, F, P>) => FxRes | null;
+  preEffects?: (ctx: InvocationContext<S, DS, F, P>) => FxRes | null;
 
   /**
    * Retrieve the state to set as current data before the promise is resolved.
    * If the there's no reducer, this data will be used after the promise is done.
    */
-  optimisticEffects?: (ctx: InvocationContext<S, F, P>) => FxRes | null;
+  optimisticEffects?: (ctx: InvocationContext<S, DS, F, P>) => FxRes | null;
 
   /**
    * Policy to apply when a call to an asynchronous action is done but a previous call is still not resolved.
@@ -322,24 +336,26 @@ export type AsyncActionBase<S, F extends (...args: any[]) => any, A, P, FxRes = 
   isTriggerRetryError?: (e: Error) => boolean;
 };
 
-export type AsyncActionPromise<S, F extends (...args: any[]) => any, A, P, FxRes = S> = AsyncActionBase<
+export type AsyncActionPromise<S, F extends (...args: any[]) => any, A, P, DS = {}, FxRes = S> = AsyncActionBase<
   S,
   F,
   A,
   P,
+  DS,
   FxRes
 > & {
   /**
    * The request, returns a promise
    */
-  getPromise: PromiseProvider<S, F, A, P>;
+  getPromise: PromiseProvider<S, DS, F, A, P>;
 };
 
-export type AsyncActionPromiseGet<S, F extends (...args: any[]) => any, A, P, FxRes = S> = AsyncActionBase<
+export type AsyncActionPromiseGet<S, F extends (...args: any[]) => any, A, P, DS, FxRes = S> = AsyncActionBase<
   S,
   F,
   A,
   P,
+  DS,
   FxRes
 > & {
   /**
@@ -348,32 +364,32 @@ export type AsyncActionPromiseGet<S, F extends (...args: any[]) => any, A, P, Fx
    *   - retryCount: 3
    *   - conflictPolicy: ConflictPolicy.REUSE
    */
-  getGetPromise: PromiseProvider<S, F, A, P>;
+  getGetPromise: PromiseProvider<S, DS, F, A, P>;
 };
 
-export type AsyncAction<S, F extends (...args: any[]) => any, A, P, FxRes = S> =
-  | AsyncActionPromise<S, F, A, P, FxRes>
-  | AsyncActionPromiseGet<S, F, A, P, FxRes>;
+export type AsyncAction<S, F extends (...args: any[]) => any, A, P, DS = {}, FxRes = S> =
+  | AsyncActionPromise<S, F, A, P, DS, FxRes>
+  | AsyncActionPromiseGet<S, F, A, P, DS, FxRes>;
 
-export type StoreAction<S, F extends (...args: any[]) => any, A, P, FxRes = S> =
-  | AsyncAction<S, F, A, P, FxRes>
-  | SimpleSyncAction<S, F, P, FxRes>
-  | SyncAction<S, F, A, P, FxRes>;
+export type StoreAction<S, F extends (...args: any[]) => any, A, P, DS = {}, FxRes = S> =
+  | AsyncAction<S, F, A, P, DS, FxRes>
+  | SimpleSyncAction<S, F, P, DS, FxRes>
+  | SyncAction<S, F, A, P, DS, FxRes>;
 
 /**
  * S: The type of the state
  * A: The type of the actions to pass to the children (used to check keys only).
  */
-export type StoreActions<S, A extends DecoratedActions, P = {}, FxRes = S> = {
-  [Prop in keyof A]: StoreAction<S, A[Prop], A, P, FxRes>;
+export type StoreActions<S, A extends DecoratedActions, P = {}, DS = {}, FxRes = S> = {
+  [Prop in keyof A]: StoreAction<S, A[Prop], A, P, DS, FxRes>;
 };
 
-export type OnPropsChangeEffectsContext<S, P> = ContextBase<S, P> & {
+export type OnPropsChangeEffectsContext<S, DS, P> = ContextWithDerived<S, DS, P> & {
   indices: number[];
   index: number;
 };
 
-export type OnPropsChangeSideEffectsContext<S, P, A> = OnPropsChangeEffectsContext<S, P> & {
+export type OnPropsChangeSideEffectsContext<S, P, A, DS = {}> = OnPropsChangeEffectsContext<S, DS, P> & {
   actions: A;
   a: A;
 };
@@ -385,13 +401,13 @@ type DerivedStateOption<S, P, DS> = {
   };
 };
 
-export type OnPropsChangeOptions<S, A, P> = {
+export type OnPropsChangeOptions<S, DS, A, P> = {
   getDeps: (p: P) => any[];
-  effects?: (ctx: OnPropsChangeEffectsContext<S, P>) => S;
+  effects?: (ctx: OnPropsChangeEffectsContext<S, DS, P>) => S;
   sideEffects?: (ctx: OnPropsChangeSideEffectsContext<S, P, A>) => void;
 };
 
-export type StoreOptions<S, A, P = {}, DS = S> = {
+export type StoreOptions<S, A, P = {}, DS = {}> = {
   /**
    * The state decorator name. Use in debug traces to identify the useStateDecorator instance.
    */
@@ -406,7 +422,7 @@ export type StoreOptions<S, A, P = {}, DS = S> = {
   /**
    * One or several configurations of inbound properties change managements.
    */
-  onPropsChange?: OnPropsChangeOptions<S, A, P> | OnPropsChangeOptions<S, A, P>[];
+  onPropsChange?: OnPropsChangeOptions<S, DS, A, P> | OnPropsChangeOptions<S, DS, A, P>[];
 
   /**
    * The callback function called if an asynchronous function succeeded and a success messsage is defined.
