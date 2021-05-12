@@ -29,12 +29,12 @@ import {
   WarningNotifyFunc,
   ErrorEffectsInvocationContext,
   OnMountInvocationContext,
-  ContextBase,
   OnPropsChangeEffectsContext,
   ContextState,
   Middleware,
   MiddlewareFactory,
   OnPropsChangeOptions,
+  ContextWithDerived,
 } from './types';
 
 export type SetStateFunc<S, A, P> = (
@@ -72,10 +72,11 @@ export type ConflictActionsMap<A> = {
 };
 
 /** @internal */
-type AsyncActionExecContext<S, F extends (...args: any[]) => any, A extends DecoratedActions, P> = {
+type AsyncActionExecContext<S, DS, F extends (...args: any[]) => any, A extends DecoratedActions, P> = {
   actionName: keyof A;
-  action: AsyncActionPromise<S, F, A, P>;
+  action: AsyncActionPromise<S, F, A, P, DS>;
   stateRef: Ref<S>;
+  derivedStateRef: Ref<DerivedState<DS>>;
   propsRef: Ref<P>;
   loadingMapRef: Ref<InternalLoadingMap<A>>;
   promisesRef: Ref<PromiseMap<A>>;
@@ -236,9 +237,9 @@ function clone(obj: any) {
 /**
  * Type guard function to test if an action is a asynchronous action.
  */
-export function isAsyncAction<S, F extends (...args: any[]) => any, A, P, FxRes = S>(
-  action: StoreAction<S, F, A, P, FxRes>
-): action is AsyncAction<S, F, A, P, FxRes> {
+export function isAsyncAction<S, DS, F extends (...args: any[]) => any, A, P, FxRes = S>(
+  action: StoreAction<S, F, A, P, DS, FxRes>
+): action is AsyncAction<S, F, A, P, DS, FxRes> {
   return (
     !(action instanceof Function) && (action.hasOwnProperty('getPromise') || action.hasOwnProperty('getGetPromise'))
   );
@@ -247,39 +248,39 @@ export function isAsyncAction<S, F extends (...args: any[]) => any, A, P, FxRes 
 /**
  * Type guard function to test if an action is a synchronous action.
  */
-export function isSimpleSyncAction<S, F extends (...args: any[]) => any, A, P, FxRes = S>(
-  action: StoreAction<S, F, A, P, FxRes>
-): action is SimpleSyncAction<S, F, P, FxRes> {
+export function isSimpleSyncAction<S, F extends (...args: any[]) => any, A, P, DS = {}, FxRes = S>(
+  action: StoreAction<S, F, A, P, DS, FxRes>
+): action is SimpleSyncAction<S, F, P, DS, FxRes> {
   return typeof action === 'function';
 }
 
 /**
  * Type guard function to test if an action is a synchronous action.
  */
-export function isSyncAction<S, F extends (...args: any[]) => any, A, P, FxRes = S>(
-  action: StoreAction<S, F, A, P, FxRes>
-): action is SyncAction<S, F, A, P, FxRes> {
+export function isSyncAction<S, F extends (...args: any[]) => any, A, P, DS = {}, FxRes = S>(
+  action: StoreAction<S, F, A, P, DS, FxRes>
+): action is SyncAction<S, F, A, P, DS, FxRes> {
   return (
     typeof action !== 'function' && !action.hasOwnProperty('getPromise') && !action.hasOwnProperty('getGetPromise')
   );
 }
 
-export function isAsyncGetPromiseAction<S, F extends (...args: any[]) => any, A, P, FxRes = S>(
-  action: StoreAction<S, F, A, P, FxRes>
-): action is AsyncActionPromise<S, F, A, P, FxRes> {
+export function isAsyncGetPromiseAction<S, DS, F extends (...args: any[]) => any, A, P, FxRes = S>(
+  action: StoreAction<S, F, A, P, DS, FxRes>
+): action is AsyncActionPromise<S, F, A, P, DS, FxRes> {
   return typeof action !== 'function' && action.hasOwnProperty('getPromise') && !action.hasOwnProperty('getGetPromise');
 }
 
-export function isAsyncGetPromiseGetAction<S, F extends (...args: any[]) => any, A, P, FxRes = S>(
-  action: StoreAction<S, F, A, P, FxRes>
-): action is AsyncActionPromiseGet<S, F, A, P, FxRes> {
+export function isAsyncGetPromiseGetAction<S, DS, F extends (...args: any[]) => any, A, P, FxRes = S>(
+  action: StoreAction<S, F, A, P, DS, FxRes>
+): action is AsyncActionPromiseGet<S, F, A, P, DS, FxRes> {
   return typeof action !== 'function' && !action.hasOwnProperty('getPromise') && action.hasOwnProperty('getGetPromise');
 }
 
 /** @internal */
-export function computeAsyncActionInput<S, F extends (...args: any[]) => any, A, P, FxRes = S>(
-  action: AsyncAction<S, F, A, P, FxRes>
-): AsyncActionPromise<S, F, A, P, FxRes> {
+export function computeAsyncActionInput<S, DS, F extends (...args: any[]) => any, A, P, FxRes = S>(
+  action: AsyncAction<S, F, A, P, DS, FxRes>
+): AsyncActionPromise<S, F, A, P, DS, FxRes> {
   if (isAsyncGetPromiseGetAction(action)) {
     return {
       ...(action as any),
@@ -312,16 +313,16 @@ export function buildLoadingMap<A>(
 }
 
 /** @internal */
-export function retryPromiseDecorator<S, F extends (...args: any[]) => Promise<any>, A, P>(
-  promiseProvider: PromiseProvider<S, F, A, P>,
+export function retryPromiseDecorator<S, DS, F extends (...args: any[]) => Promise<any>, A, P>(
+  promiseProvider: PromiseProvider<S, DS, F, A, P>,
   maxCalls = 1,
   delay = 1000,
   isRetryError: (e: Error) => boolean = () => true
-): PromiseProvider<S, F, A, P> {
+): PromiseProvider<S, DS, F, A, P> {
   if (maxCalls === 1) {
     return promiseProvider;
   }
-  return (ctx: GetPromiseInvocationContext<S, F, P, A>): ReturnType<F> => {
+  return (ctx: GetPromiseInvocationContext<S, DS, F, P, A>): ReturnType<F> => {
     function call(callCount: number, resolve: (res: any) => any, reject: (e: Error) => any) {
       const p = promiseProvider(ctx);
 
@@ -366,45 +367,54 @@ export function createRef<U>(init: U = null): Ref<U> {
 //
 // =============================
 /** @internal */
-export function buildInvocationContextBase<S, P>(stateRef: Ref<S>, propsRef: Ref<P>): ContextBase<S, P> {
+export function buildInvocationContextBase<S, DS, P>(
+  stateRef: Ref<S>,
+  derivedStateRef: Ref<DerivedState<DS>>,
+  propsRef: Ref<P>
+): ContextWithDerived<S, DS, P> {
   return {
     state: stateRef.current,
     s: stateRef.current,
+    ds: derivedStateRef?.current?.state,
+    derived: derivedStateRef?.current?.state,
     props: propsRef.current,
     p: propsRef.current,
   };
 }
 
 /** @internal */
-export function buildOnMountInvocationContext<S, A, P>(
+export function buildOnMountInvocationContext<S, DS, A, P>(
   stateRef: Ref<S>,
+  derivedStateRef: Ref<DerivedState<DS>>,
   propsRef: Ref<P>,
   actionsRef: Ref<A>
 ): OnMountInvocationContext<S, A, P> {
-  return addContextActions(buildInvocationContextBase(stateRef, propsRef), actionsRef);
+  return addContextActions(buildInvocationContextBase(stateRef, derivedStateRef, propsRef), actionsRef);
 }
 
 /** @internal */
-export function buildOnPropChangeEffects<S, P>(
+export function buildOnPropChangeEffects<S, DS, P>(
   stateRef: Ref<S>,
+  derivedStateRef: Ref<DerivedState<DS>>,
   propsRef: Ref<P>,
   indices: number[],
   index: number
-): OnPropsChangeEffectsContext<S, P> {
-  const res = buildInvocationContextBase(stateRef, propsRef) as OnPropsChangeEffectsContext<S, P>;
+): OnPropsChangeEffectsContext<S, DS, P> {
+  const res = buildInvocationContextBase(stateRef, derivedStateRef, propsRef) as OnPropsChangeEffectsContext<S, DS, P>;
   res.indices = indices;
   res.index = index;
   return res;
 }
 
 /** @internal */
-function buildInvocationContext<S, F extends (...args: any[]) => any, P>(
+function buildInvocationContext<S, DS, F extends (...args: any[]) => any, P>(
   stateRef: Ref<S>,
+  derivedStateRef: Ref<DerivedState<DS>>,
   propsRef: Ref<P>,
   args: Parameters<F>,
   promiseId?: string
-): InvocationContext<S, F, P> {
-  const res = buildInvocationContextBase(stateRef, propsRef) as InvocationContext<S, F, P>;
+): InvocationContext<S, DS, F, P> {
+  const res = buildInvocationContextBase(stateRef, derivedStateRef, propsRef) as InvocationContext<S, DS, F, P>;
   res.args = args;
   if (promiseId) {
     res.promiseId = promiseId;
@@ -414,46 +424,60 @@ function buildInvocationContext<S, F extends (...args: any[]) => any, P>(
 }
 
 /** @internal */
-function buildEffectsInvocationContext<S, F extends (...args: any[]) => any, P>(
+function buildEffectsInvocationContext<S, DS, F extends (...args: any[]) => any, P>(
   stateRef: Ref<S>,
+  derivedStateRef: Ref<DerivedState<DS>>,
   propsRef: Ref<P>,
   args: Parameters<F>,
   result: PromiseResult<ReturnType<F>>,
   promiseId?: string
-): EffectsInvocationContext<S, F, P> {
-  const res = buildInvocationContext(stateRef, propsRef, args, promiseId) as EffectsInvocationContext<S, F, P>;
+): EffectsInvocationContext<S, DS, F, P> {
+  const res = buildInvocationContext(stateRef, derivedStateRef, propsRef, args, promiseId) as EffectsInvocationContext<
+    S,
+    DS,
+    F,
+    P
+  >;
   res.result = result;
   res.res = result;
   return res;
 }
 
 /** @internal */
-function buildErrorEffectsInvocationContext<S, F extends (...args: any[]) => any, P>(
+function buildErrorEffectsInvocationContext<S, DS, F extends (...args: any[]) => any, P>(
   stateRef: Ref<S>,
+  derivedStateRef: Ref<DerivedState<DS>>,
   propsRef: Ref<P>,
   args: Parameters<F>,
   error: Error,
   promiseId?: string
-): ErrorEffectsInvocationContext<S, F, P> {
-  const res = buildInvocationContext(stateRef, propsRef, args, promiseId) as ErrorEffectsInvocationContext<S, F, P>;
+): ErrorEffectsInvocationContext<S, DS, F, P> {
+  const res = buildInvocationContext(
+    stateRef,
+    derivedStateRef,
+    propsRef,
+    args,
+    promiseId
+  ) as ErrorEffectsInvocationContext<S, DS, F, P>;
   res.error = error;
   res.err = error;
   return res;
 }
 
 /** @internal */
-function buildPromiseActionContext<S, F extends (...args: any[]) => any, P, A>(
+function buildPromiseActionContext<S, DS, F extends (...args: any[]) => any, P, A>(
   stateRef: Ref<S>,
+  derivedStateRef: Ref<DerivedState<DS>>,
   propsRef: Ref<P>,
   args: Parameters<F>,
   actionsRef: Ref<A>,
   abortSignal: AbortSignal,
   promiseId?: string
-): GetPromiseInvocationContext<S, F, P, A> {
+): GetPromiseInvocationContext<S, DS, F, P, A> {
   const res = addContextActions(
-    buildInvocationContext(stateRef, propsRef, args, promiseId),
+    buildInvocationContext(stateRef, derivedStateRef, propsRef, args, promiseId),
     actionsRef
-  ) as GetPromiseInvocationContext<S, F, P, A>;
+  ) as GetPromiseInvocationContext<S, DS, F, P, A>;
   res.abortSignal = abortSignal;
   return res;
 }
@@ -498,10 +522,11 @@ function notInitWarning<A>(actionName: keyof A) {
 }
 
 /** @internal */
-export function decorateSimpleSyncAction<S, F extends (...args: any[]) => any, A extends DecoratedActions, P>(
+export function decorateSimpleSyncAction<S, DS, F extends (...args: any[]) => any, A extends DecoratedActions, P>(
   actionName: keyof A,
-  action: SimpleSyncAction<S, F, P>,
+  action: SimpleSyncAction<S, F, P, DS>,
   stateRef: Ref<S>,
+  derivedStateRef: Ref<DerivedState<DS>>,
   propsRef: Ref<P>,
   initializedRef: Ref<boolean>,
   setState: SetStateFunc<S, A, P>
@@ -513,17 +538,18 @@ export function decorateSimpleSyncAction<S, F extends (...args: any[]) => any, A
       return;
     }
 
-    const ctx = buildInvocationContext(stateRef, propsRef, args);
+    const ctx = buildInvocationContext(stateRef, derivedStateRef, propsRef, args);
     const newState = action(ctx);
     setState(newState, null, actionName, 'effects', false, ctx, false);
   };
 }
 
 /** @internal */
-function executeSyncActionImpl<S, F extends (...args: any[]) => any, A extends DecoratedActions, P>(
+function executeSyncActionImpl<S, DS, F extends (...args: any[]) => any, A extends DecoratedActions, P>(
   actionName: keyof A,
-  action: SyncAction<S, F, A, P>,
+  action: SyncAction<S, F, A, P, DS>,
   stateRef: Ref<S>,
+  derivedStateRef: Ref<DerivedState<DS>>,
   propsRef: Ref<P>,
   actionsRef: Ref<A>,
   timeoutMap: Ref<TimeoutMap<A>>,
@@ -531,7 +557,7 @@ function executeSyncActionImpl<S, F extends (...args: any[]) => any, A extends D
   setState: SetStateFunc<S, A, P>,
   args: Parameters<F>
 ) {
-  const ctx = buildEffectsInvocationContext(stateRef, propsRef, args, undefined);
+  const ctx = buildEffectsInvocationContext(stateRef, derivedStateRef, propsRef, args, undefined);
   const newState = action.effects(ctx);
   setState(newState, undefined, actionName, 'effects', false, ctx, false);
 
@@ -554,10 +580,11 @@ function executeSyncActionImpl<S, F extends (...args: any[]) => any, A extends D
 }
 
 /** @internal */
-export function decorateSyncAction<S, F extends (...args: any[]) => any, A extends DecoratedActions, P>(
+export function decorateSyncAction<S, DS, F extends (...args: any[]) => any, A extends DecoratedActions, P>(
   actionName: keyof A,
-  action: SyncAction<S, F, A, P>,
+  action: SyncAction<S, F, A, P, DS>,
   stateRef: Ref<S>,
+  derivedStateRef: Ref<DerivedState<DS>>,
   propsRef: Ref<P>,
   actionsRef: Ref<A>,
   initializedRef: Ref<boolean>,
@@ -581,16 +608,38 @@ export function decorateSyncAction<S, F extends (...args: any[]) => any, A exten
 
       timeoutMap.current[actionName] = setTimeout(() => {
         delete timeoutMap.current[actionName];
-        executeSyncActionImpl(actionName, action, stateRef, propsRef, actionsRef, timeoutMap, options, setState, args);
+        executeSyncActionImpl(
+          actionName,
+          action,
+          stateRef,
+          derivedStateRef,
+          propsRef,
+          actionsRef,
+          timeoutMap,
+          options,
+          setState,
+          args
+        );
       }, action.debounceTimeout);
     } else {
-      executeSyncActionImpl(actionName, action, stateRef, propsRef, actionsRef, timeoutMap, options, setState, args);
+      executeSyncActionImpl(
+        actionName,
+        action,
+        stateRef,
+        derivedStateRef,
+        propsRef,
+        actionsRef,
+        timeoutMap,
+        options,
+        setState,
+        args
+      );
     }
   };
 }
 
-function processPromiseSuccess<S, F extends (...args: any[]) => any, A extends DecoratedActions, P>(
-  context: AsyncActionExecContext<S, F, A, P>,
+function processPromiseSuccess<S, DS, F extends (...args: any[]) => any, A extends DecoratedActions, P>(
+  context: AsyncActionExecContext<S, DS, F, A, P>,
   promiseId: string,
   promiseResult: PromiseResult<F>,
   args: Parameters<F>
@@ -598,6 +647,7 @@ function processPromiseSuccess<S, F extends (...args: any[]) => any, A extends D
   const {
     action,
     stateRef,
+    derivedStateRef,
     propsRef,
     promisesRef,
     actionsRef,
@@ -615,7 +665,7 @@ function processPromiseSuccess<S, F extends (...args: any[]) => any, A extends D
 
   let newState = null;
 
-  const ctx = buildEffectsInvocationContext(stateRef, propsRef, args, promiseResult, promiseId);
+  const ctx = buildEffectsInvocationContext(stateRef, derivedStateRef, propsRef, args, promiseResult, promiseId);
 
   if (action.effects) {
     newState = action.effects(ctx);
@@ -656,8 +706,8 @@ function processPromiseSuccess<S, F extends (...args: any[]) => any, A extends D
   return promiseResult;
 }
 
-function processPromiseFailed<S, F extends (...args: any[]) => any, A extends DecoratedActions, P>(
-  context: AsyncActionExecContext<S, F, A, P>,
+function processPromiseFailed<S, DS, F extends (...args: any[]) => any, A extends DecoratedActions, P>(
+  context: AsyncActionExecContext<S, DS, F, A, P>,
   promiseId: string,
   error: Error,
   args: Parameters<F>
@@ -665,6 +715,7 @@ function processPromiseFailed<S, F extends (...args: any[]) => any, A extends De
   const {
     action,
     stateRef,
+    derivedStateRef,
     propsRef,
     actionsRef,
     loadingMapRef,
@@ -682,7 +733,7 @@ function processPromiseFailed<S, F extends (...args: any[]) => any, A extends De
 
   let newState = null;
 
-  const ctx = buildErrorEffectsInvocationContext(stateRef, propsRef, args, error, promiseId);
+  const ctx = buildErrorEffectsInvocationContext(stateRef, derivedStateRef, propsRef, args, error, promiseId);
 
   if (action.errorEffects) {
     newState = action.errorEffects(ctx);
@@ -747,12 +798,13 @@ function processPromiseFailed<S, F extends (...args: any[]) => any, A extends De
 }
 
 /** @internal */
-export function decorateAsyncAction<S, F extends (...args: any[]) => any, A extends DecoratedActions, P>(
-  context: AsyncActionExecContext<S, F, A, P>
+export function decorateAsyncAction<S, DS, F extends (...args: any[]) => any, A extends DecoratedActions, P>(
+  context: AsyncActionExecContext<S, DS, F, A, P>
 ) {
   const {
     action,
     stateRef,
+    derivedStateRef,
     propsRef,
     actionsRef,
     promisesRef,
@@ -793,7 +845,7 @@ export function decorateAsyncAction<S, F extends (...args: any[]) => any, A exte
     let newState = null;
     let hasChanged = false;
 
-    const ctx = buildInvocationContext(stateRef, propsRef, args, promiseId);
+    const ctx = buildInvocationContext(stateRef, derivedStateRef, propsRef, args, promiseId);
     if (action.preEffects) {
       newState = action.preEffects(ctx);
 
@@ -815,7 +867,9 @@ export function decorateAsyncAction<S, F extends (...args: any[]) => any, A exte
       isTriggerRetryError || globalConfig.retryOnErrorFunction
     );
 
-    const p = promiseProvider(buildPromiseActionContext(stateRef, propsRef, args, actionsRef, abortController?.signal))
+    const p = promiseProvider(
+      buildPromiseActionContext(stateRef, derivedStateRef, propsRef, args, actionsRef, abortController?.signal)
+    )
       ?.then((promiseResult: PromiseResult<F>) => processPromiseSuccess(context, promiseId, promiseResult, args))
       .catch((error: any) => processPromiseFailed(context, promiseId, error, args));
 
@@ -988,7 +1042,7 @@ export function computeDerivedValues<S, A, P, DS>(
   const compare = globalConfig.comparator;
 
   const depsMap = derivedStateRef.current.deps;
-  const ctx = buildInvocationContextBase(s, p);
+  const ctx = buildInvocationContextBase(s, null, p);
 
   const keys = Object.keys(options.derivedState) as (keyof DS)[];
 
@@ -1030,6 +1084,7 @@ export function computeDerivedValues<S, A, P, DS>(
 /** @internal */
 export function onPropChange<S, P, A, DS>(
   stateRef: Ref<S>,
+  derivedStateRef: Ref<DerivedState<DS>>,
   propsRef: Ref<P>,
   oldProps: P,
   actionsRef: Ref<A>,
@@ -1046,7 +1101,7 @@ export function onPropChange<S, P, A, DS>(
     return;
   }
 
-  let onPropsChanges: OnPropsChangeOptions<S, A, P>[];
+  let onPropsChanges: OnPropsChangeOptions<S, DS, A, P>[];
 
   if (Array.isArray(options.onPropsChange)) {
     onPropsChanges = options.onPropsChange;
@@ -1057,7 +1112,7 @@ export function onPropChange<S, P, A, DS>(
   let stateChanged = false;
 
   const newStateRef = createRef(stateRef.current);
-  const sideEffects: { index: number; indices: any[]; ctx: OnPropsChangeEffectsContext<S, P> }[] = [];
+  const sideEffects: { index: number; indices: any[]; ctx: OnPropsChangeEffectsContext<S, DS, P> }[] = [];
 
   const compare = globalConfig.comparator;
 
@@ -1083,7 +1138,7 @@ export function onPropChange<S, P, A, DS>(
       }
 
       if (propChanged) {
-        const ctx = buildOnPropChangeEffects(newStateRef, propsRef, indices, index);
+        const ctx = buildOnPropChangeEffects(newStateRef, derivedStateRef, propsRef, indices, index);
         const newState = propsChange.effects?.(ctx) ?? null;
 
         if (newState != null) {

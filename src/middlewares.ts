@@ -426,7 +426,7 @@ export function optimisticActions<S, A extends DecoratedActions, P>(
 
         if (isAsync) {
           // can cast
-          const action = (storeContext.actions[name] as any) as AsyncAction<S, any, A, P>;
+          const action = (storeContext.actions[name] as any) as AsyncAction<S, any, any, A, P>;
 
           // promise is sent and action is optimistic
           if (loading && action.optimisticEffects != null && type === 'preEffects') {
@@ -519,6 +519,7 @@ export function devtools<S, A extends DecoratedActions, P>(): MiddlewareFactory<
           delete cleanCtx.p;
           delete cleanCtx.res;
           delete cleanCtx.err;
+          delete cleanCtx.ds;
 
           devtools.send(
             {
