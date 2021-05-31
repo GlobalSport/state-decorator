@@ -72,7 +72,7 @@ export type ConflictActionsMap<A> = {
 };
 
 /** @internal */
-type AsyncActionExecContext<S, DS, F extends (...args: any[]) => any, A extends DecoratedActions, P> = {
+export type AsyncActionExecContext<S, DS, F extends (...args: any[]) => any, A extends DecoratedActions, P> = {
   actionName: keyof A;
   action: AsyncActionPromise<S, F, A, P, DS>;
   stateRef: Ref<S>;

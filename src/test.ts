@@ -14,7 +14,7 @@ import {
   Ref,
   onPropChange,
 } from './impl';
-import { DecoratedActions, InternalLoadingMap } from './types';
+import { AsyncAction, DecoratedActions, InternalLoadingMap } from './types';
 
 type MockActions<A, MockAction> = {
   [k in keyof A]: MockAction;
@@ -189,7 +189,7 @@ export function setMockFactory(factory: (impl?: (...args: any[]) => any) => any)
 export function createMockStoreAction<S, A extends DecoratedActions, F extends (...args: any[]) => any, P, DS>(
   state: S,
   actionName: keyof A,
-  actions: StoreActions<S, A, P, S>,
+  actions: StoreActions<S, A, P, DS, S>,
   props: P,
   promiseRes: Promise<F> | Error,
   options: StoreOptions<S, A, P, DS>
@@ -242,7 +242,7 @@ export function createMockStoreAction<S, A extends DecoratedActions, F extends (
       return this;
     },
     call(...args) {
-      const newStateRef = createRef<S>(stateRef.current);
+      const newStateRef = createRef<S>({ ...stateRef.current });
       const derivedStateRef = createRef<DerivedState<DS>>({ state: null, deps: {} });
       computeDerivedValues(newStateRef, propsRef, derivedStateRef, options);
 
@@ -264,7 +264,7 @@ export function createMockStoreAction<S, A extends DecoratedActions, F extends (
         decorateSimpleSyncAction(
           actionName,
           action as any,
-          stateRef,
+          newStateRef,
           derivedStateRef,
           propsRef,
           createRef(true),
@@ -277,7 +277,7 @@ export function createMockStoreAction<S, A extends DecoratedActions, F extends (
           actionName,
           // force no debouncing to trigger side effects directly
           { ...action, debounceSideEffectsTimeout: 0 },
-          stateRef,
+          newStateRef,
           derivedStateRef,
           propsRef,
           actionsRef as any,
@@ -294,7 +294,8 @@ export function createMockStoreAction<S, A extends DecoratedActions, F extends (
         const conflictActionsRef = createRef({});
         const initializedRef = createRef(true);
 
-        const impl = { ...computeAsyncActionInput(action) };
+        const impl: AsyncAction<S, A[keyof A], A, P, DS> = { ...computeAsyncActionInput(action) };
+
         if (promiseResult) {
           impl.getPromise = () => promiseResult as any;
         }
@@ -307,7 +308,6 @@ export function createMockStoreAction<S, A extends DecoratedActions, F extends (
 
         promise = (decorateAsyncAction({
           actionName,
-          stateRef,
           derivedStateRef,
           propsRef,
           loadingMapRef,
@@ -316,6 +316,7 @@ export function createMockStoreAction<S, A extends DecoratedActions, F extends (
           initializedRef,
           options,
           setState,
+          stateRef: newStateRef,
           actionsRef: actionsRef as any,
           action: impl,
         }) as any)(...((args as any) as Parameters<A[keyof A]>));

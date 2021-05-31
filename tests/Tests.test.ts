@@ -31,8 +31,8 @@ describe('createMockStore', () => {
     setProp1: ({ s, args: [v] }) => ({ ...s, prop1: v }),
     setProp2: {
       effects: ({ s, args: [v] }) => ({ ...s, prop2: v }),
-      sideEffects: ({ a }) => {
-        a.setProp1('sideEffect');
+      sideEffects: ({ a, s }) => {
+        a.setProp1(`sideEffect ${s.prop2}`);
       },
     },
     setProp3: {
@@ -40,11 +40,11 @@ describe('createMockStore', () => {
       getPromise: ({ args: [param, fail] }) => (fail ? Promise.reject(new Error('boom')) : Promise.resolve(param)),
       effects: ({ s, res }) => ({ ...s, prop3: res }),
       errorEffects: ({ s, err }) => ({ ...s, error: err.message }),
-      sideEffects: ({ a }) => {
-        a.setProp1('sideEffect');
+      sideEffects: ({ a, s }) => {
+        a.setProp1(`sideEffect ${s.prop3}`);
       },
-      errorSideEffects: ({ a }) => {
-        a.setProp1('errorSideEffect');
+      errorSideEffects: ({ a, s }) => {
+        a.setProp1(`errorSideEffect ${s.prop3}`);
       },
     },
     setOptimistic: {
@@ -287,12 +287,12 @@ describe('createMockStore', () => {
       });
   });
 
-  it('allows to test advanced sync action', async () => {
+  it('allows to test advanced sync action (+side effects)', async () => {
     await store
       .getAction('setProp2')
       .call(42)
       .then((res) => {
-        expect(res.actions.setProp1).toHaveBeenCalledWith('sideEffect');
+        expect(res.actions.setProp1).toHaveBeenCalledWith('sideEffect 42');
         expect(res.state).toEqual({
           prop1: '',
           prop2: 42,
@@ -309,7 +309,7 @@ describe('createMockStore', () => {
       .getAction('setProp3')
       .call('new value', false)
       .then((res) => {
-        expect(res.actions.setProp1).toHaveBeenCalledWith('sideEffect');
+        expect(res.actions.setProp1).toHaveBeenCalledWith('sideEffect new value');
         expect(res.state).toEqual({
           prop1: '',
           prop2: 0,
@@ -324,7 +324,7 @@ describe('createMockStore', () => {
       .getAction('setProp3')
       .call('new value', true)
       .then((res) => {
-        expect(res.actions.setProp1).toHaveBeenCalledWith('errorSideEffect');
+        expect(res.actions.setProp1).toHaveBeenCalledWith('errorSideEffect ');
         expect(res.state).toEqual({
           prop1: '',
           prop2: 0,
@@ -342,7 +342,7 @@ describe('createMockStore', () => {
       .promiseResolves('override')
       .call('new value', false)
       .then((res) => {
-        expect(res.actions.setProp1).toHaveBeenCalledWith('sideEffect');
+        expect(res.actions.setProp1).toHaveBeenCalledWith('sideEffect override');
         expect(res.state).toEqual({
           prop1: '',
           prop2: 0,
@@ -362,7 +362,7 @@ describe('createMockStore', () => {
       .promiseRejects(new Error('override'))
       .call('new value', false)
       .then((res) => {
-        expect(res.actions.setProp1).toHaveBeenCalledWith('errorSideEffect');
+        expect(res.actions.setProp1).toHaveBeenCalledWith('errorSideEffect ');
         expect(res.state).toEqual({
           prop1: '',
           prop2: 0,
