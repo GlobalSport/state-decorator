@@ -1,4 +1,4 @@
-import { StoreActions, StoreOptions } from '.';
+import { StoreActions, StoreApi, StoreOptions } from '.';
 import {
   computeAsyncActionInput,
   computeDerivedValues,
@@ -57,6 +57,14 @@ type MockStore<S, A extends DecoratedActions, P, DS> = {
 
   getAction: <K extends keyof A>(name: K) => MockStoreAction<S, A, A[K], P, DS>;
 };
+
+export function createMockFromStore<S, A extends DecoratedActions, P, DS>(
+  store: StoreApi<S, A, P, DS>,
+  props: P = {} as P
+): MockStore<S, A, P, DS> {
+  const cfg = store.getConfig();
+  return createMockStore(cfg.getInitialState, cfg.actions as any, props, cfg.options);
+}
 
 export function createMockStore<S, A extends DecoratedActions, P = {}, DS = {}>(
   initialState: S | ((p: P) => S),

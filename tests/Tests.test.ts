@@ -1,5 +1,6 @@
 import { StoreActions, StoreOptions } from '../src/types';
-import { createMockStore, setMockFactory } from '../src/test';
+import { createMockStore, setMockFactory, createMockFromStore } from '../src/test';
+import { createStore } from '../src';
 
 describe('createMockStore', () => {
   type State = {
@@ -83,62 +84,70 @@ describe('createMockStore', () => {
     };
   }
 
-  const store = createMockStore(getInitialState, actionsImpl, { prop: '', prop2: '', onMount: null }, options);
+  const mockStore = createMockStore(getInitialState, actionsImpl, { prop: '', prop2: '', onMount: null }, options);
+
+  const store = createStore(getInitialState, actionsImpl, options);
+  const mockStore2 = createMockFromStore(store, { prop: '', prop2: '', onMount: null });
 
   it('allows to set state correctly', () => {
-    store.test((s) => {
-      expect(s).toEqual({
-        prop1: '',
-        prop2: 0,
-        prop3: '',
-        prop4: '',
-        error: '',
-        concat: ',0,,,', // derived state is included
+    const test = (mockStore) => {
+      mockStore.test((s) => {
+        expect(s).toEqual({
+          prop1: '',
+          prop2: 0,
+          prop3: '',
+          prop4: '',
+          error: '',
+          concat: ',0,,,', // derived state is included
+        });
       });
-    });
 
-    const newStore = store.setState({
-      prop1: 'a',
-      prop2: 0,
-      prop3: 'c',
-      prop4: 'd',
-      error: 'e',
-    });
-
-    expect(newStore).not.toBe(store);
-
-    const newStore2 = store.setPartialState({
-      prop1: 'a',
-    });
-
-    expect(newStore2).not.toBe(store);
-
-    newStore2.test((s) => {
-      expect(s).toEqual({
+      const newStore = mockStore.setState({
         prop1: 'a',
         prop2: 0,
-        prop3: '',
-        prop4: '',
-        error: '',
-        concat: 'a,0,,,', // derived state is included
+        prop3: 'c',
+        prop4: 'd',
+        error: 'e',
       });
-    });
 
-    // unchanged
-    store.test((s) => {
-      expect(s).toEqual({
-        prop1: '',
-        prop2: 0,
-        prop3: '',
-        prop4: '',
-        error: '',
-        concat: ',0,,,', // derived state is included
+      expect(newStore).not.toBe(mockStore);
+
+      const newStore2 = mockStore.setPartialState({
+        prop1: 'a',
       });
-    });
+
+      expect(newStore2).not.toBe(mockStore);
+
+      newStore2.test((s) => {
+        expect(s).toEqual({
+          prop1: 'a',
+          prop2: 0,
+          prop3: '',
+          prop4: '',
+          error: '',
+          concat: 'a,0,,,', // derived state is included
+        });
+      });
+
+      // unchanged
+      mockStore.test((s) => {
+        expect(s).toEqual({
+          prop1: '',
+          prop2: 0,
+          prop3: '',
+          prop4: '',
+          error: '',
+          concat: ',0,,,', // derived state is included
+        });
+      });
+    };
+
+    test(mockStore);
+    test(mockStore2);
   });
 
   it('allows to set props correctly', () => {
-    store.test((s, props) => {
+    mockStore.test((s, props) => {
       expect(s).toEqual({
         prop1: '',
         prop2: 0,
@@ -155,12 +164,12 @@ describe('createMockStore', () => {
       });
     });
 
-    const newStore = store.setPartialProps({
+    const newStore = mockStore.setPartialProps({
       prop: 'a',
       prop2: '',
     });
 
-    expect(newStore).not.toBe(store);
+    expect(newStore).not.toBe(mockStore);
 
     newStore.test((s, props) => {
       expect(s).toEqual({
@@ -179,11 +188,11 @@ describe('createMockStore', () => {
       });
     });
 
-    const newStore2 = store.setPartialProps({
+    const newStore2 = mockStore.setPartialProps({
       prop: 'a',
     });
 
-    expect(newStore2).not.toBe(store);
+    expect(newStore2).not.toBe(mockStore);
 
     newStore2.test((s, props) => {
       expect(s).toEqual({
@@ -203,7 +212,7 @@ describe('createMockStore', () => {
     });
 
     // unchanged
-    store.test((s) => {
+    mockStore.test((s) => {
       expect(s).toEqual({
         prop1: '',
         prop2: 0,
@@ -216,7 +225,7 @@ describe('createMockStore', () => {
   });
 
   it('allows to test prop change', () => {
-    store
+    mockStore
       .onPropsChange({
         prop: 'new_prop',
         prop2: '',
@@ -237,7 +246,7 @@ describe('createMockStore', () => {
   });
 
   it('allows to test sync action', async () => {
-    const action = store.getAction('setProp1');
+    const action = mockStore.getAction('setProp1');
 
     await action.call('new value').then((ctx) => {
       expect(ctx.state).toEqual({
@@ -288,7 +297,7 @@ describe('createMockStore', () => {
   });
 
   it('allows to test advanced sync action (+side effects)', async () => {
-    await store
+    await mockStore
       .getAction('setProp2')
       .call(42)
       .then((res) => {
@@ -305,7 +314,7 @@ describe('createMockStore', () => {
   });
 
   it('allows to test asynchronous action (use promise impl)', async () => {
-    await store
+    await mockStore
       .getAction('setProp3')
       .call('new value', false)
       .then((res) => {
@@ -320,7 +329,7 @@ describe('createMockStore', () => {
         });
       });
 
-    await store
+    await mockStore
       .getAction('setProp3')
       .call('new value', true)
       .then((res) => {
@@ -337,7 +346,7 @@ describe('createMockStore', () => {
   });
 
   it('allows to test asynchronous action, (override promise resolve)', async () => {
-    await store
+    await mockStore
       .getAction('setProp3')
       .promiseResolves('override')
       .call('new value', false)
@@ -357,7 +366,7 @@ describe('createMockStore', () => {
   it('allows to test asynchronous action, (override promise rejects)', async () => {
     setMockFactory((impl) => jest.fn(impl));
 
-    await store
+    await mockStore
       .getAction('setProp3')
       .promiseRejects(new Error('override'))
       .call('new value', false)
@@ -375,7 +384,7 @@ describe('createMockStore', () => {
   });
 
   it('allows to test optimistic action', async () => {
-    const action = store.getAction('setOptimistic');
+    const action = mockStore.getAction('setOptimistic');
 
     await action.call('new value').then((res) => {
       expect(res.state).toEqual({
@@ -414,7 +423,7 @@ describe('createMockStore', () => {
   });
 
   it('allows to state on store mock action', async () => {
-    const action = store.getAction('setProp1');
+    const action = mockStore.getAction('setProp1');
 
     const action2 = action
       .setState({
@@ -480,7 +489,7 @@ describe('createMockStore', () => {
   });
 
   it('allows to set props on store mock action', async () => {
-    const action = store.getAction('setProp1');
+    const action = mockStore.getAction('setProp1');
 
     const action2 = action
       .setProps({
@@ -545,7 +554,7 @@ describe('createMockStore', () => {
 
   describe('onMount', () => {
     it('allows to test onMount on store', () => {
-      store.onMount(
+      mockStore.onMount(
         {
           prop: '',
           prop2: '',
