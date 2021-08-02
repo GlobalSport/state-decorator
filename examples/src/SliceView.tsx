@@ -14,12 +14,14 @@ import Typography from '@material-ui/core/Typography';
 import { makeStyles } from '@material-ui/core/styles';
 
 function Buttons() {
-  const a = useStoreSlice(store, slice('setValue1', 'setValue2'));
+  const styles = useStyles();
+
+  const a = useStoreSlice(store, ['setValue1', 'setValue2']);
 
   return (
     <FlashingBox>
       <Box>
-        <Button variant="outlined" onClick={() => a.setValue1('test1')}>
+        <Button variant="outlined" className={styles.btn} onClick={() => a.setValue1('test1')}>
           Set Value 1 to "test1"
         </Button>
         <Button variant="outlined" onClick={() => a.setValue2('test2')}>
@@ -75,7 +77,6 @@ function Value2() {
 }
 
 function SliceView() {
-  const styles = useStyles({});
   return (
     <Box>
       <Typography variant="h6">Slices</Typography>
@@ -85,7 +86,7 @@ function SliceView() {
       </Typography>
       <Box mt={1}>
         <Buttons />
-        <Grid container>
+        <Grid container spacing={1}>
           <Grid item md={6} xs={12}>
             <Value1 />
           </Grid>

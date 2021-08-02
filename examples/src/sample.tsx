@@ -114,7 +114,7 @@ const myActions: StoreActions<MyState, MyActions, MyProps> = {
   },
 };
 
-export const myStore = createStore(
+export const myStore = createStore<MyState, MyActions, MyProps, MyDerivedState>(
   (p) => ({ list: [p.init.toString()], prop1: '', prop2: '', prop3: '' }),
   myActions,
   {
@@ -198,7 +198,7 @@ const Child2 = React.memo(function Child2() {
 });
 
 function List() {
-  const s = useStoreSlice(myStore, slice('list', 'addItem'));
+  const s = useStoreSlice(myStore, ['list', 'addItem']);
 
   return (
     <FlashingBox>
@@ -213,7 +213,7 @@ function List() {
 }
 
 function Prop1() {
-  const s = useStoreSlice(myStore, slice('prop1', 'setProp1'));
+  const s = useStoreSlice(myStore, ['prop1', 'setProp1']);
 
   return (
     <FlashingBox>
@@ -279,7 +279,7 @@ function Prop2() {
   // const s = useStoreSlice(myStore, ({ s, a }) => ({ item: s.prop2, setItem: a.setProp2 }));
   // const s = useStoreSlice(myStore, (s) => ({ item: s.prop2, setItem: s.setProp2 }));
   // const s = useStoreSlice(myStore, (s) => pick(s, 'prop2', 'setProp2'));
-  const s = useStoreSlice(myStore, slice('prop2', 'setProp2'));
+  const s = useStoreSlice(myStore, ['prop2', 'setProp2']);
 
   return (
     <FlashingBox>
@@ -294,7 +294,7 @@ function Prop2() {
 }
 
 function Prop3() {
-  const s = useStoreSlice(myStore, slice('prop3', 'setProp3'));
+  const s = useStoreSlice(myStore, ['prop3', 'setProp3']);
 
   return (
     <FlashingBox>
@@ -310,7 +310,7 @@ function Prop3() {
 }
 
 function Prop3Debounced() {
-  const s = useStoreSlice(myStore, slice('prop3', 'setProp3Debounced'));
+  const s = useStoreSlice(myStore, ['prop3', 'setProp3Debounced']);
 
   return (
     <FlashingBox>

@@ -24,7 +24,7 @@ type TableRowProps = {
 // memo for id
 const TableRow = memo(function TableRow(p: TableRowProps) {
   const s = useStoreSlice(store, (s) => ({
-    ...pick(s, 'editValue', 'moveRow', 'deleteRow'),
+    ...pick(s, ['editValue', 'moveRow', 'deleteRow']),
     row: s.rowMap[p.id],
   }));
 

@@ -42,18 +42,18 @@ export function immerizeActions<S, A extends DecoratedActions, P>(
   }, {} as StoreActions<S, A, P, S>);
 }
 
-// EXAMPLE
+// // EXAMPLE
 
-type MyState = {
-  list: string[];
-};
+// type MyState = {
+//   list: string[];
+// };
 
-type MyActions = {
-  loadList: (p: string) => void;
-};
+// type MyActions = {
+//   loadList: (p: string) => void;
+// };
 
-const actions: StoreActions<MyState, MyActions> = immerizeActions({
-  loadList: ({ s, args: [param] }) => {
-    s.list.push(param);
-  },
-});
+// const actions: StoreActions<MyState, MyActions> = immerizeActions({
+//   loadList: ({ s, args: [param] }) => {
+//     s.list.push(param);
+//   },
+// });

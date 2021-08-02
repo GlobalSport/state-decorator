@@ -8,7 +8,7 @@
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { useEffect, useLayoutEffect, useReducer, useRef } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useReducer, useRef } from 'react';
 import {
   computeAsyncActionInput,
   createRef,
@@ -26,7 +26,6 @@ import {
   decorateSimpleSyncAction,
   decorateSyncAction,
   decorateAsyncAction,
-  ComparatorFunction,
   computeDerivedValues,
   DerivedState,
   onPropChange,
@@ -95,7 +94,7 @@ export {
 export type IsLoadingFunc<A> = (...props: (keyof A | [keyof A, string])[]) => boolean;
 type StateListenerUnregister = () => void;
 
-export type StoreApi<S, A, P, DS = {}> = {
+export type StoreApi<S, A extends DecoratedActions, P, DS = {}> = {
   /**
    * The current store state (with derived state if any).
    */
@@ -140,14 +139,22 @@ export type StoreApi<S, A, P, DS = {}> = {
    * A function that takes a list of action names or a tuple of [action name, promiseId] and returns <code>true</code> if any action is loading.
    */
   isLoading: IsLoadingFunc<A>;
+  /**
+   * @internal
+   */
+  getConfig: () => {
+    getInitialState: (p: P) => S;
+    options: StoreOptions<S, A, P, DS>;
+    actions: StoreActions<S, A, P, DS>;
+  };
 };
 
-export type StateListenerContext<S, DS, A> = S &
+export type StateListenerContext<S, DS, A extends DecoratedActions> = S &
   DS &
   A &
   Pick<StoreApi<S, A, any, DS>, 'loading' | 'loadingMap' | 'isLoading' | 'abortAction'>;
 
-export type StateListener<S, DS, A> = (ctx: StateListenerContext<S, DS, A>) => void;
+export type StateListener<S, DS, A extends DecoratedActions> = (ctx: StateListenerContext<S, DS, A>) => void;
 
 // =============================
 //
@@ -455,7 +462,16 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
     return null;
   }
 
+  function getConfig() {
+    return {
+      getInitialState,
+      options,
+      actions: actionsImpl,
+    };
+  }
+
   return {
+    getConfig,
     setProps,
     addStateListener,
     init,
@@ -495,7 +511,7 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
 //
 // =====================================
 
-type useStoreSlice<S, A, P, DS, SLICE> = (
+type useStoreSlice<S, A extends DecoratedActions, P, DS, SLICE> = (
   store: StoreApi<S, A, P, DS>,
   slicer: (ctx: StateListenerContext<S, DS, A>) => SLICE
 ) => SLICE;
@@ -509,12 +525,23 @@ type useStoreSlice<S, A, P, DS, SLICE> = (
  */
 export function useStoreSlice<S, A extends DecoratedActions, P, DS, SLICE>(
   store: StoreApi<S, A, P, DS>,
-  slicerFunc: (ctx: StateListenerContext<S, DS, A>) => SLICE,
-  comparator: ComparatorFunction = null
-): SLICE {
+  slicerFunc: (ctx: StateListenerContext<S, DS, A>) => SLICE
+): SLICE;
+
+export function useStoreSlice<S, A extends DecoratedActions, P, DS, K extends keyof StateListenerContext<S, DS, A>>(
+  store: StoreApi<S, A, P, DS>,
+  properties: K[]
+): Pick<StateListenerContext<S, DS, A>, K>;
+
+export function useStoreSlice<S, A extends DecoratedActions, P, DS>(store: StoreApi<S, A, P, DS>, funcOrArr: any) {
   const [, forceRefresh] = useReducer((s) => (s > 100 ? 0 : s + 1), 0);
 
-  const sliceRef = useRef<SLICE>(null);
+  const slicerFunc = useMemo(
+    () => (funcOrArr instanceof Function ? funcOrArr : (ctx: StateListenerContext<S, DS, A>) => pick(ctx, funcOrArr)),
+    [funcOrArr]
+  );
+
+  const sliceRef = useRef<any>(null);
   if (sliceRef.current === null) {
     const s = store.state;
     sliceRef.current = slicerFunc({
@@ -534,7 +561,7 @@ export function useStoreSlice<S, A extends DecoratedActions, P, DS, SLICE>(
 
       const slice = slicerFunc(ctx);
       const prevSlice = sliceRef.current;
-      const compare = comparator || globalConfig.comparator;
+      const compare = globalConfig.comparator;
 
       hasChanged = prevSlice == null || !compare(slice, prevSlice);
 
@@ -647,7 +674,7 @@ export default useLocalStore;
  * @param props Property names
  * @returns a new object containing only picked properties
  */
-export function pick<T, K extends keyof T>(obj: T, ...props: K[]): Pick<T, K> {
+export function pick<T, K extends keyof T>(obj: T, props: K[]): Pick<T, K> {
   return props.reduce((acc, p) => {
     if (obj.hasOwnProperty(p)) {
       acc[p] = obj[p];
@@ -664,5 +691,5 @@ export function pick<T, K extends keyof T>(obj: T, ...props: K[]): Pick<T, K> {
  * @returns a function to pick property from an passed object.
  */
 export function slice<T, K extends keyof T>(...props: K[]): (obj: T) => Pick<T, K> {
-  return (store: T) => pick(store, ...props);
+  return (store: T) => pick(store, props);
 }
