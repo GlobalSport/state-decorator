@@ -173,6 +173,7 @@ The action context contain all the data needed to implement the actions. It cont
 | actions       | a     | side effects / onMount         | Store actions (decorated)                         |
 | result        | res   | promise effects / side effects | The promise result                                |
 | error         | err   | error effects / side effects   | The promise error                                 |
+| derived       | ds    | everywhere                     | The derived state (from props/state)              |
 | promiseId     |       | asynchronous actions callbacks | Parallel asynchronous actions promise identifier  |
 | notifyWarning |       | side effects                   | Injected function if set at store or global level |
 
