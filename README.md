@@ -184,10 +184,10 @@ export function SubComponent() {
 # React hooks
 
 | Hook          | Purpose                                                | Component refreshed on store change | Store is destroyed on unmount |
-| ------------- | ------------------------------------------------------ | ----------------------------------- | ----------------------------- | --- |
+| ------------- | ------------------------------------------------------ | ----------------------------------- | ----------------------------- |
 | useLocalStore | Create a store and binds it to the react component     | Y                                   | Y                             |
 | useStore      | Binds an existing store to a react component (sharing) | Y                                   | Y                             |
-| useBindStore  | Bind an existing store to a react component (sharing)  | N                                   | Y                             |     |
+| useBindStore  | Bind an existing store to a react component (sharing)  | N                                   | Y                             |
 | useStoreSlice | Binds a store slice to a react component (sharing)     | If slice has changed only           | N                             |
 
 # Global configuration
