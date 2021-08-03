@@ -19,7 +19,8 @@
     "noImplicitReturns": true,
     "noImplicitThis": true,
     "stripInternal": true,
-    "lib": ["es2017", "dom"],
+    "importsNotUsedAsValues": "error",
+    "lib": ["es2017", "dom"]
   },
   "exclude": ["node_modules", "dist", "tests", "examples", "legacy"]
 }
