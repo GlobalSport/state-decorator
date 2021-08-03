@@ -137,11 +137,11 @@ export function App(props: Props) => {
 };
 ```
 
-## State sharing
+## State sharing and slices
 
-Use `useStoreSlice` with the store and list the store properties or provide a function to create the data slice for complex use cases.
-
-Using a function:
+- Declare a store and bind it to a component using _useStore_ or _useBindStore_ hooks.
+- Deeper in the tree component, use _useStoreSlice_ to get a store slice.
+- Component using slices will be refreshed only if their store slice changes.
 
 ```typescript
 import React from 'react';
