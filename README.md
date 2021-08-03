@@ -137,50 +137,6 @@ export function App(props: Props) => {
 };
 ```
 
-## State sharing and slices
-
-- Declare a store and bind it to a component using _useStore_ or _useBindStore_ hooks.
-- Deeper in the tree component, use _useStoreSlice_ to get a store slice.
-- Component using slices will be refreshed only if their store slice changes.
-
-```typescript
-import React from 'react';
-import { useStore, useStoreSlice, StoreActions } from 'state-decorator';
-
-// Declare typings & actions as above
-
-// Create a store
-
-export const store = createStore(getInitialState, userAppActions);
-
-// Bind to react component
-
-export function Container(prop: Props) {
-  const { state, actions } = useStore(store, props);
-
-  // or
-  // useBindStore(store, props);
-  // if you are not interested in getting the state here
-
-  return <div />;
-}
-
-// Components deeper in the component tree will be refreshed if, and only if,
-// slice is changed (here: text property)
-
-export function SubComponent2() {
-  const s = useStoreSlice(store, ['text']);
-  return <div>{s.text}</div>;
-}
-
-export function SubComponent() {
-  const s = useStoreSlice(store, (s) => ({ text: s.text }));
-  return <div>{s.text}</div>;
-}
-```
-
-[![Edit Slice](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/slices-v6-eg471?file=/src/SliceView.tsx)
-
 # React hooks
 
 | Hook          | Purpose                                                | Component refreshed on store change | Store is destroyed on unmount |
@@ -189,32 +145,6 @@ export function SubComponent() {
 | useStore      | Binds an existing store to a react component (sharing) | Y                                   | Y                             |
 | useBindStore  | Bind an existing store to a react component (sharing)  | N                                   | Y                             |
 | useStoreSlice | Binds a store slice to a react component (sharing)     | If slice has changed only           | N                             |
-
-# Global configuration
-
-Overrides configuration to set properties that will be used by all stores.
-
-```typescript
-// all parameters are optional
-setGlobalConfig({
-  // Used to clone state and props when managing optimistic conflicting actions.
-  clone: defaultCloneFunc,
-  // Compare to objets and returns if they are equal (slices).
-  comparator: shallow,
-  // Callback function to handle asychronous actions rejected promise (error reporting).
-  asyncErrorHandler: () => {},
-  // Tests if the error will trigger a retry of the action or will fail directly (retry promises)
-  retryOnErrorFunction: (error: Error) => error instanceof TypeError,
-  // Notification function on successful asynchronous action (if success message is set on action)
-  notifySuccess: undefined,
-  // Notification function on failed asynchronous action (if error message is set on action)
-  notifyError: undefined,
-  // Notification function injected in side effects action context (success and error) to notify warning
-  notifyWarning: undefined,
-  // Function called to return common error message if error message is not provided or error not managed in action
-  getErrorMessage: undefined,
-});
-```
 
 # Initial state
 
@@ -564,6 +494,76 @@ const store = createStore(getInitialState, actionsImpl, {
 function Container(p: ContainerProps) {
   useBindStore(store, p);
 }
+```
+
+## State sharing and slices
+
+- Declare a store and bind it to a component using _useStore_ or _useBindStore_ hooks.
+- Deeper in the tree component, use _useStoreSlice_ to get a store slice.
+- Component using slices will be refreshed only if their store slice changes.
+
+```typescript
+import React from 'react';
+import { useStore, useStoreSlice, StoreActions } from 'state-decorator';
+
+// Declare typings & actions as above
+
+// Create a store
+
+export const store = createStore(getInitialState, userAppActions);
+
+// Bind to react component
+
+export function Container(prop: Props) {
+  const { state, actions } = useStore(store, props);
+
+  // or
+  // useBindStore(store, props);
+  // if you are not interested in getting the state here
+
+  return <div />;
+}
+
+// Components deeper in the component tree will be refreshed if, and only if,
+// slice is changed (here: text property)
+
+export function SubComponent2() {
+  const s = useStoreSlice(store, ['text']);
+  return <div>{s.text}</div>;
+}
+
+export function SubComponent() {
+  const s = useStoreSlice(store, (s) => ({ text: s.text }));
+  return <div>{s.text}</div>;
+}
+```
+
+[![Edit Slice](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/slices-v6-eg471?file=/src/SliceView.tsx)
+
+# Global configuration
+
+Overrides configuration to set properties that will be used by all stores.
+
+```typescript
+// all parameters are optional
+setGlobalConfig({
+  // Used to clone state and props when managing optimistic conflicting actions.
+  clone: defaultCloneFunc,
+  // Compare to objets and returns if they are equal (slices).
+  comparator: shallow,
+  // Callback function to handle asychronous actions rejected promise (error reporting).
+  asyncErrorHandler: () => {},
+  // Tests if the error will trigger a retry of the action or will fail directly (retry promises)
+  retryOnErrorFunction: (error: Error) => error instanceof TypeError,
+  // Notification function on successful asynchronous action (if success message is set on action)
+  notifySuccess: undefined,
+  // Notification function on failed asynchronous action (if error message is set on action)
+  notifyError: undefined,
+  // Notification function injected in side effects action context (success and error) to notify warning
+  notifyWarning: undefined,
+  // Function called to return common error message if error message is not provided or error not managed in action
+  getErrorMessage: undefined,
+});
 ```
 
 # Update store when props change
