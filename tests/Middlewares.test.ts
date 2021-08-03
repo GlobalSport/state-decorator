@@ -1,3 +1,7 @@
+/**
+ * @jest-environment jsdom
+ */
+
 import { StoreActions, StoreOptions, createStore, ConflictPolicy } from '../src';
 import { logEffects, logDetailedEffects, Logger, devtools } from '../src/middlewares';
 

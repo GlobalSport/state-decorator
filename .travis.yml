@@ -3,6 +3,5 @@ node_js: 12
 cache:
   yarn: false
 script:
-- yarn install
 - yarn test
 - yarn build

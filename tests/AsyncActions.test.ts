@@ -8,6 +8,10 @@
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+/**
+ * @jest-environment jsdom
+ */
+
 import { createStore } from '../src/index';
 import { StoreAction, StoreActions } from '../src/types';
 
@@ -301,8 +305,6 @@ describe('Async action', () => {
     });
 
     expect(isLoading('errorAction')).toBeTruthy();
-
-    return promise;
   });
 
   it('error & reject action', (done) => {
@@ -324,7 +326,7 @@ describe('Async action', () => {
       callbackCancel,
     });
 
-    return store.actions
+    store.actions
       .errorRejectAction('test')
       .then(done.fail)
       .catch(() => {

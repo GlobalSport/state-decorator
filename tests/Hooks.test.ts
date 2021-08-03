@@ -1,3 +1,7 @@
+/**
+ * @jest-environment jsdom
+ */
+
 import { renderHook, act } from '@testing-library/react-hooks';
 import { useLocalStore, useBindStore, useStore, useStoreSlice, createStore, StoreActions } from '../src/';
 
