@@ -302,9 +302,9 @@ const actions: StoreActions<State, Actions> = {
 
 [![See Debounce demo](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/debounce-forked-tmk2j?file=/src/Debounce.tsx)
 
-## Cancel effects
+## Cancel action
 
-To cancel effects just return **null** instead of new state in **effects**.
+To cancel effects/side effects just return **null** instead of new state in **effects**.
 
 # Asynchronous actions
 
@@ -326,6 +326,21 @@ action: {
   retryCount: 1,
   retryDelaySeed: 1000,
 }
+```
+
+Example:
+
+```typescript
+const actions: StoreActions<State, Actions> = {
+  loadList: {
+    getPromise: () => fetch('https://myapi/myserives').then((res) => (res.ok ? res.json() : Promise.reject())),
+    effects: ({ s, res }) => ({ ...s, list: res }),
+    sideEffects: ({ a }) => {
+      a.otherAction();
+    },
+    getErrorMessage: () => 'Cannot load list',
+  },
+};
 ```
 
 - If **null** is returned by **getPromise**, the action is not executed. It allows to not cancel an action depending on state or props etc.
