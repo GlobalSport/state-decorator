@@ -24,6 +24,7 @@ The StateDecorator is a set of Reacts hook that manages a complex component stat
 - New internal architecture, far simpler and more efficient
 - New state sharing feature
 - New derived state support
+- New test framework
 - Updated terminology (less redux, more consistent)
 - Action context: no more arguments order issue
 - See migration details in [migration section](#migration).
@@ -138,6 +139,10 @@ export function App(props: Props) => {
 
 ## State sharing
 
+Use `useStoreSlice` with the store and list the store properties or provide a function to create the data slice for complex use cases.
+
+Using a function:
+
 ```typescript
 import React from 'react';
 import { useStore, useStoreSlice, StoreActions } from 'state-decorator';
@@ -160,21 +165,16 @@ export function Container(prop: Props) {
   return <div />;
 }
 
-// Another component deeper in the component tree
-export function SubComponent() {
-  // Component will be refreshed if, and only if, 'text' is changed (actions are stable)
-  const s = useStoreSlice(store, (s) => ({ text: s.text, loadList: s.loadList }));
+// Components deeper in the component tree will be refreshed if, and only if,
+// slice is changed (here: text property)
+
+export function SubComponent2() {
+  const s = useStoreSlice(store, ['text', 'loadList']);
   return <div>{s.text}</div>;
 }
-```
 
-A provided `slice` function allows to be even more concise:
-
-```typescript
-import { slice, useStoreSlice } from 'state-decorator';
-export function SubComponetn() {
-  // Component will be refreshed if, and only if, 'text' is changed (actions are stable)
-  const s = useStoreSlice(store, slice('text', 'loadList'));
+export function SubComponent() {
+  const s = useStoreSlice(store, (s) => ({ text: s.text, loadList: s.loadList }));
   return <div>{s.text}</div>;
 }
 ```
@@ -245,116 +245,6 @@ The action context contain all the data needed to implement the actions. It cont
 | error         | err   | error effects / side effects   | The promise error                                 |
 | promiseId     |       | asynchronous actions callbacks | Parallel asynchronous actions promise identifier  |
 | notifyWarning |       | side effects                   | Injected function if set at store or global level |
-
-# React on props changes
-
-## Getting started
-
-```typescript
-import { createStore } from 'state-decorator';
-
-const store = createStore(getInitialState, actionsImpl, {
-  onPropsChange: {
-    // list of depedencies that should trigger effects & side effects if changed
-    getDeps: (p) => [p.id],
-    // state changes, indices contains the indices of dependencies that have changed
-    effects: ({ state, props, indices }) => ({ ...state, selectedId: props.id }),
-    // other changes (use short aliases)
-    sideEffects: ({ p, a }) => {
-      a.loadItem(p.id);
-    },
-  },
-});
-```
-
-## Multiple props change configuration
-
-The store can manage several props change configurations to have a better granularity.
-
-- Effects are triggered in order and reuse previously computed state
-
-- Side effects are invoked after all effects using computed state
-
-```typescript
-import { createStore } from 'state-decorator';
-
-const store = createStore(getInitialState, actionsImpl, {
-  onPropsChange: [
-    {
-      getDeps: (p) => [p.id],
-      effects: ({ state, props, indices }) => ({ ...state, selectedId: props.id }),
-    },
-    {
-      getDeps: (p) => [p.otherId],
-      sideEffects: ({ p, a }) => {
-        a.loadOtherItem(p.id);
-      },
-    },
-    {
-      getDeps: (p) => [p.otherProp],
-      effects: ({ state, props, indices }) => ({ ...state, otherProp: props.otherProp }),
-      sideEffects: ({ p, a }) => {
-        a.otherSideEffect(p.otherProp);
-      },
-    },
-  ],
-});
-```
-
-# Derived state
-
-A derived state is a state that can be deduced from state and props.
-
-```typescript
-import { createStore } from 'state-decorator';
-
-type State = {
-  value: number;
-};
-
-type Actions = {
-  add1: () => void;
-};
-
-type Props = {
-  propIn: number;
-};
-
-type DerivedState = {
-  derivedProp: number;
-};
-
-const store = createStore<State, Actions, Props, DerivedState>(
-  () => ({ value: 0 }),
-  {
-    add1: ({ s }) => ({ ...s, value: s.value + 1 }),
-  },
-  {
-    derivedState: {
-      derivedProp: {
-        // get the list of dependencies to be checked to trigger the computation of the derived state
-        // if state.value AND/OR props.prop1 changes, derivedProp is recomputed
-        getDeps: ({ state, props }) => [state.value, props.propIn],
-        // compute derived state from state & props (use short aliases)
-        get: ({ s, p }) => s.value * p.propIn,
-      },
-    },
-  }
-);
-
-export function App(props: Props) {
-  const { state } = useStore(store, props);
-  // state contains the store state and derived state
-  return <div>{state.derivedProp}</div>;
-}
-```
-
-## Recipes
-
-- Derived state is the same as using _useMemo_ pin sub component.
-- If the derived state is needed in one component only, it may prove better to use a _useMemo_ in this component to save memory when it is unmounted and store not.
-- In general, do **not** compute derived values directly in state, it's error prone as you can forget some places or implement different logic.
-- Use derived state especially if this state is shared accross several sub components
 
 # Actions
 
@@ -661,6 +551,116 @@ function Container(p: ContainerProps) {
 }
 ```
 
+# Update store when props change
+
+## Getting started
+
+```typescript
+import { createStore } from 'state-decorator';
+
+const store = createStore(getInitialState, actionsImpl, {
+  onPropsChange: {
+    // list of depedencies that should trigger effects & side effects if changed
+    getDeps: (p) => [p.id],
+    // state changes, indices contains the indices of dependencies that have changed
+    effects: ({ state, props, indices }) => ({ ...state, selectedId: props.id }),
+    // other changes (use short aliases)
+    sideEffects: ({ p, a }) => {
+      a.loadItem(p.id);
+    },
+  },
+});
+```
+
+## Multiple props change configuration
+
+The store can manage several props change configurations to have a better granularity.
+
+- Effects are triggered in order and reuse previously computed state
+
+- Side effects are invoked after all effects using computed state
+
+```typescript
+import { createStore } from 'state-decorator';
+
+const store = createStore(getInitialState, actionsImpl, {
+  onPropsChange: [
+    {
+      getDeps: (p) => [p.id],
+      effects: ({ state, props, indices }) => ({ ...state, selectedId: props.id }),
+    },
+    {
+      getDeps: (p) => [p.otherId],
+      sideEffects: ({ p, a }) => {
+        a.loadOtherItem(p.id);
+      },
+    },
+    {
+      getDeps: (p) => [p.otherProp],
+      effects: ({ state, props, indices }) => ({ ...state, otherProp: props.otherProp }),
+      sideEffects: ({ p, a }) => {
+        a.otherSideEffect(p.otherProp);
+      },
+    },
+  ],
+});
+```
+
+# Derived state
+
+A derived state is a state that can be deduced from state and props.
+
+```typescript
+import { createStore } from 'state-decorator';
+
+type State = {
+  value: number;
+};
+
+type Actions = {
+  add1: () => void;
+};
+
+type Props = {
+  propIn: number;
+};
+
+type DerivedState = {
+  derivedProp: number;
+};
+
+const store = createStore<State, Actions, Props, DerivedState>(
+  () => ({ value: 0 }),
+  {
+    add1: ({ s }) => ({ ...s, value: s.value + 1 }),
+  },
+  {
+    derivedState: {
+      derivedProp: {
+        // get the list of dependencies to be checked to trigger the computation of the derived state
+        // if state.value AND/OR props.prop1 changes, derivedProp is recomputed
+        getDeps: ({ state, props }) => [state.value, props.propIn],
+        // compute derived state from state & props (use short aliases)
+        get: ({ s, p }) => s.value * p.propIn,
+      },
+    },
+  }
+);
+
+export function App(props: Props) {
+  const { state } = useStore(store, props);
+  // state contains the store state and derived state
+  return <div>{state.derivedProp}</div>;
+}
+```
+
+## Recipes
+
+- Derived state is the same as using _useMemo_ in sub component.
+- If the derived state is needed in one component only, it may prove better to use a _useMemo_ in this component to save memory when the component is unmounted and store not.
+- In general, do **not** compute derived values directly in state, it's error prone as you can forget some places or implement different logic.
+- Use derived state especially if this state is shared accross several sub components
+
 # Debug actions
 
 To debug actions, add a middleware to the store.
@@ -742,15 +742,15 @@ function Container(props: Props) {
 ## Getting started
 
 ```typescript
-import { createMockStore } from 'state-decorator/test';
+import { createMockFromStore } from 'state-decorator/test';
 
-import { getInitialState, todoActions, TodoItem } from './Todos';
+import { todoStore, TodoItem } from './Todos';
 
 describe('Todo', () => {
   // create a mock store and setup initial state
   // state / props can be set in full form or partial form
   // this store can be shared accross tests because it is immutable
-  const store = createMockStore(getInitialState, todoActions, {}, {}).setPartialState({
+  const store = createMockFromStore(todoStore, {}).setPartialState({
     idCount: 3,
     todoIds: ['id', 'id2'],
     todoMap: {
@@ -997,21 +997,21 @@ Choose one of _useLocalStore_, _useStore_, _useBindStore_ or _useStoreSlice_.
 ```diff
 - const actions: StateDecoratorActions<S, A, P> = {
 + const actions: StoreActions<S, A, P> = {
--   loadList: {
+    loadList: {
 -     promise: ([id], s, p, a) => {
 +     getPromise: ({ s, args: [id], p, a }) => {
--       /* ... */
--     },
+        /* ... */
+      },
 -     reducer: (s, res) => ({
 +     effects: ({ s, res }) => ({
--       /* ... */
--     }),
+        /* ... */
+      }),
 -     errorReducer: (s, err) => ({
 +     errorEffects: ({ s, err }) => ({
--       /* ... */
--     }),
--   },
-- };
+        /* ... */
+      }),
+    },
+  };
 ```
 
 ### Options
