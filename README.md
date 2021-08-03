@@ -184,11 +184,11 @@ export function SubComponent() {
 # React hooks
 
 | Hook          | Purpose                                                | Component refreshed on store change | Store is destroyed on unmount |
-| ------------- | ------------------------------------------------------ | ----------------------------------- | ----------------------------- |
+| ------------- | ------------------------------------------------------ | ----------------------------------- | ----------------------------- | --- |
 | useLocalStore | Create a store and binds it to the react component     | Y                                   | Y                             |
 | useStore      | Binds an existing store to a react component (sharing) | Y                                   | Y                             |
+| useBindStore  | Bind an existing store to a react component (sharing)  | N                                   | Y                             |     |
 | useStoreSlice | Binds a store slice to a react component (sharing)     | If slice has changed only           | N                             |
-| useBindStore  | Bind an existing store to a react component (sharing)  | N                                   | Y                             |
 
 # Global configuration
 
@@ -755,9 +755,10 @@ function Container(props: Props) {
 # Unit testing
 
 - The state decorator provides a testing framework for stores.
-- The base principle is that a mock store is immutable. A new store is created if internal state is changed. It allows to share mock store across tests.
-- On each test, reuse/setup store (state/props) or store action and:
+- The base principle is that a mock store is immutable. A new store is created is setting state/props. It allows to share mock store across tests.
+- On each test, reuse/setup store or store action and:
   - call the action and test state, side effect calls,...
+  - calls have no effects on mock store
   - test prop changes
 
 ## Getting started
