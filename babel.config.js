@@ -1,5 +1,3 @@
-const snakeCase = require('lodash/snakeCase');
-
 const babelConfig = (api) => {
   if (api.env('test')) {
     return {
@@ -8,7 +6,7 @@ const babelConfig = (api) => {
           '@babel/env',
           {
             targets: {
-              node: '10',
+              node: '12',
             },
           },
         ],
@@ -26,8 +24,9 @@ const babelConfig = (api) => {
   }
 
   return {
-    presets: [['@babel/env'], '@babel/react', '@babel/preset-typescript'],
+    presets: [['@babel/env'], '@babel/react'],
     plugins: [
+      '@babel/plugin-transform-runtime',
       '@babel/plugin-proposal-object-rest-spread',
       '@babel/plugin-proposal-class-properties',
       '@babel/plugin-proposal-optional-chaining',

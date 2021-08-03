@@ -1,8 +1,7 @@
-language: node_js
+language: node
 node_js: 12
 cache:
-  yarn: true
+  yarn: false
 script:
-- yarn install
 - yarn test
-- yarn run build
+- yarn build

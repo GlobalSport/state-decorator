@@ -4,3 +4,4 @@ dist
 .rpt2*
 .vscode/launch.json
 stats.html
+tests/reports

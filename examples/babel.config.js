@@ -1,5 +1,3 @@
-const snakeCase = require('lodash/snakeCase');
-
 const babelConfig = (api) => {
   if (api.env('test')) {
     return {
