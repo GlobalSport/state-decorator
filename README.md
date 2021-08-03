@@ -343,7 +343,7 @@ const actions: StoreActions<State, Actions> = {
 };
 ```
 
-- If **null** is returned by **getPromise**, the action is not executed. It allows to not cancel an action depending on state or props etc.
+- If **null** is returned by **getPromise**, the action is not executed. It allows to cancel an action depending on state or props etc.
 
 - **getGetPromise** is a shortcut that sets the conflict policy to **ConflictPolicy.REUSE** and **retryCount** to 3.
 
@@ -753,6 +753,9 @@ function Container(props: Props) {
 ```
 
 # Unit testing
+
+- The state decorator provides a testing framework for stores.
+- The base principle is that a mock store is immutable. A New store is created if internal state is changed. It allows to share mock store across tests.
 
 ## Getting started
 
