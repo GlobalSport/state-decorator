@@ -78,24 +78,26 @@ function Value2() {
 
 function SliceView() {
   return (
-    <Box>
-      <Typography variant="h6">Slices</Typography>
-      <Typography variant="caption">
-        Each component is using only a slice of the state and is refreshed only if slice changed (flashing when is
-        rendered)
-      </Typography>
-      <Box mt={1}>
-        <Buttons />
-        <Grid container spacing={1}>
-          <Grid item md={6} xs={12}>
-            <Value1 />
+    <FlashingBox>
+      <Box>
+        <Typography variant="h6">Slices</Typography>
+        <Typography variant="caption">
+          Each component is using only a slice of the state and is refreshed only if slice changed (flashing when is
+          rendered)
+        </Typography>
+        <Box mt={1}>
+          <Buttons />
+          <Grid container spacing={1}>
+            <Grid item md={6} xs={12}>
+              <Value1 />
+            </Grid>
+            <Grid item md={6} xs={12}>
+              <Value2 />
+            </Grid>
           </Grid>
-          <Grid item md={6} xs={12}>
-            <Value2 />
-          </Grid>
-        </Grid>
+        </Box>
       </Box>
-    </Box>
+    </FlashingBox>
   );
 }
 
