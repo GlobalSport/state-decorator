@@ -169,12 +169,12 @@ export function Container(prop: Props) {
 // slice is changed (here: text property)
 
 export function SubComponent2() {
-  const s = useStoreSlice(store, ['text', 'loadList']);
+  const s = useStoreSlice(store, ['text']);
   return <div>{s.text}</div>;
 }
 
 export function SubComponent() {
-  const s = useStoreSlice(store, (s) => ({ text: s.text, loadList: s.loadList }));
+  const s = useStoreSlice(store, (s) => ({ text: s.text }));
   return <div>{s.text}</div>;
 }
 ```
