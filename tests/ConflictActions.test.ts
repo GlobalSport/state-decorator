@@ -296,6 +296,106 @@ describe('Conflicting actions', () => {
     });
   });
 
+  it('REUSE works as expected [cancel promise bug]', () => {
+    const callback = jest.fn();
+    const callbackError = jest.fn();
+
+    // BAD !! for testing only
+    let count = 0;
+
+    const store = createStore<State, Actions, Props>(
+      () => ({
+        values: [],
+        errors: [],
+      }),
+      {
+        setValue: {
+          ...setValueAction,
+          getPromise: ({ args: [value] }) => {
+            if (value == null) {
+              return null;
+            }
+
+            if (count++ < 2) {
+              return getFailedTimeoutPromise(5, new TypeError('failed')) as any;
+            }
+
+            return getTimeoutPromise(5, value);
+          },
+          conflictPolicy: ConflictPolicy.REUSE,
+          retryCount: 5,
+          retryDelaySeed: 1,
+        },
+      }
+    );
+
+    store.setProps({
+      callback,
+      callbackError,
+    });
+
+    const setValue = store.actions.setValue;
+
+    const p1 = setValue(undefined);
+    const p2 = setValue('v1');
+
+    expect(p2).not.toBe(p1);
+
+    return Promise.all([p1, p2]).then(() => {
+      expect(store.state).toEqual({
+        values: ['v1'],
+        errors: [],
+      });
+      expect(callback).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('RETRY works as expected [MAX retry]', (done) => {
+    const callback = jest.fn();
+    const callbackError = jest.fn();
+
+    let count = 0;
+
+    const store = createStore<State, Actions, Props>(
+      () => ({
+        values: [],
+        errors: [],
+      }),
+      {
+        setValue: {
+          ...setValueAction,
+          getPromise: ({ args: [value] }) => {
+            count++;
+            return getFailedTimeoutPromise(5, new TypeError('failed')) as any;
+          },
+          retryCount: 3,
+          retryDelaySeed: 1,
+        },
+      }
+    );
+
+    store.setProps({
+      callback,
+      callbackError,
+    });
+
+    const setValue = store.actions.setValue;
+
+    const p1 = setValue('v1');
+
+    p1.then(() => {
+      done.fail();
+    }).catch((e) => {
+      expect(count).toBe(1 + 3);
+      expect(store.state).toEqual({
+        values: [],
+        errors: ['v1'],
+      });
+      expect(callback).toHaveBeenCalledTimes(0);
+      done();
+    });
+  });
+
   it('IGNORE works as expected', () => {
     const callback = jest.fn();
     const callbackError = jest.fn();

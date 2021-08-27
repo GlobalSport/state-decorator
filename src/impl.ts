@@ -323,33 +323,38 @@ export function retryPromiseDecorator<S, DS, F extends (...args: any[]) => Promi
     return promiseProvider;
   }
   return (ctx: GetPromiseInvocationContext<S, DS, F, P, A>): ReturnType<F> => {
-    function call(callCount: number, resolve: (res: any) => any, reject: (e: Error) => any) {
-      const p = promiseProvider(ctx);
-
+    async function call(callCount: number, p: Promise<any>): Promise<any> {
       if (p === null) {
         return null;
       }
 
-      return p
-        .then((res) => resolve(res))
-        .catch((e) => {
-          if (isRetryError(e)) {
-            if (callCount === maxCalls) {
-              reject(e);
-            } else {
-              setTimeout(call, delay * callCount, callCount + 1, resolve, reject);
-            }
-          } else {
-            reject(e);
+      return p.catch((e) => {
+        if (isRetryError(e)) {
+          if (callCount === maxCalls) {
+            return Promise.reject(e);
           }
-        });
+          return new Promise((resolve, reject) => {
+            setTimeout(() => {
+              const p = promiseProvider(ctx);
+              call(callCount + 1, p)
+                .then(resolve)
+                .catch(reject);
+            }, delay * callCount);
+          });
+        }
+        return Promise.reject(e);
+      });
     }
 
-    return new Promise((resolve, reject) => {
-      call(1, resolve, reject);
-    }) as any;
+    const initialPromise = promiseProvider(ctx);
+    if (initialPromise === null) {
+      return null;
+    }
+
+    return call(1, initialPromise) as ReturnType<F>;
   };
 }
+
 export type Ref<P> = {
   current: P;
 };
