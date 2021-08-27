@@ -937,7 +937,7 @@ export function areSameArgs(args1: any[], args2: any[]): boolean {
   if (args1.length !== args2.length) {
     return false;
   }
-  return args1.find((value, index) => args2[index] !== value) == null;
+  return args1.findIndex((value, index) => args2[index] !== value) === -1;
 }
 
 /**

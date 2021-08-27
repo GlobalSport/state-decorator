@@ -258,6 +258,44 @@ describe('Conflicting actions', () => {
     });
   });
 
+  it('REUSE works as expected [undefined bug]', () => {
+    const callback = jest.fn();
+    const callbackError = jest.fn();
+
+    const store = createStore<State, Actions, Props>(
+      () => ({
+        values: [],
+        errors: [],
+      }),
+      {
+        setValue: {
+          ...setValueAction,
+          conflictPolicy: ConflictPolicy.REUSE,
+        },
+      }
+    );
+
+    store.setProps({
+      callback,
+      callbackError,
+    });
+
+    const setValue = store.actions.setValue;
+
+    const p1 = setValue(undefined);
+    const p2 = setValue('v1');
+
+    expect(p2).not.toBe(p1);
+
+    return Promise.all([p1, p2]).then(() => {
+      expect(store.state).toEqual({
+        values: [undefined, 'v1'],
+        errors: [],
+      });
+      expect(callback).toHaveBeenCalledTimes(2);
+    });
+  });
+
   it('IGNORE works as expected', () => {
     const callback = jest.fn();
     const callbackError = jest.fn();
