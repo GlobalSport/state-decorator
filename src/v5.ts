@@ -49,7 +49,6 @@ export {
 
 import { useEffect, useLayoutEffect, useReducer, useRef } from 'react';
 import { logDetailedEffects } from './middlewares';
-import { DEFAULT_PROMISE_ID } from './impl';
 
 function isAsyncActionPromise<S, F extends (...args: any[]) => any, A, P>(
   action: StateDecoratorAction<S, F, A, P>
