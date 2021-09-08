@@ -83,6 +83,30 @@ describe('Async action', () => {
     error: '',
   });
 
+  it('initialActionsMarkedLoading works as expected', () => {
+    const actions: StoreActions<State, Actions, Props> = {
+      ...actionsImpl,
+    };
+
+    const props = {
+      callback: null,
+      callbackCancel: null,
+      callbackError: null,
+    };
+
+    const store = createStore(getInitialState, actions, {
+      initialActionsMarkedLoading: ['successAction'],
+    });
+    store.init(props);
+
+    expect(store.loadingMap.successAction).toBeTruthy();
+
+    const store2 = createStore(getInitialState, actions);
+    store2.init(props);
+
+    expect(store2.loadingMap.successAction).toBeFalsy();
+  });
+
   it('successful action', () => {
     const listener = jest.fn();
     const callback = jest.fn();

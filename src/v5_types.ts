@@ -228,7 +228,6 @@ export type StateDecoratorOptions<S, A, P = {}> = {
    * List of action names that are marked as loading at initial time.
    * As a render is done before first actions can be trigerred, some actions can be marked as loading at
    * initial time.
-   * @deprecated
    */
   initialActionsMarkedLoading?: (keyof A)[];
 

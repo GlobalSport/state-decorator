@@ -266,13 +266,7 @@ function convertV5Options<S, P, A>(sourceOptions: StateDecoratorOptions<S, A, P>
   }
 
   if (sourceOptions.initialActionsMarkedLoading) {
-    opts.initialLoadingMap = sourceOptions.initialActionsMarkedLoading.reduce<InternalLoadingMap<A>>(
-      (acc, actionName) => {
-        acc[actionName] = { [DEFAULT_PROMISE_ID]: true };
-        return acc;
-      },
-      {}
-    );
+    opts.initialActionsMarkedLoading = sourceOptions.initialActionsMarkedLoading;
   }
 
   return opts;

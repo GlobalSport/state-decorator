@@ -414,10 +414,11 @@ export type StoreOptions<S, A, P = {}, DS = {}> = {
   name?: string;
 
   /**
-   * For v5 compatibility layer
-   * @internal
+   * List of action names that are marked as loading at initial time.
+   * If you must start your initial actions in a useSideEffect, a render is done before
+   * first actions can be trigerred, some actions can be marked as loading at initial time.
    */
-  initialLoadingMap?: InternalLoadingMap<A>;
+  initialActionsMarkedLoading?: (keyof A)[];
 
   /**
    * One or several configurations of inbound properties change managements.

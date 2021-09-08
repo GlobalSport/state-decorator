@@ -242,10 +242,14 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
       propsRef.current = p;
       initializedRef.current = true;
       stateRef.current = getInitialState(p);
+
+      const initialActionSet = new Set(options?.initialActionsMarkedLoading);
+
       loadingMapRef.current = (Object.keys(actionsImpl) as (keyof A)[]).reduce<InternalLoadingMap<A>>((acc, name) => {
-        acc[name] = options?.initialLoadingMap?.[name] ?? {};
+        acc[name] = initialActionSet.has(name) ? { [DEFAULT_PROMISE_ID]: true } : {};
         return acc;
       }, {});
+
       timeoutRef.current = {};
       promisesRef.current = {};
       conflictActionsRef.current = {};
