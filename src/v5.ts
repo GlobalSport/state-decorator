@@ -14,7 +14,6 @@ import {
   StoreActions,
   StoreOptions,
   MiddlewareFactory,
-  InternalLoadingMap,
 } from './types';
 
 import { createStore, StoreApi, setGlobalConfig, ConflictPolicy } from './index';
