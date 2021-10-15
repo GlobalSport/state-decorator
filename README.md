@@ -165,17 +165,19 @@ export const CounterContainer = () => {
 
 The action context contain all the data needed to implement the actions. It contains the action arguments and the injected data.
 
-| Property      | Alias | Availability                   | Description                                       |
-| ------------- | ----- | ------------------------------ | ------------------------------------------------- |
-| state         | s     | everywhere                     | Current state                                     |
-| args          |       | action related                 | Action arguments                                  |
-| props         | p     | everywhere                     | Current bound component props                     |
-| actions       | a     | side effects / onMount         | Store actions (decorated)                         |
-| result        | res   | promise effects / side effects | The promise result                                |
-| error         | err   | error effects / side effects   | The promise error                                 |
-| derived       | ds    | everywhere                     | The derived state (from props/state)              |
-| promiseId     |       | asynchronous actions callbacks | Parallel asynchronous actions promise identifier  |
-| notifyWarning |       | side effects                   | Injected function if set at store or global level |
+| Property      | Alias | Availability                   | Description                                             |
+| ------------- | ----- | ------------------------------ | ------------------------------------------------------- |
+| state         | s     | everywhere                     | Current state                                           |
+| args          |       | action related                 | Action arguments                                        |
+| props         | p     | everywhere                     | Current bound component props                           |
+| actions       | a     | side effects / onMount         | Store actions (decorated)                               |
+| result        | res   | promise effects / side effects | The promise result                                      |
+| error         | err   | error effects / side effects   | The promise error                                       |
+| derived       | ds    | everywhere                     | The derived state (from props/state)                    |
+| promiseId     |       | asynchronous actions callbacks | Parallel asynchronous actions promise identifier        |
+| notifyWarning |       | side effects                   | Injected function if set at store or global level       |
+| indices       |       | onPropsChange                  | Indices in the getDeps array of changed props           |
+| isInit        |       | onPropsChange                  | Whether the onPropsCHange is executed during init phase |
 
 # Actions
 
@@ -497,6 +499,8 @@ function Container(p: ContainerProps) {
 }
 ```
 
+If an initial action is launched each time a property changes, consider using the **onMount** flag of the **onPropsChange** entry.
+
 ## State sharing and slices
 
 - Declare a store and bind it to a component using _useStore_ or _useBindStore_ hooks.
@@ -579,11 +583,13 @@ const store = createStore(getInitialState, actionsImpl, {
     // list of depedencies that should trigger effects & side effects if changed
     getDeps: (p) => [p.id],
     // state changes, indices contains the indices of dependencies that have changed
-    effects: ({ state, props, indices }) => ({ ...state, selectedId: props.id }),
+    effects: ({ state, props, indices, isInit }) => ({ ...state, selectedId: props.id }),
     // other changes (use short aliases)
-    sideEffects: ({ p, a }) => {
+    sideEffects: ({ p, a, indices, isInit }) => {
       a.loadItem(p.id);
     },
+    // whether apply effects & side effects on mount
+    onMount: true,
   },
 });
 ```
@@ -621,6 +627,51 @@ const store = createStore(getInitialState, actionsImpl, {
   ],
 });
 ```
+
+## OnMount
+
+If the onMount flag is set on the props change configuration, the effects and side effects will be executed at the store creation when the component is mounted.
+
+It allows to trigger same actions at creation time and when the dependencies props are changed.
+
+```typescript
+const store = createStore(getInitialState, actionsImpl, {
+  onMount: ({ p }) => {
+    a.loadUser(p.userId);
+  },
+  onPropsChange: [
+    {
+      getDeps: (p) => [p.userId],
+      effects: ({ s, p }) => ({ ...s, userId: p.userId }),
+      sideEffects: ({ p, a }) => {
+        a.loadUser(p.userId);
+      },
+    },
+  ],
+});
+
+// SAME AS
+
+const store = createStore(getInitialState, actionsImpl, {
+  onPropsChange: [
+    {
+      getDeps: (p) => [p.userId],
+      effects: ({ s, p, isInit }) => (isInit ? null : { ...s, userId: p.userId }),
+      sideEffects: ({ p, a }) => {
+        a.loadUser(p.userId);
+      },
+      onMount: true,
+    },
+  ],
+});
+```
+
+**Caution**: the effects are executed too. Use the isInit parameter is passed to the context to apply or not state change.
+
+## Recipes
+
+- Use several prop change configurations to separate dependencies between props and have simple definition.
+- Use onMount flag to have a more systematic and simpler code.
 
 # Derived state
 

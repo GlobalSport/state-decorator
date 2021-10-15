@@ -15,6 +15,7 @@ import Paper from '@material-ui/core/Paper';
 import { useState } from 'react';
 
 import { makeStyles } from '@material-ui/core/styles';
+import PropsChangeOnMount from './PropsChangeOnMount';
 
 type TabPanelProps = {
   children?: React.ReactNode;
@@ -74,6 +75,7 @@ export default function App() {
           <Tab label="Abort" />
           <Tab label="Debounce" />
           <Tab label="State sharing" />
+          <Tab label="Props change onmount" />
         </Tabs>
         <Box flex={1} className={classes.content}>
           <TabPanel tabId={tabId} index={0} classes={classes}>
@@ -100,6 +102,9 @@ export default function App() {
           </TabPanel>
           <TabPanel tabId={tabId} index={7} classes={classes}>
             <StateSharing />
+          </TabPanel>
+          <TabPanel tabId={tabId} index={8} classes={classes}>
+            <PropsChangeOnMount />
           </TabPanel>
         </Box>
       </Paper>

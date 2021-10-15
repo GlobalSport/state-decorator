@@ -387,6 +387,7 @@ export type StoreActions<S, A extends DecoratedActions, P = {}, DS = {}, FxRes =
 export type OnPropsChangeEffectsContext<S, DS, P> = ContextWithDerived<S, DS, P> & {
   indices: number[];
   index: number;
+  isInit: boolean;
 };
 
 export type OnPropsChangeSideEffectsContext<S, P, A, DS = {}> = OnPropsChangeEffectsContext<S, DS, P> & {
@@ -402,6 +403,7 @@ type DerivedStateOption<S, P, DS> = {
 };
 
 export type OnPropsChangeOptions<S, DS, A, P> = {
+  onMount?: boolean;
   getDeps: (p: P) => any[];
   effects?: (ctx: OnPropsChangeEffectsContext<S, DS, P>) => S;
   sideEffects?: (ctx: OnPropsChangeSideEffectsContext<S, P, A>) => void;

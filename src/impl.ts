@@ -44,7 +44,8 @@ export type SetStateFunc<S, A, P> = (
   actionType: 'preEffects' | 'effects' | 'errorEffects' | null, // FIXME
   isAsync: boolean,
   actionCtx: any,
-  propsChanged: boolean
+  propsChanged: boolean,
+  isInit?: boolean
 ) => void;
 
 /** @internal */
@@ -403,11 +404,13 @@ export function buildOnPropChangeEffects<S, DS, P>(
   derivedStateRef: Ref<DerivedState<DS>>,
   propsRef: Ref<P>,
   indices: number[],
-  index: number
+  index: number,
+  isInit: boolean
 ): OnPropsChangeEffectsContext<S, DS, P> {
   const res = buildInvocationContextBase(stateRef, derivedStateRef, propsRef) as OnPropsChangeEffectsContext<S, DS, P>;
   res.indices = indices;
   res.index = index;
+  res.isInit = isInit;
   return res;
 }
 
@@ -1094,7 +1097,8 @@ export function onPropChange<S, P, A, DS>(
   oldProps: P,
   actionsRef: Ref<A>,
   options: StoreOptions<S, A, P, DS>,
-  setState: SetStateFunc<S, A, P>
+  setState: SetStateFunc<S, A, P>,
+  isInit: boolean
 ) {
   const hasDerivedState = options?.derivedState != null;
 
@@ -1126,30 +1130,40 @@ export function onPropChange<S, P, A, DS>(
     if (getDeps) {
       let propChanged = false;
 
-      const oldValues = getDeps(oldProps);
-      const newValues = getDeps(propsRef.current);
-
       const indices: number[] = [];
-      if (oldValues.length !== newValues.length) {
-        console.warn('options.onPropsChange.getDeps returned array must be stable (same length)');
-        propChanged = true;
+
+      if (isInit) {
+        if (propsChange.onMount) {
+          propChanged = true;
+        } else {
+          // skip this onPropsChange
+          return;
+        }
       } else {
-        oldValues.forEach((v, i) => {
-          if (!compare(v, newValues[i])) {
-            propChanged = true;
-            indices.push(i);
-          }
-        });
+        const oldValues = getDeps(oldProps);
+        const newValues = getDeps(propsRef.current);
+
+        if (oldValues.length !== newValues.length) {
+          console.warn('options.onPropsChange.getDeps returned array must be stable (same length)');
+          propChanged = true;
+        } else {
+          oldValues.forEach((v, i) => {
+            if (!compare(v, newValues[i])) {
+              propChanged = true;
+              indices.push(i);
+            }
+          });
+        }
       }
 
       if (propChanged) {
-        const ctx = buildOnPropChangeEffects(newStateRef, derivedStateRef, propsRef, indices, index);
+        const ctx = buildOnPropChangeEffects(newStateRef, derivedStateRef, propsRef, indices, index, isInit);
         const newState = propsChange.effects?.(ctx) ?? null;
 
         if (newState != null) {
           stateChanged = true;
           newStateRef.current = newState;
-          setState(newStateRef.current, undefined, 'onPropsChange', 'effects', false, ctx, true);
+          setState(newStateRef.current, undefined, 'onPropsChange', 'effects', false, ctx, true, isInit);
         }
 
         if (propsChange.sideEffects) {

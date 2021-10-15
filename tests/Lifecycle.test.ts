@@ -186,9 +186,7 @@ describe('Lifecycle', () => {
         setProp: ({ s, args: [p] }) => ({ ...s, prop: p }),
       });
 
-      const callback = jest.fn(() => {
-        debugger;
-      });
+      const callback = jest.fn(() => {});
 
       store.addStateListener(() => {
         callback();
@@ -220,6 +218,184 @@ describe('Lifecycle', () => {
       expect(onMount).toHaveBeenCalled();
 
       store.destroy();
+    });
+  });
+  describe('onPropsChanges called on mount', () => {
+    type State = {
+      prop1: string;
+      prop2: string;
+    };
+
+    type Actions = {
+      setProp1: (v: string) => void;
+      setProp2: (v: string) => void;
+    };
+
+    type Props = {
+      propIn: string;
+    };
+
+    it('simple effect', () => {
+      const store = createStore<State, Actions, Props>(
+        () => ({ prop1: '', prop2: '' }),
+        {
+          setProp1: ({ s, args: [p] }) => ({ ...s, prop1: p }),
+          setProp2: ({ s, args: [p] }) => ({ ...s, prop2: p }),
+        },
+        {
+          onPropsChange: [
+            {
+              getDeps: (p) => [p.propIn],
+              effects: ({ s, p, isInit }) => {
+                expect(isInit).toBeTruthy();
+                return { ...s, prop1: p.propIn };
+              },
+              onMount: true,
+            },
+            {
+              getDeps: (p) => [p.propIn],
+              effects: ({ s, p, isInit }) => {
+                expect(isInit).toBeTruthy();
+                return { ...s, prop2: p.propIn };
+              },
+            },
+          ],
+        }
+      );
+
+      const callback = jest.fn(() => {});
+
+      store.addStateListener(() => {
+        callback();
+      });
+
+      store.init({
+        propIn: 'init',
+      });
+
+      // side effect + onMount
+      expect(callback).toHaveBeenCalledTimes(1);
+
+      expect(store.state).toEqual({
+        prop1: 'init',
+        prop2: '',
+      });
+    });
+
+    it('simple side effect', () => {
+      const store = createStore<State, Actions, Props>(
+        () => ({ prop1: '', prop2: '' }),
+        {
+          setProp1: ({ s, args: [p] }) => ({ ...s, prop1: p }),
+          setProp2: ({ s, args: [p] }) => ({ ...s, prop2: p }),
+        },
+        {
+          onPropsChange: [
+            {
+              getDeps: (p) => [p.propIn],
+              sideEffects: ({ a, isInit }) => {
+                expect(isInit).toBeTruthy();
+                a.setProp1('effect');
+              },
+              onMount: true,
+            },
+            {
+              getDeps: (p) => [p.propIn],
+              sideEffects: ({ a, isInit }) => {
+                a.setProp1('effect');
+              },
+            },
+          ],
+        }
+      );
+
+      const callback = jest.fn(() => {});
+
+      store.addStateListener(() => {
+        callback();
+      });
+
+      store.init({
+        propIn: 'init',
+      });
+
+      // side effect + onMount
+      expect(callback).toHaveBeenCalledTimes(2);
+
+      expect(store.state).toEqual({
+        prop1: 'effect',
+        prop2: '',
+      });
+    });
+
+    it('effect + side effect', () => {
+      type State = {
+        prop1: string;
+        prop2: string;
+        prop3: string;
+        prop4: string;
+      };
+
+      type Actions = {
+        setProp1: (v: string) => void;
+        setProp2: (v: string) => void;
+        setProp3: (v: string) => void;
+        setProp4: (v: string) => void;
+      };
+
+      const store = createStore<State, Actions, Props>(
+        () => ({
+          prop1: '',
+          prop2: '',
+          prop3: '',
+          prop4: '',
+        }),
+        {
+          setProp1: ({ s, args: [p] }) => ({ ...s, prop1: p }),
+          setProp2: ({ s, args: [p] }) => ({ ...s, prop2: p }),
+          setProp3: ({ s, args: [p] }) => ({ ...s, prop3: p }),
+          setProp4: ({ s, args: [p] }) => ({ ...s, prop4: p }),
+        },
+        {
+          onPropsChange: [
+            {
+              getDeps: (p) => [p.propIn],
+              effects: ({ s, p }) => ({ ...s, prop1: p.propIn }),
+              sideEffects: ({ a }) => {
+                a.setProp2('effect');
+              },
+              onMount: true,
+            },
+            {
+              getDeps: (p) => [p.propIn],
+              effects: ({ s, p }) => ({ ...s, prop3: p.propIn }),
+              sideEffects: ({ a }) => {
+                a.setProp4('effect2');
+              },
+            },
+          ],
+        }
+      );
+
+      const callback = jest.fn(() => {});
+
+      store.addStateListener(() => {
+        callback();
+      });
+
+      store.init({
+        propIn: 'init',
+      });
+
+      // side effect + onMount
+      expect(callback).toHaveBeenCalledTimes(2);
+
+      expect(store.state).toEqual({
+        prop1: 'init',
+        prop2: 'effect',
+        prop3: '',
+        prop4: '',
+      });
     });
   });
 });

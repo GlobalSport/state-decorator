@@ -226,7 +226,7 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
     if (!initializedRef.current) {
       init(p);
     } else {
-      onPropChange(stateRef, derivedStateRef, propsRef, oldProps, actionsRef, options, setState);
+      onPropChange(stateRef, derivedStateRef, propsRef, oldProps, actionsRef, options, setState, false);
     }
   }
 
@@ -277,11 +277,14 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
       storeMiddlewares?.forEach(mapper);
       // end init
 
+      computeDerivedValues(stateRef, propsRef, derivedStateRef, options);
+
+      // manage PropsChange with onMount
+      onPropChange(stateRef, derivedStateRef, propsRef, null, actionsRef, options, setState, true);
+
       if (options?.onMount) {
         options.onMount(buildOnMountInvocationContext(stateRef, derivedStateRef, propsRef, actionsRef));
       }
-
-      computeDerivedValues(stateRef, propsRef, derivedStateRef, options);
 
       notifyStateListeners(stateRef.current, derivedStateRef.current.state);
     }
@@ -321,7 +324,8 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
     actionType: 'preEffects' | 'effects' | 'errorEffects' | null,
     isAsync: boolean,
     actionCtx: any,
-    propsChanged: boolean = false
+    propsChanged: boolean = false,
+    init = false
   ) {
     let hasChanged = false;
 
@@ -370,10 +374,12 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
 
     if (hasChanged) {
       computeDerivedValues(stateRef, propsRef, derivedStateRef, options);
-      notifyStateListeners(newState || stateRef.current, derivedStateRef.current.state);
+      if (!init) {
+        notifyStateListeners(newState || stateRef.current, derivedStateRef.current.state);
+      }
     } else if (propsChanged) {
       const derivedChanged = computeDerivedValues(stateRef, propsRef, derivedStateRef, options);
-      if (derivedChanged) {
+      if (derivedChanged && !init) {
         notifyStateListeners(newState || stateRef.current, derivedStateRef.current.state);
       }
     }
