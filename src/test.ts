@@ -53,7 +53,7 @@ type MockStore<S, A extends DecoratedActions, P, DS> = {
   test: (f: (state: S & DS, props: P) => void) => MockStore<S, A, P, DS>;
   onMount: (props: P, testFunction: (props: P, actions: MockActions<A, any>) => void) => MockStore<S, A, P, DS>;
 
-  onPropsChange: (props: P, init?: boolean) => MockResultWithTest<S, A, P, DS>;
+  onPropsChange: (props: Partial<P>, init?: boolean) => MockResultWithTest<S, A, P, DS>;
 
   getAction: <K extends keyof A>(name: K) => MockStoreAction<S, A, A[K], P, DS>;
 };
@@ -135,9 +135,9 @@ export function createMockStore<S, A extends DecoratedActions, P = {}, DS = {}>(
     setPartialProps(p) {
       return cloneStore(undefined, { ...propsRef.current, ...p }) as MockStore<S, A, P, DS>;
     },
-    onPropsChange(newProps, init?: boolean) {
+    onPropsChange(newProps: Partial<P>, init?: boolean) {
       const newStateRef = createRef(stateRef.current);
-      const newPropsRef = createRef(newProps);
+      const newPropsRef = createRef({ ...propsRef.current, ...newProps });
       const derivedStateRef = createRef<DerivedState<DS>>({ state: null, deps: {} });
       computeDerivedValues(newStateRef, newPropsRef, derivedStateRef, options);
 
