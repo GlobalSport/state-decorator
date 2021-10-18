@@ -15,6 +15,7 @@ describe('createMockStore', () => {
     setProp1: (p: string) => void;
     setProp2: (p: number) => void;
     setProp3: (p: string, willFail: boolean) => Promise<string>;
+    setProp4: (p: string) => void;
     setOptimistic: (p: string) => Promise<string>;
   };
 
@@ -30,6 +31,7 @@ describe('createMockStore', () => {
 
   const actionsImpl: StoreActions<State, Actions, Props> = {
     setProp1: ({ s, args: [v] }) => ({ ...s, prop1: v }),
+    setProp4: ({ s, args: [v] }) => ({ ...s, prop4: v }),
     setProp2: {
       effects: ({ s, args: [v] }) => ({ ...s, prop2: v }),
       sideEffects: ({ a, s }) => {
@@ -224,25 +226,112 @@ describe('createMockStore', () => {
     });
   });
 
-  it('allows to test prop change', () => {
-    mockStore
-      .onPropsChange({
-        prop: 'new_prop',
-        prop2: '',
-        onMount: null,
-      })
-      .test((res) => {
-        expect(res.actions.setProp1).toHaveBeenCalled();
-        expect(res.props.prop).toEqual('new_prop');
-        expect(res.state).toEqual({
-          prop1: 'new_prop',
-          prop2: 0,
-          prop3: '',
-          prop4: '',
-          error: '',
-          concat: 'new_prop,0,,,new_prop', // derived state is updated
+  describe('onPropsChange', () => {
+    it('allows to test prop change', () => {
+      mockStore
+        .onPropsChange({
+          prop: 'new_prop',
+          prop2: '',
+          onMount: null,
+        })
+        .test((res) => {
+          expect(res.actions.setProp1).toHaveBeenCalled();
+          expect(res.props.prop).toEqual('new_prop');
+          expect(res.state).toEqual({
+            prop1: 'new_prop',
+            prop2: 0,
+            prop3: '',
+            prop4: '',
+            error: '',
+            concat: 'new_prop,0,,,new_prop', // derived state is updated
+          });
         });
-      });
+    });
+
+    it('allows to test several prop change', () => {
+      const optionsPropsChange: StoreOptions<State, Actions, Props, DerivedState> = {
+        onPropsChange: [
+          {
+            getDeps: (p) => [p.prop],
+            effects: ({ s, p }) => ({ ...s, prop1: p.prop }),
+            sideEffects: ({ p, a }) => {
+              a.setProp1(p.prop);
+            },
+          },
+          {
+            getDeps: (p) => [p.prop2],
+            effects: ({ s, p }) => ({ ...s, prop3: p.prop2 }),
+            sideEffects: ({ p, a }) => {
+              a.setProp4(p.prop2);
+            },
+            onMount: true,
+          },
+        ],
+        derivedState: {
+          concat: {
+            getDeps: ({ s, p }) => [s.prop1, s.prop2, s.prop3, s.prop4, p.prop],
+            get: ({ s, p }) => [s.prop1, s.prop2, s.prop3, s.prop4, p.prop].join(','),
+          },
+        },
+      };
+
+      const mockStore = createMockStore(
+        getInitialState,
+        actionsImpl,
+        { prop: '', prop2: '', onMount: null },
+        optionsPropsChange
+      );
+
+      mockStore
+        .onPropsChange(
+          {
+            prop: 'new_prop',
+            prop2: 'new_prop2',
+            onMount: null,
+          },
+          true
+        )
+        .test((res) => {
+          expect(res.actions.setProp1).not.toHaveBeenCalled();
+          expect(res.actions.setProp2).not.toHaveBeenCalled();
+          expect(res.actions.setProp3).not.toHaveBeenCalled();
+          expect(res.actions.setProp4).toHaveBeenCalled();
+          expect(res.props.prop).toEqual('new_prop');
+          expect(res.state).toEqual({
+            prop1: '',
+            prop2: 0,
+            prop3: 'new_prop2',
+            prop4: '',
+            error: '',
+            concat: ',0,new_prop2,,new_prop', // derived state is updated
+          });
+        });
+
+      mockStore
+        .onPropsChange(
+          {
+            prop: 'new_prop',
+            prop2: 'new_prop2',
+            onMount: null,
+          },
+          false
+        )
+        .test((res) => {
+          expect(res.actions.setProp1).toHaveBeenCalled();
+          expect(res.actions.setProp2).not.toHaveBeenCalled();
+          expect(res.actions.setProp3).not.toHaveBeenCalled();
+          expect(res.actions.setProp4).toHaveBeenCalled();
+          expect(res.props.prop).toEqual('new_prop');
+          expect(res.state).toEqual({
+            prop1: 'new_prop',
+            prop2: 0,
+            prop3: 'new_prop2',
+            prop4: '',
+            error: '',
+            concat: 'new_prop,0,new_prop2,,new_prop', // derived state is updated
+          });
+        });
+    });
   });
 
   it('allows to test sync action', async () => {
