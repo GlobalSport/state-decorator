@@ -13,6 +13,7 @@ import {
   decorateAsyncAction,
   Ref,
   onPropChange,
+  buildOnMountInvocationContext,
 } from './impl';
 import { AsyncAction, DecoratedActions, InternalLoadingMap } from './types';
 
@@ -51,10 +52,21 @@ type MockStore<S, A extends DecoratedActions, P, DS> = {
   setPartialProps: (props: Partial<P>) => MockStore<S, A, P, DS>;
 
   test: (f: (state: S & DS, props: P) => void) => MockStore<S, A, P, DS>;
-  onMount: (props: P, testFunction: (props: P, actions: MockActions<A, any>) => void) => MockStore<S, A, P, DS>;
+  onMount: (props: Partial<P>) => MockResultWithTest<S, A, P, DS>;
 
   onPropsChange: (props: Partial<P>, init?: boolean) => MockResultWithTest<S, A, P, DS>;
 
+  init: (props?: Partial<P>) => MockResultWithTest<S, A, P, DS>;
+
+  /** @internal */
+  onPropsChangeImpl: (
+    newStateRef: Ref<S>,
+    newPropsRef: Ref<P>,
+    newDerivedStateRef: Ref<DerivedState<DS>>,
+    newActionsRef: Ref<StoreActions<S, A, P, {}, S>>,
+    setState: SetStateFunc<S, A, P>,
+    init?: boolean
+  ) => MockResult<S, A, P, DS>;
   getAction: <K extends keyof A>(name: K) => MockStoreAction<S, A, A[K], P, DS>;
 };
 
@@ -99,14 +111,14 @@ export function createMockStore<S, A extends DecoratedActions, P = {}, DS = {}>(
       f(getState(), propsRef.current);
       return this;
     },
-    onMount(propsIn, f) {
+    onMount(propsIn = {} as P) {
       const actionsRef = getActionsRef(actions);
 
       if (options?.onMount == null) {
         throw new Error("There's no onMount set on store options");
       }
 
-      const p = propsIn || props;
+      const p = { ...propsRef.current, ...propsIn };
       const a = actionsRef.current as any;
       const s = stateRef.current;
 
@@ -119,9 +131,18 @@ export function createMockStore<S, A extends DecoratedActions, P = {}, DS = {}>(
         actions: a,
       });
 
-      f(p, a);
+      const res = {
+        state: getState(),
+        props: p,
+        actions: actionsRef.current,
+      };
 
-      return this;
+      return {
+        ...res,
+        test(testFunc) {
+          testFunc(res);
+        },
+      };
     },
     setState(s) {
       return cloneStore(s, undefined) as MockStore<S, A, P, DS>;
@@ -135,23 +156,39 @@ export function createMockStore<S, A extends DecoratedActions, P = {}, DS = {}>(
     setPartialProps(p) {
       return cloneStore(undefined, { ...propsRef.current, ...p }) as MockStore<S, A, P, DS>;
     },
-    onPropsChange(newProps: Partial<P>, init?: boolean) {
+    onPropsChange(newProps: Partial<P>, init = false) {
       const newStateRef = createRef(stateRef.current);
       const newPropsRef = createRef({ ...propsRef.current, ...newProps });
       const derivedStateRef = createRef<DerivedState<DS>>({ state: null, deps: {} });
-      computeDerivedValues(newStateRef, newPropsRef, derivedStateRef, options);
-
+      const actionsRef = getActionsRef(actions);
       const setState: SetStateFunc<S, A, P> = (newStateIn, newLoadingMap, actionName, actionType, isAsync) => {
         if (newStateIn != null) {
           newStateRef.current = newStateIn;
         }
       };
 
-      const actionsRef = getActionsRef(actions);
+      const res = this.onPropsChangeImpl(newStateRef, newPropsRef, derivedStateRef, actionsRef, setState, init);
+
+      return {
+        ...res,
+        test(testFunc) {
+          testFunc(res);
+        },
+      };
+    },
+    onPropsChangeImpl(
+      newStateRef: Ref<S>,
+      newPropsRef: Ref<P>,
+      newDerivedStateRef: Ref<DerivedState<DS>>,
+      actionsRef: Ref<StoreActions<S, A, P, {}, S>>,
+      setState: SetStateFunc<S, A, P>,
+      init?: boolean
+    ) {
+      computeDerivedValues(stateRef, propsRef, newDerivedStateRef, options);
 
       onPropChange(
         newStateRef,
-        derivedStateRef,
+        newDerivedStateRef,
         newPropsRef,
         propsRef.current,
         actionsRef as any,
@@ -160,11 +197,40 @@ export function createMockStore<S, A extends DecoratedActions, P = {}, DS = {}>(
         init
       );
 
+      return {
+        state: getState(newStateRef, newPropsRef),
+        props: newPropsRef.current,
+        actions: actionsRef.current,
+      };
+    },
+
+    init(newProps: Partial<P> = {}) {
+      // reset initial state
+      const state = typeof initialState === 'function' ? (initialState as (props: P) => S)(props) : initialState;
+
+      const newStateRef = createRef(state);
+      const newPropsRef = createRef({ ...propsRef.current, ...newProps });
+      const derivedStateRef = createRef<DerivedState<DS>>({ state: null, deps: {} });
+      const actionsRef = getActionsRef(actions);
+
+      const setState: SetStateFunc<S, A, P> = (newStateIn, newLoadingMap, actionName, actionType, isAsync) => {
+        if (newStateIn != null) {
+          newStateRef.current = newStateIn;
+        }
+      };
+
+      this.onPropsChangeImpl(newStateRef, newPropsRef, derivedStateRef, actionsRef, setState, true);
+
+      if (options?.onMount) {
+        options.onMount(buildOnMountInvocationContext(newStateRef, derivedStateRef, newPropsRef, actionsRef as any));
+      }
+
       const res = {
         state: getState(newStateRef, newPropsRef),
         props: newPropsRef.current,
         actions: actionsRef.current,
       };
+
       return {
         ...res,
         test(testFunc) {
@@ -172,6 +238,7 @@ export function createMockStore<S, A extends DecoratedActions, P = {}, DS = {}>(
         },
       };
     },
+
     getAction(actionName) {
       return createMockStoreAction(stateRef.current, actionName, actions, propsRef.current, null, options);
     },

@@ -961,15 +961,17 @@ describe('Todo', () => {
 
 ### MockStore
 
-| Function        | Arguments                            | Returns             | Description                                                          |
-| --------------- | ------------------------------------ | ------------------- | -------------------------------------------------------------------- |
-| setState        | state: S                             | new mock store      | Create a new store with the specified state                          |
-| setPartialState | state: Partial<S>                    | new mock store      | Create a new store with the merge of current state and partial state |
-| setProps        | props: P                             | new mock store      | Create a new store with the specified props                          |
-| setPartialProps | props: Partial<P>                    | new mock store      | Create a new store with the merge of current props and partial props |
-| test            | f: (state: S & DS, props: P) => void | same store instance | Call specified fuction to test current state and store               |
-| getAction       | actionName: keyof A                  | MockStoreAction     | Get a mock action instance                                           |
-| onPropsChange   | props: P                             | MockResult          | Test a prop change. Does not change internal props                   |
+| Function        | Arguments                            | Returns             | Description                                                                                 |
+| --------------- | ------------------------------------ | ------------------- | ------------------------------------------------------------------------------------------- |
+| getAction       | actionName: keyof A                  | MockStoreAction     | Get a mock action instance                                                                  |
+| init            | props?: Partial<P>                   | MockResult          | Test store initialization (onPropsChanged marked onMount + onMount)                         |
+| onMount         | props: P                             | MockResult          | Test onMount. Does not change internal props.                                               |
+| onPropsChange   | props: P, init?: boolean             | MockResult          | Test prop changes. Does not change internal props. Init allows to test onMount prop changes |
+| setPartialProps | props: Partial<P>                    | new mock store      | Create a new store with the merge of current props and partial props                        |
+| setPartialState | state: Partial<S>                    | new mock store      | Create a new store with the merge of current state and partial state                        |
+| setProps        | props: P                             | new mock store      | Create a new store with the specified props                                                 |
+| setState        | state: S                             | new mock store      | Create a new store with the specified state                                                 |
+| test            | f: (state: S & DS, props: P) => void | same store instance | Call specified fuction to test current state and store                                      |
 
 ### MockStoreAction
 

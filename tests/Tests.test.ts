@@ -227,6 +227,58 @@ describe('createMockStore', () => {
   });
 
   describe('onPropsChange', () => {
+    const optionsPropsChange: StoreOptions<State, Actions, Props, DerivedState> = {
+      onPropsChange: [
+        {
+          getDeps: (p) => [p.prop],
+          effects: ({ s, p }) => ({ ...s, prop1: p.prop }),
+          sideEffects: ({ p, a }) => {
+            a.setProp1(p.prop);
+          },
+        },
+        {
+          getDeps: (p) => [p.prop2],
+          effects: ({ s, p }) => ({ ...s, prop3: p.prop2 }),
+          sideEffects: ({ p, a }) => {
+            a.setProp4(p.prop2);
+          },
+          onMount: true,
+        },
+      ],
+      derivedState: {
+        concat: {
+          getDeps: ({ s, p }) => [s.prop1, s.prop2, s.prop3, s.prop4, p.prop],
+          get: ({ s, p }) => [s.prop1, s.prop2, s.prop3, s.prop4, p.prop].join(','),
+        },
+      },
+      onMount: ({ a }) => {
+        a.setProp2(42);
+      },
+    };
+
+    const mockStore2 = createMockStore(
+      getInitialState,
+      actionsImpl,
+      { prop: '', prop2: '', onMount: null },
+      optionsPropsChange
+    );
+
+    it('allows to test initial props changes + onMount', () => {
+      mockStore2
+        .init({
+          prop: 'new_prop',
+          prop2: 'new_prop2',
+          onMount: null,
+        })
+        .test((res) => {
+          expect(res.actions.setProp1).not.toHaveBeenCalled(); // 1st prop change not called
+          expect(res.actions.setProp2).toHaveBeenCalledWith(42); // onMount
+          expect(res.actions.setProp3).not.toHaveBeenCalled();
+          expect(res.actions.setProp4).toHaveBeenCalledWith('new_prop2'); // 2nd prop change called
+          expect(res.props.prop).toEqual('new_prop');
+        });
+    });
+
     it('allows to test prop change', () => {
       mockStore
         .onPropsChange({
@@ -248,74 +300,13 @@ describe('createMockStore', () => {
         });
     });
 
-    it('allows to test several prop change', () => {
-      const optionsPropsChange: StoreOptions<State, Actions, Props, DerivedState> = {
-        onPropsChange: [
-          {
-            getDeps: (p) => [p.prop],
-            effects: ({ s, p }) => ({ ...s, prop1: p.prop }),
-            sideEffects: ({ p, a }) => {
-              a.setProp1(p.prop);
-            },
-          },
-          {
-            getDeps: (p) => [p.prop2],
-            effects: ({ s, p }) => ({ ...s, prop3: p.prop2 }),
-            sideEffects: ({ p, a }) => {
-              a.setProp4(p.prop2);
-            },
-            onMount: true,
-          },
-        ],
-        derivedState: {
-          concat: {
-            getDeps: ({ s, p }) => [s.prop1, s.prop2, s.prop3, s.prop4, p.prop],
-            get: ({ s, p }) => [s.prop1, s.prop2, s.prop3, s.prop4, p.prop].join(','),
-          },
-        },
-      };
-
-      const mockStore = createMockStore(
-        getInitialState,
-        actionsImpl,
-        { prop: '', prop2: '', onMount: null },
-        optionsPropsChange
-      );
-
-      mockStore
-        .onPropsChange(
-          {
-            prop: 'new_prop',
-            prop2: 'new_prop2',
-            onMount: null,
-          },
-          true
-        )
-        .test((res) => {
-          expect(res.actions.setProp1).not.toHaveBeenCalled();
-          expect(res.actions.setProp2).not.toHaveBeenCalled();
-          expect(res.actions.setProp3).not.toHaveBeenCalled();
-          expect(res.actions.setProp4).toHaveBeenCalled();
-          expect(res.props.prop).toEqual('new_prop');
-          expect(res.state).toEqual({
-            prop1: '',
-            prop2: 0,
-            prop3: 'new_prop2',
-            prop4: '',
-            error: '',
-            concat: ',0,new_prop2,,new_prop', // derived state is updated
-          });
-        });
-
-      mockStore
-        .onPropsChange(
-          {
-            prop: 'new_prop',
-            prop2: 'new_prop2',
-            onMount: null,
-          },
-          false
-        )
+    it('allows to test several prop changes', () => {
+      mockStore2
+        .onPropsChange({
+          prop: 'new_prop',
+          prop2: 'new_prop2',
+          onMount: null,
+        })
         .test((res) => {
           expect(res.actions.setProp1).toHaveBeenCalled();
           expect(res.actions.setProp2).not.toHaveBeenCalled();
@@ -610,7 +601,7 @@ describe('createMockStore', () => {
       });
     });
 
-    // setParialState
+    // setPartialState
 
     const action3 = action
       .setPartialProps({
@@ -643,17 +634,32 @@ describe('createMockStore', () => {
 
   describe('onMount', () => {
     it('allows to test onMount on store', () => {
-      mockStore.onMount(
-        {
+      mockStore
+        .onMount({
           prop: '',
           prop2: '',
           onMount: jest.fn(),
-        },
-        (p, a) => {
-          expect(p.onMount).toHaveBeenCalled();
-          expect(a.setProp1).toHaveBeenCalledWith('onMount1');
-        }
-      );
+        })
+        .test(({ props, actions }) => {
+          expect(props.onMount).toHaveBeenCalled();
+          expect(actions.setProp1).toHaveBeenCalledWith('onMount1');
+          expect(actions.setProp2).not.toHaveBeenCalled();
+          expect(actions.setProp3).not.toHaveBeenCalled();
+          expect(actions.setProp4).not.toHaveBeenCalled();
+        });
+    });
+
+    it('allows to test onMount through init', () => {
+      mockStore
+        .init({
+          prop: '',
+          prop2: '',
+          onMount: jest.fn(),
+        })
+        .test(({ actions, props }) => {
+          expect(props.onMount).toHaveBeenCalled();
+          expect(actions.setProp1).toHaveBeenCalledWith('onMount1');
+        });
     });
 
     it('fails if no onMount is set on options', () => {
