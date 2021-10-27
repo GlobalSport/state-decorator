@@ -266,7 +266,7 @@ Example:
 ```typescript
 const actions: StoreActions<State, Actions> = {
   loadList: {
-    getPromise: () => fetch('https://myapi/myserives').then((res) => (res.ok ? res.json() : Promise.reject())),
+    getPromise: () => fetch('https://myapi/myservices').then((res) => (res.ok ? res.json() : Promise.reject())),
     effects: ({ s, res }) => ({ ...s, list: res }),
     sideEffects: ({ a }) => {
       a.otherAction();
