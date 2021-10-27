@@ -79,9 +79,9 @@ export type SimpleSyncAction<S, F extends (...args: any[]) => any, P, DS, FxRes 
 
 export type SyncAction<S, F extends (...args: any[]) => any, A, P, DS, FxRes = S> = {
   /**
-   * The action to execute.
+   * Function that update the state when the action is called.
    */
-  effects: (ctx: EffectsInvocationContext<S, DS, F, P>) => FxRes | null;
+  effects?: (ctx: EffectsInvocationContext<S, DS, F, P>) => FxRes | null;
 
   /**
    * Debounces the action if this parameter is defined.
@@ -94,7 +94,7 @@ export type SyncAction<S, F extends (...args: any[]) => any, A, P, DS, FxRes = S
   debounceSideEffectsTimeout?: number;
 
   /**
-   * Action to call when the action is done. Used to trigger other actions (even asynchronous),
+   * Function that calls side effects, ie. effects that are not changing the state directly.
    */
   sideEffects?: (ctx: SideEffectsInvocationContext<S, DS, F, P, A>) => void;
 };

@@ -10,6 +10,7 @@ describe('Advanced synchronous action', () => {
   type Actions = {
     setProp1: (p: string) => void;
     setProp2: (p: number) => void;
+    sideEffects: () => void;
     setEffectsDebounced: (p: number) => void;
     setSideEffectsDebounced: (p: number) => void;
     setCancelled: (p: number) => void;
@@ -18,6 +19,7 @@ describe('Advanced synchronous action', () => {
   type Props = {
     callback: (s: State) => void;
     callbackCancelled: () => void;
+    callbackSideEffects?: (s: State) => void;
   };
 
   const actionsImpl: StoreActions<State, Actions, Props> = {
@@ -26,6 +28,11 @@ describe('Advanced synchronous action', () => {
       effects: ({ s, args: [p] }) => ({ ...s, prop2: p }),
       sideEffects: ({ s, p }) => {
         p.callback(s);
+      },
+    },
+    sideEffects: {
+      sideEffects: ({ s, p }) => {
+        p.callbackSideEffects(s);
       },
     },
     setEffectsDebounced: {
@@ -54,19 +61,20 @@ describe('Advanced synchronous action', () => {
     const store = createStore(getInitialState, actionsImpl);
     const listener = jest.fn();
     const callback = jest.fn();
+    const callbackSideEffects = jest.fn();
     const callbackCancelled = jest.fn(() => {
       throw new Error('Must not have been called');
     });
 
     store.addStateListener(listener);
-    store.setProps({ callback, callbackCancelled });
+    store.setProps({ callback, callbackCancelled, callbackSideEffects });
 
     expect(store.state).toEqual({
       prop1: '',
       prop2: 0,
     });
 
-    const { setProp1, setProp2, setCancelled } = store.actions;
+    const { setProp1, setProp2, sideEffects, setCancelled } = store.actions;
 
     // init
     expect(listener).toHaveBeenCalledTimes(1);
@@ -94,12 +102,27 @@ describe('Advanced synchronous action', () => {
       prop2: 23,
     });
 
+    // cancel both effects and sideEffects if null is returned by effects
     setCancelled(23);
 
     // not called
     expect(listener).toHaveBeenCalledTimes(3);
     expect(callbackCancelled).not.toHaveBeenCalled();
 
+    expect(store.state).toEqual({
+      prop1: 'coucou',
+      prop2: 23,
+    });
+
+    // allow to call sideEffects only
+    sideEffects();
+
+    // not called
+    expect(listener).toHaveBeenCalledTimes(3);
+    expect(callbackSideEffects).toHaveBeenCalledWith({
+      prop1: 'coucou',
+      prop2: 23,
+    });
     expect(store.state).toEqual({
       prop1: 'coucou',
       prop2: 23,

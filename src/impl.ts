@@ -566,10 +566,18 @@ function executeSyncActionImpl<S, DS, F extends (...args: any[]) => any, A exten
   args: Parameters<F>
 ) {
   const ctx = buildEffectsInvocationContext(stateRef, derivedStateRef, propsRef, args, undefined);
-  const newState = action.effects(ctx);
-  setState(newState, undefined, actionName, 'effects', false, ctx, false);
 
-  if (newState !== null) {
+  let actionDropped = false;
+  if (action.effects != null) {
+    const newState: S = action.effects(ctx);
+    if (newState === null) {
+      actionDropped = true;
+    } else {
+      setState(newState, undefined, actionName, 'effects', false, ctx, false);
+    }
+  }
+
+  if (!actionDropped) {
     if (action.debounceSideEffectsTimeout > 0) {
       const timeout = timeoutMap.current[actionName];
 
