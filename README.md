@@ -235,6 +235,11 @@ const actions: StoreActions<State, Actions> = {
 
 [![See Debounce demo](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/debounce-forked-tmk2j?file=/src/Debounce.tsx)
 
+## Recipes
+
+- If the effects function returns **null**, the side effects, if any, are not executed when the action is called.
+- If not effects function is defined by side effects function is provided, the side effects will be executed when the action is called.
+
 ## Cancel action
 
 To cancel effects/side effects just return **null** instead of new state in **effects**.
