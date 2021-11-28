@@ -964,8 +964,6 @@ describe('Todo', () => {
 
 ## Error testing
 
-When testing an action there are 3 possible scenarios
-
 ### Managed error
 
 If an error is triggered during the action and this error was managed (in _errorEffect_, _errorSideEffect_ or _getErrorMessage_) then the action promise will be _resolved_.
