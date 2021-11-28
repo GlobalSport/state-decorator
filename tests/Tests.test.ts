@@ -1,6 +1,16 @@
 import { StoreActions, StoreOptions } from '../src/types';
-import { createMockStore, setMockFactory, createMockFromStore } from '../src/test';
+import { createMockStore, setMockFactory, createMockFromStore, ActionError } from '../src/test';
 import { createStore } from '../src';
+
+export class MyError extends Error {
+  constructor() {
+    super('my error');
+    Object.setPrototypeOf(this, MyError.prototype);
+    if (Error.captureStackTrace) {
+      Error.captureStackTrace(this, MyError);
+    }
+  }
+}
 
 describe('createMockStore', () => {
   type State = {
@@ -16,6 +26,9 @@ describe('createMockStore', () => {
     setProp2: (p: number) => void;
     setProp3: (p: string, willFail: boolean) => Promise<string>;
     setProp4: (p: string) => void;
+    asyncThatCrashes: () => Promise<any>;
+    asyncManagedError: () => Promise<any>;
+    asyncManagedErrorThrow: () => Promise<any>;
     setOptimistic: (p: string) => Promise<string>;
   };
 
@@ -53,6 +66,25 @@ describe('createMockStore', () => {
     setOptimistic: {
       getPromise: ({ args: [param] }) => Promise.resolve(param),
       optimisticEffects: ({ s, args: [param] }) => ({ ...s, prop1: param }),
+    },
+    asyncThatCrashes: {
+      getPromise: () => Promise.resolve(),
+      effects: ({ s }) => {
+        const nullObj = null;
+        nullObj.crash = 'test';
+        return s;
+      },
+    },
+    asyncManagedError: {
+      getPromise: () => Promise.reject(new MyError()),
+      errorEffects: ({ s }) => {
+        return { ...s, error: 'true' };
+      },
+    },
+    asyncManagedErrorThrow: {
+      getPromise: () => Promise.reject(new MyError()),
+      errorEffects: ({ s }) => ({ ...s, error: 'true' }),
+      rejectPromiseOnError: true,
     },
   };
 
@@ -412,9 +444,9 @@ describe('createMockStore', () => {
     await mockStore
       .getAction('setProp3')
       .call('new value', true)
-      .then((res) => {
-        expect(res.actions.setProp1).toHaveBeenCalledWith('errorSideEffect ');
-        expect(res.state).toEqual({
+      .catch((e) => {
+        expect(e.actions.setProp1).toHaveBeenCalledWith('errorSideEffect ');
+        expect(e.state).toEqual({
           prop1: '',
           prop2: 0,
           prop3: '',
@@ -422,6 +454,98 @@ describe('createMockStore', () => {
           error: 'boom',
           concat: ',0,,,', // derived state is included
         });
+      });
+  });
+
+  it('allows to test asynchronous action, error in effect', (done) => {
+    mockStore
+      .getAction('asyncThatCrashes')
+      .call()
+      .then(() => {
+        done.fail();
+      })
+      .catch((e) => {
+        if (e instanceof ActionError) {
+          done();
+        } else {
+          done.fail();
+        }
+      });
+  });
+
+  // REAL WORLD TEST
+  // asyncThatCrashes: {
+  //   getPromise: () => Promise.resolve(),
+  //   effects: ({ s }) => {
+  //     const nullObj = null;
+  //     nullObj.crash = 'test';
+  //     return s;
+  //   },
+  // },
+  // it.only('asyncThatCrashes works as expected', async () => {
+  //   return mockStore.getAction('asyncThatCrashes').call();
+  // });
+
+  // REAL WORLD TEST
+  // it.only('asyncThatCrashes works as expected', async () => {
+  //   return mockStore
+  //     .getAction('asyncThatCrashes')
+  //     .call()
+  //     .catch((e) => Promise.reject(e.sourceError));
+  // });
+
+  // REAL WORLD TEST
+  // asyncManagedError: {
+  //   getPromise: () => Promise.reject(new MyError()),
+  //   errorEffects: ({ s }) => ({ ...s, error: 'true' })
+  // },
+  // it.only('asyncManagedErrorThrow works as expected', async () => {
+  //   return mockStore
+  //     .getAction('asyncManagedErrorThrow')
+  //     .call()
+  //     .catch((e: ActionError<State>) => {
+  //       // test source error
+  //       if (!(e.sourceError instanceof MyError)) {
+  //         return Promise.reject();
+  //       }
+
+  //       // check that error was correcly managed
+  //       expect(e.state.error).toEqual('true');
+  //     });
+  // });
+
+  it('allows to test asynchronous action, managed error', (done) => {
+    mockStore
+      .getAction('asyncManagedError')
+      .call()
+      .then(({ state }) => {
+        // check that error was really mananged
+        expect(state.error).toEqual('true');
+        done();
+      })
+      .catch(() => {
+        done.fail();
+      });
+  });
+
+  it('allows to test asynchronous action, managed error + throw', (done) => {
+    mockStore
+      .getAction('asyncManagedErrorThrow')
+      .call()
+      .then(() => {
+        done.fail();
+      })
+      .catch((e) => {
+        debugger;
+        if (e instanceof ActionError) {
+          if (e.sourceError.message === 'my error') {
+            done();
+          } else {
+            done.fail(e.sourceError);
+          }
+        } else {
+          done.fail();
+        }
       });
   });
 
@@ -450,9 +574,9 @@ describe('createMockStore', () => {
       .getAction('setProp3')
       .promiseRejects(new Error('override'))
       .call('new value', false)
-      .then((res) => {
-        expect(res.actions.setProp1).toHaveBeenCalledWith('errorSideEffect ');
-        expect(res.state).toEqual({
+      .catch((e) => {
+        expect(e.actions.setProp1).toHaveBeenCalledWith('errorSideEffect ');
+        expect(e.state).toEqual({
           prop1: '',
           prop2: 0,
           prop3: '',
@@ -490,8 +614,8 @@ describe('createMockStore', () => {
         });
       })
       .call('new value')
-      .then((res) => {
-        expect(res.state).toEqual({
+      .catch((e) => {
+        expect(e.state).toEqual({
           prop1: '',
           prop2: 0,
           prop3: '',
@@ -675,17 +799,16 @@ describe('createMockStore', () => {
       );
 
       try {
-        store.onMount(
-          {
+        store
+          .onMount({
             prop: '',
             prop2: '',
             onMount: jest.fn(),
-          },
-          (p, a) => {
+          })
+          .test(({ props: p, actions: a }) => {
             expect(p.onMount).toHaveBeenCalled();
             expect(a.setProp1).toHaveBeenCalledWith('onMount1');
-          }
-        );
+          });
 
         throw new Error('failed');
       } catch (e) {

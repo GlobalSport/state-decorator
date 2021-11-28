@@ -962,6 +962,124 @@ describe('Todo', () => {
 
 [![Edit Todo](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/todo-forked-ml0z6?file=/src/TodoApp.tsx)
 
+## Error testing
+
+When testing an action there are 3 possible scenarios
+
+### Managed error
+
+If an error is triggered during the action and this error was managed (in _errorEffect_, _errorSideEffect_ or _getErrorMessage_) then the action promise will be _resolved_.
+
+```typescript
+// asyncManagedError: {
+//   getPromise: () => Promise.reject(new Error('my error')),
+//   errorEffects: ({ s }) => ({ ...s, error: true })
+// },
+
+it('asyncManagedError works as expected', async () => {
+  mockStore
+    .getAction('asyncManagedError')
+    .call()
+    .then(({ state }) => {
+      // check that error was correcly managed
+      expect(state.error).toEqual(true);
+    });
+});
+```
+
+### Managed error and rejectPromiseOnError=true
+
+If an error is triggered during the action and this error was managed (in _errorEffect_, _errorSideEffect_ or _getErrorMessage_) but the action has the rejectPromiseOnError flag set then the action promise will be _rejected_ and the _sourceError_ allows to inspect the action.
+
+```typescript
+import { ActionError } from 'state-decorator/test';
+
+// asyncManagedError: {
+//   getPromise: () => Promise.reject(new MyError()),
+//   errorEffects: ({ s }) => ({ ...s, error: true })
+// },
+
+it('asyncManagedErrorThrow works as expected', async () => {
+  return mockStore
+    .getAction('asyncManagedErrorThrow')
+    .call()
+    .catch((e: ActionError<State>) => {
+      // test source error
+      if (e.sourceError instanceof MyError) {
+        // check that error was correcly managed
+        expect(e.state.error).toEqual(true);
+      } else {
+        return Promise.reject();
+      }
+    });
+});
+```
+
+### Unexpected error
+
+The action implementation can contain a mistake that triggers an error.
+
+For example:
+
+```typescript
+// asyncThatCrashes: {
+//   getPromise: () => Promise.resolve(),
+//   effects: ({ s }) => {
+//     const nullObj = null;
+//     nullObj.crash = 'test';
+//     return s;
+//   },
+// },
+it('asyncThatCrashes works as expected', async () => {
+  return mockStore.getAction('asyncThatCrashes').call();
+});
+```
+
+This test will crash but the source of the error is not clear:
+
+```
+Cannot set property 'crash' of null
+
+  438 |         .catch((e: Error) => {
+  439 |           return Promise.reject(
+> 440 |             new ActionError(
+      |             ^
+  441 |               e,
+  442 |               getState(newStateRef),
+  443 |               propsRef.current,
+
+  at src/test.ts:440:13
+```
+
+Just return the _sourceError_ to get the real stack trace.
+
+```typescript
+it.only('asyncThatCrashes works as expected', async () => {
+  return mockStore
+    .getAction('asyncThatCrashes')
+    .call()
+    .catch((e) => Promise.reject(e.sourceError));
+});
+```
+
+will display
+
+```
+TypeError: Cannot set property 'crash' of null
+
+  72 |       effects: ({ s }) => {
+  73 |         const nullObj = null;
+> 74 |         nullObj.crash = 'test';
+     |         ^
+  75 |         return s;
+  76 |       },
+  77 |     },
+
+  at Object.effects (tests/Tests.test.ts:74:9)
+  at processPromiseSuccess (src/impl.ts:687:23)
+  at src/impl.ts:889:51
+```
+
 ## API
 
 ### MockStore

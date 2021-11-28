@@ -270,6 +270,27 @@ export function setMockFactory(factory: (impl?: (...args: any[]) => any) => any)
   mockFactory = factory;
 }
 
+export class ActionError<S = any, P = any, A = any> extends Error {
+  public sourceError: Error;
+  public state: S;
+  public props: P;
+  public actions: MockActions<A, any>;
+
+  constructor(sourceError: Error, state: S, props: P, actions: MockActions<A, any>) {
+    super(sourceError.message);
+
+    Object.setPrototypeOf(this, ActionError.prototype);
+
+    this.sourceError = sourceError;
+    this.state = state;
+    this.actions = actions;
+
+    if (Error.captureStackTrace) {
+      Error.captureStackTrace(this, ActionError);
+    }
+  }
+}
+
 export function createMockStoreAction<S, A extends DecoratedActions, F extends (...args: any[]) => any, P, DS>(
   state: S,
   actionName: keyof A,
@@ -372,8 +393,7 @@ export function createMockStoreAction<S, A extends DecoratedActions, F extends (
         )(...((args as any) as Parameters<A[keyof A]>));
 
         promise = Promise.resolve();
-      }
-      if (isAsyncAction(action)) {
+      } else if (isAsyncAction(action)) {
         const promisesRef = createRef({});
         const conflictActionsRef = createRef({});
         const initializedRef = createRef(true);
@@ -406,8 +426,7 @@ export function createMockStoreAction<S, A extends DecoratedActions, F extends (
         }) as any)(...((args as any) as Parameters<A[keyof A]>));
       }
 
-      return (promise || Promise.resolve())
-        .catch(() => Promise.resolve())
+      return (promise ?? Promise.resolve())
         .then(() => {
           loadingMapRef.current = {};
           return {
@@ -415,6 +434,16 @@ export function createMockStoreAction<S, A extends DecoratedActions, F extends (
             props: propsRef.current,
             actions: (actionsRef.current as any) as MockActions<A, any>,
           };
+        })
+        .catch((e: Error) => {
+          return Promise.reject(
+            new ActionError(
+              e,
+              getState(newStateRef),
+              propsRef.current,
+              (actionsRef.current as any) as MockActions<A, any>
+            )
+          );
         });
     },
   };
