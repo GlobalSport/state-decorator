@@ -560,11 +560,7 @@ export function useStoreSlice<S, A extends DecoratedActions, P, DS>(store: Store
     sliceRef.current = slicerFunc({
       ...s,
       ...store.actions,
-      actions: store.actions,
-      loading: store.loading,
-      isLoading: store.isLoading,
-      abortAction: store.abortAction,
-      loadingMap: store.loadingMap,
+      ...pick(store, ['actions', 'loading', 'isLoading', 'abortAction', 'loadingMap']),
     });
   }
 
