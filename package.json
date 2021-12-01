@@ -18,7 +18,8 @@
     "copy": "copyfiles -f package.json README.md LICENSE dist && json -I -f dist/package.json -e \"this.private=false; this.devDependencies=undefined; this.optionalDependencies=undefined; this.scripts=undefined; this.husky=undefined; this['lint-staged']=undefined; \"",
     "build": "yarn rollup && yarn copy",
     "rollup": "cross-env NODE_ENV=production rollup -c rollup.config.js",
-    "tslint": "tslint -p ./tsconfig.json --fix"
+    "tslint": "tslint -p ./tsconfig.json --fix",
+    "prepare": "husky install"
   },
   "devDependencies": {
     "@babel/cli": "^7.11.6",
@@ -47,10 +48,10 @@
     "babel-plugin-transform-es2015-modules-commonjs": "^6.26.2",
     "copyfiles": "^2.2.0",
     "cross-env": "^5.2.0",
-    "husky": "^1.0.0-rc.15",
+    "husky": ">=6",
     "jest": "^27.0.0",
     "json": "^9.0.6",
-    "lint-staged": "^7.3.0",
+    "lint-staged": ">=10",
     "prettier": "^2.1.5",
     "react": "^16.9.0",
     "react-dom": "16.9.0",
@@ -74,7 +75,8 @@
       "tslint -p ./tsconfig.json -e 'tests/**' -e 'dist/**'",
       "prettier --write",
       "git add"
-    ]
+    ],
+    "*.{js,css,md}": "prettier --write"
   },
   "keywords": [
     "state",
@@ -82,11 +84,6 @@
     "react",
     "javascript"
   ],
-  "husky": {
-    "hooks": {
-      "pre-commit": "lint-staged"
-    }
-  },
   "dependencies": {
     "fast-deep-equal": "^2.0.1"
   },
