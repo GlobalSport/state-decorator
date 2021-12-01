@@ -139,12 +139,12 @@ export function App(props: Props) => {
 
 # React hooks
 
-| Hook          | Purpose                                                | Component refreshed on store change | Store is destroyed on unmount |
-| ------------- | ------------------------------------------------------ | ----------------------------------- | ----------------------------- |
-| useLocalStore | Create a store and binds it to the react component     | Y                                   | Y                             |
-| useStore      | Binds an existing store to a react component (sharing) | Y                                   | Y                             |
-| useBindStore  | Bind an existing store to a react component (sharing)  | N                                   | Y                             |
-| useStoreSlice | Binds a store slice to a react component (sharing)     | If slice has changed only           | N                             |
+| Hook             | Purpose                                             | Return         | Component refreshed on store change | Store is destroyed on unmount |
+| ---------------- | --------------------------------------------------- | -------------- | ----------------------------------- | ----------------------------- |
+| useLocalStore    | Create a store, binds it to the react component.    | State, actions | Y                                   | Y                             |
+| useGetLocalStore | Create a store, binds it to the react component.    | Store          | N                                   | Y                             |
+| useStore         | Binds a store instance to the react component.      | State, actions | Y                                   | N                             |
+| useStoreSlice    | Binds a store slice to a react component (sharing). | Slice          | If slice has changed only           | N                             |
 
 # Initial state
 
@@ -492,63 +492,228 @@ When a hook that creates / binds a store is mounted, the **onMount** option is c
 ```typescript
 import { createStore } from 'state-decorator';
 
+// global store
 const store = createStore(getInitialState, actionsImpl, {
   onMount: ({ a }) => {
     a.loadList;
   },
 });
 
-// onMount is called when this component is mounted
+store.init(initialProps);
+```
+
+```typescript
+import { createStore } from 'state-decorator';
+
+// local store
 function Container(p: ContainerProps) {
-  useBindStore(store, p);
+  const store = useGetLocalStore(getInitialState, actionsImpl, p, {
+    onMount: ({ a }) => {
+      a.loadList;
+    },
+  });
 }
 ```
 
 If an initial action is launched each time a property changes, consider using the **onMount** flag of the **onPropsChange** entry.
 
-## State sharing and slices
+## Global and Local Stores VS State sharing
 
-- Declare a store and bind it to a component using _useStore_ or _useBindStore_ hooks.
-- Deeper in the tree component, use _useStoreSlice_ to get a store slice.
-- Component using slices will be refreshed only if their store slice changes.
+There are two ways to share state and actions:
+
+- Using regular props.
+- Using state slices.
+
+There are two types of stores:
+
+- Global store:
+
+  - store is created as an instance and it is exported from the JS module.
+  - it can be imported in any other JS module.
+  - store lifespan is equal to the application one.
+
+- Local store:
+  - store is created by a hook and is bound to a React component (each instance of this component owns its own store).
+  - action and props can be shared using props or sharing the store itself (see example below)
+  - store is destroyed when its React component is unmounted.
+
+### Using props
+
+- Bind a React component to make store state / actions available on React component.
+- Any change in the store (state, loading actions, ...) will trigger a refresh of the bound React component.
+- Pass state / actions using regular React props.
+- Use React.memo to prevent unecessary React re-renders if needed.
+
+#### Global store
 
 ```typescript
-import React from 'react';
-import { useStore, useStoreSlice, StoreActions } from 'state-decorator';
+// Declare typings & actions as above
+
+// Create a store in a dedicated file, named GlobalStore.ts for example
+export const store = createStore(getInitialState, userAppActions);
+
+//----------------------
+
+// In another file
+import React, { memo } from 'react';
+import { useStore } from 'state-decorator';
+import store from './GlobalStore';
+
+// Bind to react component
+// Each time the store state changes, a re-render is done.
+export function Container(props: Props) {
+  const { state, actions } = useStore(store, props);
+  return (
+    <div>
+      <Title text={state.title} />
+      <Subtitle text={state.subtitle} />
+    </div>
+  );
+}
+
+// Simple presentation components
+// Use memo to prevent re-render if another part of the state has changed than "title"
+const Title = memo(function Title(props: { title: string }) {
+  return <div>{props.text}</div>;
+});
+
+const Subtitle = memo(function Subtitle(props: { subtitle: string }) {
+  return <div>{props.subtitle}</div>;
+});
+```
+
+#### Local Store
+
+```typescript
+import React, { memo } from 'react';
+import { useLocalStore } from 'state-decorator';
 
 // Declare typings & actions as above
 
-// Create a store
+// Create and bind to react component
+// Each time the store state changes, a re-render is done.
+export function Container(props: Props) {
+  const { state, actions } = useLocalStore(getInitialState, userAppActions, props);
+  return (
+    <div>
+      <Title text={state.title} />
+      <Subtitle text={state.subtitle} />
+    </div>
+  );
+}
 
+// Simple presentation components
+// Use memo to prevent re-render if another part of the state has changed than "title"
+const Title = memo(function Title(props: { title: string }) {
+  return <div>{props.title}</div>;
+});
+
+const Subtitle = memo(function Subtitle(props: { subtitle: string }) {
+  return <div>{props.subtitle}</div>;
+});
+```
+
+### State slices
+
+Using React props implies useless re-renders and optionally memoization.
+
+To prevent this, React provides [context](https://en.reactjs.org/docs/context.html) hooks.
+
+The problem is that if the context contains a complex state with lots of props, if **any** of these props is changing, **all** components that uses this context will be re-rendered.
+
+To overcome this problem, the StateDecorator provides a _useStoreSlice_ and _useStoreContextSlice_ hook that allow to define and extracts a slice of the state and trigger a re-render of the React component only if slice has changed.
+
+[![Edit Slice](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/slices-v6-eg471?file=/src/SliceView.tsx)
+
+### Global Store
+
+```typescript
+// Declare typings & actions as above
+
+// Create a store in a dedicated file, named GlobalStore.ts for example
 export const store = createStore(getInitialState, userAppActions);
 
+//----------------------
+
+import React, { memo } from 'react';
+import { useStoreSlice } from 'state-decorator';
+import store from './GlobalStore';
+
 // Bind to react component
-
-export function Container(prop: Props) {
-  const { state, actions } = useStore(store, props);
-
-  // or
-  // useBindStore(store, props);
-  // if you are not interested in getting the state here
-
-  return <div />;
+// Each time the store state changes, a re-render is done.
+export function Container(props: Props) {
+  return (
+    <div>
+      <Title />
+      <Subtitle />
+    </div>
+  );
 }
 
-// Components deeper in the component tree will be refreshed if, and only if,
-// slice is changed (here: text property)
-
-export function SubComponent2() {
-  const s = useStoreSlice(store, ['text']);
-  return <div>{s.text}</div>;
+function Title() {
+  // extracts the "title" slice
+  // component is refresh only if title is changed in the store
+  const { title } = useStoreSlice(store, ['title']);
+  return <div>{title}</div>;
 }
 
-export function SubComponent() {
-  const s = useStoreSlice(store, (s) => ({ text: s.text }));
-  return <div>{s.text}</div>;
+function Subtitle(props: { subtitle: string }) {
+  const { subtitle } = useStoreSlice(store, ['subtitle']);
+  return <div>{subtitle}</div>;
 }
 ```
 
-[![Edit Slice](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/slices-v6-eg471?file=/src/SliceView.tsx)
+### Local Store
+
+```typescript
+import React from 'react';
+import { useGetLocalStore, useStoreContextSlice } from 'state-decorator';
+
+// Declare typings & actions as above
+
+// Create a store context
+
+type StoreContextProps = StoreApi<State, Actions, Props>;
+
+export const StoreContext = createContext<StoreContextProps>(null);
+
+// The StoreContext will allow to access to the store
+// But this context is NOT refreshed if the store state is changed
+function StoreContextProvider(p: { children: any; propIn: string }) {
+  const { children, ...props } = p;
+  const store = useGetLocalStore(getInitialState, actionsImpl, props);
+  return <StoreContext.Provider value={store}>{children}</StoreContext.Provider>;
+}
+
+// If Container is destroyed store is destroyed
+export function Container(props: Props) {
+  return (
+    <StoreContextProvider {...props}>
+      <SubComponent />
+      <SubComponent2 />
+    </StoreContextProvider>
+  );
+}
+
+// Components deeper in the component tree...
+
+function Title() {
+  // extracts the "title" slice
+  // component is refresh only if title is changed in the store
+  const { title } = useStoreContextSlice(StoreContext, ['title']);
+
+  // same as
+  // const store = useContext(StoreContext)
+  // const { title } = useStoreSlice(store, ['title']);
+
+  return <div>{title}</div>;
+}
+
+function Subtitle(props: { subtitle: string }) {
+  const { subtitle } = useStoreContextSlice(StoreContext, ['subtitle']);
+  return <div>{subtitle}</div>;
+}
+```
 
 # Global configuration
 

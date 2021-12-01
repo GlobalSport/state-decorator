@@ -8,7 +8,7 @@
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { useEffect, useLayoutEffect, useMemo, useReducer, useRef } from 'react';
+import { Context, useContext, useEffect, useLayoutEffect, useMemo, useReducer, useRef } from 'react';
 import {
   computeAsyncActionInput,
   createRef,
@@ -528,7 +528,6 @@ type useStoreSlice<S, A extends DecoratedActions, P, DS, SLICE> = (
  * A react hook to get a state slice. Will be refresh if, and only if, one property of the slice has changed
  * @param store The store to listen to.
  * @param slicerFunc A function that returns a state slice
- * @param comparator An optional function to compare if slice property has changed (shallow test by default)
  * @returns The state slice.
  */
 export function useStoreSlice<S, A extends DecoratedActions, P, DS, SLICE>(
@@ -536,6 +535,12 @@ export function useStoreSlice<S, A extends DecoratedActions, P, DS, SLICE>(
   slicerFunc: (ctx: StateListenerContext<S, DS, A>) => SLICE
 ): SLICE;
 
+/**
+ * A react hook to get a state slice. Will be refresh if, and only if, one property of the slice has changed
+ * @param store The store to listen to.
+ * @param properties list of properties to extract from store
+ * @returns The state slice.
+ */
 export function useStoreSlice<S, A extends DecoratedActions, P, DS, K extends keyof StateListenerContext<S, DS, A>>(
   store: StoreApi<S, A, P, DS>,
   properties: K[]
@@ -587,12 +592,45 @@ export function useStoreSlice<S, A extends DecoratedActions, P, DS>(store: Store
 }
 
 /**
+ * A react hook to get a state slice from a store context. Will be refresh if, and only if, one property of the slice has changed
+ * @param store The store to listen to.
+ * @param slicerFunc A function that returns a state slice
+ * @returns The state slice.
+ */
+export function useStoreContextSlice<S, A extends DecoratedActions, P, DS, SLICE>(
+  storeContext: Context<StoreApi<S, A, P, DS>>,
+  slicerFunc: (ctx: StateListenerContext<S, DS, A>) => SLICE
+): SLICE;
+
+/**
+ * A react hook to get a state slice from a store context.
+ * Will be refresh if, and only if, one property of the slice has changed
+ * @param store The store to listen to.
+ * @param properties list of properties to extract from store
+ * @returns The state slice.
+ */
+export function useStoreContextSlice<
+  S,
+  A extends DecoratedActions,
+  P,
+  DS,
+  K extends keyof StateListenerContext<S, DS, A>
+>(storeContext: Context<StoreApi<S, A, P, DS>>, properties: K[]): Pick<StateListenerContext<S, DS, A>, K>;
+
+export function useStoreContextSlice<S, A extends DecoratedActions, P, DS>(
+  storeContext: Context<StoreApi<S, A, P, DS>>,
+  funcOrArr: any
+) {
+  const store = useContext(storeContext);
+  return useStoreSlice(store, funcOrArr);
+}
+
+/**
  * Binds the store to this component.
- * Store will be destroyed when component is unmouted.
+ * Store will NOT be destroyed when component is unmouted.
  * Props passed to actions will come from this components.
  * If store is configured to react of props changes, it will used passed props.
- * A store must be bound to only one React component.
- * This component will be refreshed for every change in the store.
+ * The component will be refreshed for every change in the store.
  *
  * @param store The store to listen to.
  * @param props The parent component props
@@ -613,8 +651,6 @@ export function useStore<S, A extends DecoratedActions, P, DS = {}>(store: Store
     []
   );
 
-  useEffect(() => () => store.destroy(), []);
-
   return {
     state: store.state,
     actions: store.actions,
@@ -633,24 +669,72 @@ export function useStore<S, A extends DecoratedActions, P, DS = {}>(store: Store
  * If store is configured to react of props changes, it will used passed props.
  * A store must be bound to only one React component.
  *
- * This component will NOT be refreshed for any change in the store.
+ * The component will NOT be refreshed for any change in the store.
  *
  * @param store The store to listen to.
  * @param props The parent component props
+ * @deprecated Do not bind an instance to a component or use useGetLocalStore to create a store local to a component.
  */
 export function useBindStore<S, A extends DecoratedActions, P, DS = {}>(store: StoreApi<S, A, P, DS>, props: P = null) {
   // access to store in debugger
   useRef(store);
 
   store.setProps(props);
-  useEffect(() => {
-    return () => store.destroy();
-  }, []);
+
+  useEffect(
+    () => () => {
+      store.destroy();
+    },
+    []
+  );
+  return store;
+}
+
+/**
+ * Creates a store as a ref to the owner component.
+ * Store WILL be destroyed when component is unmouted.
+ * Props passed to actions will come from owner components.
+ * If store is configured to react of props changes, it will used passed props.
+ *
+ * This component will NOT be refreshed for any change in the store.
+ *
+ * @param getInitialState Function to compute initial state from props.
+ * @param actionImpl Actions implementation.
+ * @param props Owner component props to update state or react on prop changes
+ * @param options The store options.
+ * @returns store
+ */
+export function useGetLocalStore<S, A extends DecoratedActions, P, DS = {}>(
+  getInitialState: (p: P) => S,
+  actionImpl: StoreActions<S, A, P, DS>,
+  props?: P,
+  options?: StoreOptions<S, A, P, DS>,
+  middlewares?: MiddlewareFactory<S, A, P>[]
+) {
+  // access to store in debugger
+  const storeRef = useRef<StoreApi<S, A, P, DS>>();
+  if (storeRef.current == null) {
+    storeRef.current = createStore(getInitialState, actionImpl, options, middlewares);
+  }
+
+  const store = storeRef.current;
+  store.setProps(props);
+
+  useEffect(
+    () => () => {
+      store.destroy();
+    },
+    []
+  );
+
   return store;
 }
 
 /**
  * Creates and manages a local store.
+ * The component will be refreshed for every change in the store.
+ * Store will NOT be destroyed when component is unmouted.
+ *
  * @param getInitialState Function to compute initial state from props.
  * @param actionImpl Actions implementation.
  * @param props Owner component props to update state or react on prop changes
@@ -668,6 +752,13 @@ export function useLocalStore<S, A extends DecoratedActions, P, DS = {}>(
   if (storeRef.current == null) {
     storeRef.current = createStore(getInitialState, actionImpl, options, middlewares);
   }
+
+  useEffect(
+    () => () => {
+      storeRef.current?.destroy();
+    },
+    []
+  );
 
   return useStore(storeRef.current, props);
 }

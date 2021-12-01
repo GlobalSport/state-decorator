@@ -1,8 +1,9 @@
 import React from 'react';
 
-import { useBindStore, StoreActions, createStore, useStoreSlice } from '../../dist/';
+import { StoreActions, createStore } from '../../dist';
 import { devtools } from '../../dist/middlewares';
-import SliceView from './SliceView';
+import FlashingBox from './FlashingBox';
+import SliceView from './GlobalStateSliceView';
 
 // Types
 export type State = {
@@ -42,11 +43,14 @@ const actionsImpl: StoreActions<State, Actions, {}> = {
 };
 
 export const store = createStore(getInitialState, actionsImpl, { name: 'Slice store' }, [devtools()]);
+store.init(null);
 
 function Slice() {
-  useBindStore(store);
-
-  return <SliceView />;
+  return (
+    <FlashingBox>
+      <SliceView />
+    </FlashingBox>
+  );
 }
 
 export default Slice;

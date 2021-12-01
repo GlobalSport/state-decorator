@@ -1,9 +1,9 @@
 import React from 'react';
 
-import { slice, useStoreSlice } from '../../dist';
+import { useStoreSlice } from '../../dist';
 
 import FlashingBox from './FlashingBox';
-import { store } from './Slice';
+import { store } from './GlobalStateSlice';
 
 import Box from '@material-ui/core/Box';
 import Button from '@material-ui/core/Button';
@@ -76,6 +76,24 @@ function Value2() {
   return <Value title="Value 2" value={value} isLoading={isLoading} />;
 }
 
+function Container() {
+  return (
+    <FlashingBox>
+      <Box mt={1}>
+        <Buttons />
+        <Grid container spacing={1}>
+          <Grid item md={6} xs={12}>
+            <Value1 />
+          </Grid>
+          <Grid item md={6} xs={12}>
+            <Value2 />
+          </Grid>
+        </Grid>
+      </Box>
+    </FlashingBox>
+  );
+}
+
 function SliceView() {
   return (
     <FlashingBox>
@@ -85,18 +103,9 @@ function SliceView() {
           Each component is using only a slice of the state and is refreshed only if slice changed (flashing when is
           rendered)
         </Typography>
-        <Box mt={1}>
-          <Buttons />
-          <Grid container spacing={1}>
-            <Grid item md={6} xs={12}>
-              <Value1 />
-            </Grid>
-            <Grid item md={6} xs={12}>
-              <Value2 />
-            </Grid>
-          </Grid>
-        </Box>
       </Box>
+      <Container />
+      <Container />
     </FlashingBox>
   );
 }

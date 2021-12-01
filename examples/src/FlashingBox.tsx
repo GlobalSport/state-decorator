@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { MutableRefObject } from 'react';
 
 type FlashingBoxProps = {
+  title?: string;
   children: any;
   color?: string;
 };
@@ -12,9 +13,17 @@ const styles: React.CSSProperties = {
   margin: 20,
   outline: '2px solid transparent',
   transition: `all ease .2s`,
+  position: 'relative',
+};
+const titleStyle: React.CSSProperties = {
+  position: 'absolute',
+  left: 0,
+  top: -16,
+  fontSize: 12,
 };
 
 export default function FlashingBox(p: FlashingBoxProps) {
+  const { title } = p;
   const countRef = useRef(0);
   countRef.current++;
   const node = useRef<HTMLDivElement>();
@@ -23,6 +32,7 @@ export default function FlashingBox(p: FlashingBoxProps) {
 
   return (
     <div ref={node} style={styles}>
+      {title && <div style={titleStyle}>{title}</div>}
       {p.children}
     </div>
   );
