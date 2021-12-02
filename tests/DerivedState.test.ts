@@ -16,10 +16,15 @@ describe('Derived state', () => {
     filterIn: string;
     otherProp: string;
     effectProp: number;
+    checkDS: (ds: DerivedState) => void;
   };
 
   type Actions = {
     setList: (list: string[]) => void;
+    setListSideEffects: (list: string[]) => void;
+    setListDebouncedSideEffects: (list: string[]) => void;
+    setAsyncListSideEffects: (list: string[]) => void;
+    setAsyncErrorListSideEffects: (list: string[]) => void;
     setFilter: (filter: string) => void;
     setOther: (p: number) => void;
   };
@@ -34,6 +39,49 @@ describe('Derived state', () => {
       return { ...s, filter };
     },
     setOther: ({ s, args: [other] }) => ({ ...s, other }),
+    setListSideEffects: {
+      effects: ({ s, args: [list], ds }) => {
+        expect(ds).toBeDefined();
+        return { ...s, list };
+      },
+      sideEffects: ({ ds, p }) => {
+        expect(ds).toBeDefined();
+        p.checkDS(ds);
+      },
+    },
+    setListDebouncedSideEffects: {
+      effects: ({ s, args: [list], ds }) => {
+        expect(ds).toBeDefined();
+        return { ...s, list };
+      },
+      debounceSideEffectsTimeout: 10,
+      sideEffects: ({ ds, p }) => {
+        expect(ds).toBeDefined();
+        p.checkDS(ds);
+      },
+    },
+    setAsyncListSideEffects: {
+      getPromise: () => Promise.resolve(),
+      effects: ({ s, args: [list], ds }) => {
+        expect(ds).toBeDefined();
+        return { ...s, list };
+      },
+      sideEffects: ({ ds, p }) => {
+        expect(ds).toBeDefined();
+        p.checkDS(ds);
+      },
+    },
+    setAsyncErrorListSideEffects: {
+      getPromise: () => Promise.reject(),
+      errorEffects: ({ s, args: [list], ds }) => {
+        expect(ds).toBeDefined();
+        return { ...s, list };
+      },
+      errorSideEffects: ({ ds, p }) => {
+        expect(ds).toBeDefined();
+        p.checkDS(ds);
+      },
+    },
   };
 
   const getInitialState = (): State => ({
@@ -63,6 +111,7 @@ describe('Derived state', () => {
       filterIn: null,
       otherProp: null,
       effectProp: null,
+      checkDS: () => {},
     });
 
     expect(store.state).toEqual({
@@ -130,6 +179,7 @@ describe('Derived state', () => {
       filterIn: null,
       otherProp: null,
       effectProp: null,
+      checkDS: () => {},
     });
 
     expect(store.state).toEqual({
@@ -151,6 +201,7 @@ describe('Derived state', () => {
       filterIn: 'aaa',
       otherProp: null,
       effectProp: null,
+      checkDS: () => {},
     });
 
     expect(listener).toHaveBeenCalledTimes(2);
@@ -182,6 +233,7 @@ describe('Derived state', () => {
       filterIn: 'aaa',
       otherProp: 'NEW',
       effectProp: null,
+      checkDS: () => {},
     });
 
     expect(listener).toHaveBeenCalledTimes(3);
@@ -195,6 +247,110 @@ describe('Derived state', () => {
     });
 
     expect(store.state.filteredListProps).toBe(savedList);
+  });
+
+  it('provides correct derived state in derived state', () => {
+    const store = createStore(getInitialState, actionsImpl, options);
+    const listener = jest.fn();
+    store.addStateListener(listener);
+    store.init({
+      filterIn: null,
+      otherProp: null,
+      effectProp: null,
+      checkDS: (ds: DerivedState) => {
+        expect(ds.filteredList).toEqual(['aaa1']);
+      },
+    });
+
+    expect(store.state).toEqual({
+      filter: null,
+      list: ['aaa1', 'bbb1', 'ccc1', 'aaa2', 'aaa3', 'bbb2'],
+      filteredList: ['aaa1', 'bbb1', 'ccc1', 'aaa2', 'aaa3', 'bbb2'],
+      filteredListProps: ['aaa1', 'bbb1', 'ccc1', 'aaa2', 'aaa3', 'bbb2'],
+      other: 0,
+    });
+
+    store.actions.setListSideEffects(['aaa1']);
+    expect(store.state.filteredList).toEqual(['aaa1']);
+  });
+
+  it('provides correct derived state in derived state', (done) => {
+    const store = createStore(getInitialState, actionsImpl, options);
+    const listener = jest.fn();
+    store.addStateListener(listener);
+    store.init({
+      filterIn: null,
+      otherProp: null,
+      effectProp: null,
+      checkDS: (ds: DerivedState) => {
+        expect(ds.filteredList).toEqual(['aaa1']);
+      },
+    });
+
+    expect(store.state).toEqual({
+      filter: null,
+      list: ['aaa1', 'bbb1', 'ccc1', 'aaa2', 'aaa3', 'bbb2'],
+      filteredList: ['aaa1', 'bbb1', 'ccc1', 'aaa2', 'aaa3', 'bbb2'],
+      filteredListProps: ['aaa1', 'bbb1', 'ccc1', 'aaa2', 'aaa3', 'bbb2'],
+      other: 0,
+    });
+
+    store.actions.setListDebouncedSideEffects(['aaa1']);
+
+    setTimeout(() => {
+      expect(store.state.filteredList).toEqual(['aaa1']);
+      done();
+    }, 200);
+  });
+
+  it('provides correct derived state in derived state (async)', async () => {
+    const store = createStore(getInitialState, actionsImpl, options);
+    const listener = jest.fn();
+    store.addStateListener(listener);
+    store.init({
+      filterIn: null,
+      otherProp: null,
+      effectProp: null,
+      checkDS: (ds: DerivedState) => {
+        expect(ds.filteredList).toEqual(['aaa1']);
+      },
+    });
+
+    expect(store.state).toEqual({
+      filter: null,
+      list: ['aaa1', 'bbb1', 'ccc1', 'aaa2', 'aaa3', 'bbb2'],
+      filteredList: ['aaa1', 'bbb1', 'ccc1', 'aaa2', 'aaa3', 'bbb2'],
+      filteredListProps: ['aaa1', 'bbb1', 'ccc1', 'aaa2', 'aaa3', 'bbb2'],
+      other: 0,
+    });
+
+    await store.actions.setAsyncListSideEffects(['aaa1']);
+    expect(store.state.filteredList).toEqual(['aaa1']);
+  });
+
+  it('provides correct derived state in derived state (async, error)', async () => {
+    const store = createStore(getInitialState, actionsImpl, options);
+    const listener = jest.fn();
+    store.addStateListener(listener);
+    store.init({
+      filterIn: null,
+      otherProp: null,
+      effectProp: null,
+      checkDS: (ds: DerivedState) => {
+        expect(ds.filteredList).toEqual(['aaa1']);
+      },
+    });
+
+    expect(store.state).toEqual({
+      filter: null,
+      list: ['aaa1', 'bbb1', 'ccc1', 'aaa2', 'aaa3', 'bbb2'],
+      filteredList: ['aaa1', 'bbb1', 'ccc1', 'aaa2', 'aaa3', 'bbb2'],
+      filteredListProps: ['aaa1', 'bbb1', 'ccc1', 'aaa2', 'aaa3', 'bbb2'],
+      other: 0,
+    });
+
+    await store.actions.setAsyncErrorListSideEffects(['aaa1']);
+    expect(store.state.filteredList).toEqual(['aaa1']);
   });
 
   it('computes derived state correctly from props (with onPropsChange)', () => {
@@ -213,6 +369,7 @@ describe('Derived state', () => {
       filterIn: null,
       otherProp: null,
       effectProp: null,
+      checkDS: () => {},
     });
 
     expect(store.state).toEqual({
@@ -234,6 +391,7 @@ describe('Derived state', () => {
       filterIn: 'aaa',
       otherProp: null,
       effectProp: null,
+      checkDS: () => {},
     });
 
     expect(listener).toHaveBeenCalledTimes(2);
@@ -267,6 +425,7 @@ describe('Derived state', () => {
       filterIn: 'aaa',
       otherProp: 'NEW',
       effectProp: null,
+      checkDS: () => {},
     });
 
     // other prop is not in effect deps nor derived value deps => no notification
@@ -286,6 +445,7 @@ describe('Derived state', () => {
       filterIn: 'aaa',
       otherProp: 'NEW',
       effectProp: 42,
+      checkDS: () => {},
     });
 
     // effect => state change

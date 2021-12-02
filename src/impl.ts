@@ -35,6 +35,7 @@ import {
   MiddlewareFactory,
   OnPropsChangeOptions,
   ContextWithDerived,
+  ContextDerivedStateState,
 } from './types';
 
 export type SetStateFunc<S, A, P> = (
@@ -509,14 +510,21 @@ export function addContextActions<T, A>(ctx: T, actionsRef: Ref<A>): T & Invocat
 }
 
 /** @internal */
-function addSideEffectsContext<S, T extends { s: S; state: S }, A>(
+function addSideEffectsContext<S, DS, T extends { s: S; state: S }, A>(
   ctx: T,
   stateRef: Ref<S>,
+  derivedStateRef: Ref<DerivedState<DS>>,
   actionsRef: Ref<A>,
   notifyWarning: NotifyFunc
-): T & InvocationContextActions<A> & WarningNotifyFunc {
-  const res = addContextActions(ctx, actionsRef) as T & InvocationContextActions<A> & WarningNotifyFunc;
+): T & InvocationContextActions<A> & WarningNotifyFunc & ContextDerivedStateState<DS> {
+  const res = addContextActions(ctx, actionsRef) as T &
+    InvocationContextActions<A> &
+    WarningNotifyFunc &
+    ContextDerivedStateState<DS>;
   addStateToContext(ctx, stateRef);
+  const ds = derivedStateRef?.current?.state;
+  res.derived = ds;
+  res.ds = ds;
   res.notifyWarning = notifyWarning;
   return res;
 }
@@ -586,11 +594,11 @@ function executeSyncActionImpl<S, DS, F extends (...args: any[]) => any, A exten
       }
 
       timeoutMap.current[actionName] = setTimeout(() => {
-        action.sideEffects(addSideEffectsContext(ctx, stateRef, actionsRef, options.notifyWarning));
+        action.sideEffects(addSideEffectsContext(ctx, stateRef, derivedStateRef, actionsRef, options.notifyWarning));
         delete timeoutMap.current[actionName];
       }, action.debounceSideEffectsTimeout);
     } else if (action.sideEffects) {
-      action.sideEffects(addSideEffectsContext(ctx, stateRef, actionsRef, options.notifyWarning));
+      action.sideEffects(addSideEffectsContext(ctx, stateRef, derivedStateRef, actionsRef, options.notifyWarning));
     }
   }
 }
@@ -714,7 +722,7 @@ function processPromiseSuccess<S, DS, F extends (...args: any[]) => any, A exten
   delete promisesRef.current[actionName][promiseId];
 
   if (action.sideEffects) {
-    action.sideEffects(addSideEffectsContext(ctx, stateRef, actionsRef, globalConfig.notifyWarning));
+    action.sideEffects(addSideEffectsContext(ctx, stateRef, derivedStateRef, actionsRef, globalConfig.notifyWarning));
   }
 
   processNextConflictAction(actionName, actionsRef.current, conflictActionsRef.current);
@@ -803,7 +811,9 @@ function processPromiseFailed<S, DS, F extends (...args: any[]) => any, A extend
   delete promisesRef.current[actionName][promiseId];
 
   if (action.errorSideEffects) {
-    action.errorSideEffects(addSideEffectsContext(ctx, stateRef, actionsRef, globalConfig.notifyWarning));
+    action.errorSideEffects(
+      addSideEffectsContext(ctx, stateRef, derivedStateRef, actionsRef, globalConfig.notifyWarning)
+    );
   }
 
   processNextConflictAction(actionName, actionsRef.current, conflictActionsRef.current);
