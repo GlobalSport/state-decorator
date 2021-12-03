@@ -22,6 +22,7 @@ type MockActions<A, MockAction> = {
 };
 
 type MockResult<S, A extends DecoratedActions, P, DS> = {
+  readonly prevState: S & DS;
   readonly state: S & DS;
   readonly props: P;
   readonly actions: MockActions<A, any>;
@@ -63,7 +64,7 @@ type MockStore<S, A extends DecoratedActions, P, DS> = {
     newStateRef: Ref<S>,
     newPropsRef: Ref<P>,
     newDerivedStateRef: Ref<DerivedState<DS>>,
-    newActionsRef: Ref<StoreActions<S, A, P, {}, S>>,
+    newActionsRef: Ref<StoreActions<S, A, P, DS, S>>,
     setState: SetStateFunc<S, A, P>,
     init?: boolean
   ) => MockResult<S, A, P, DS>;
@@ -131,7 +132,8 @@ export function createMockStore<S, A extends DecoratedActions, P = {}, DS = {}>(
         actions: a,
       });
 
-      const res = {
+      const res: MockResult<S, A, P, DS> = {
+        prevState: null,
         state: getState(),
         props: p,
         actions: actionsRef.current,
@@ -180,7 +182,7 @@ export function createMockStore<S, A extends DecoratedActions, P = {}, DS = {}>(
       newStateRef: Ref<S>,
       newPropsRef: Ref<P>,
       newDerivedStateRef: Ref<DerivedState<DS>>,
-      actionsRef: Ref<StoreActions<S, A, P, {}, S>>,
+      actionsRef: Ref<StoreActions<S, A, P, DS, S>>,
       setState: SetStateFunc<S, A, P>,
       init?: boolean
     ) {
@@ -198,6 +200,7 @@ export function createMockStore<S, A extends DecoratedActions, P = {}, DS = {}>(
       );
 
       return {
+        prevState: getState(stateRef, propsRef),
         state: getState(newStateRef, newPropsRef),
         props: newPropsRef.current,
         actions: actionsRef.current,
@@ -225,7 +228,8 @@ export function createMockStore<S, A extends DecoratedActions, P = {}, DS = {}>(
         options.onMount(buildOnMountInvocationContext(newStateRef, derivedStateRef, newPropsRef, actionsRef as any));
       }
 
-      const res = {
+      const res: MockResult<S, A, P, DS> = {
+        prevState: null,
         state: getState(newStateRef, newPropsRef),
         props: newPropsRef.current,
         actions: actionsRef.current,
@@ -272,16 +276,19 @@ export function setMockFactory(factory: (impl?: (...args: any[]) => any) => any)
 
 export class ActionError<S = any, P = any, A = any> extends Error {
   public sourceError: Error;
+  public prevState: S;
   public state: S;
   public props: P;
   public actions: MockActions<A, any>;
 
-  constructor(sourceError: Error, state: S, props: P, actions: MockActions<A, any>) {
+  constructor(sourceError: Error, prevState: S, state: S, props: P, actions: MockActions<A, any>) {
     super(sourceError.message);
 
     Object.setPrototypeOf(this, ActionError.prototype);
 
     this.sourceError = sourceError;
+    this.prevState = prevState;
+    this.props = props;
     this.state = state;
     this.actions = actions;
 
@@ -314,9 +321,9 @@ export function createMockStoreAction<S, A extends DecoratedActions, F extends (
     );
   }
 
-  function getState(newStateRef: Ref<S> = undefined) {
+  function getState(newStateRef: Ref<S> = undefined, newPropsRef: Ref<P> = undefined) {
     const derivedStateRef = createRef<DerivedState<DS>>({ state: null, deps: {} });
-    computeDerivedValues(newStateRef || stateRef, propsRef, derivedStateRef, options);
+    computeDerivedValues(newStateRef ?? stateRef, newPropsRef ?? propsRef, derivedStateRef, options);
     return {
       ...(newStateRef?.current || stateRef.current),
       ...(derivedStateRef.current.state || ({} as DS)),
@@ -430,6 +437,7 @@ export function createMockStoreAction<S, A extends DecoratedActions, F extends (
         .then(() => {
           loadingMapRef.current = {};
           return {
+            prevState: getState(stateRef),
             state: getState(newStateRef),
             props: propsRef.current,
             actions: (actionsRef.current as any) as MockActions<A, any>,
@@ -439,6 +447,7 @@ export function createMockStoreAction<S, A extends DecoratedActions, F extends (
           return Promise.reject(
             new ActionError(
               e,
+              getState(stateRef),
               getState(newStateRef),
               propsRef.current,
               (actionsRef.current as any) as MockActions<A, any>
