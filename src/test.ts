@@ -80,7 +80,7 @@ export function createMockFromStore<S, A extends DecoratedActions, P, DS>(
 
 export function createMockStore<S, A extends DecoratedActions, P = {}, DS = {}>(
   initialState: S | ((p: P) => S),
-  actions: StoreActions<S, A, P>,
+  actions: StoreActions<S, A, P, DS>,
   props: P = {} as P,
   options: StoreOptions<S, A, P, DS> = {}
 ): MockStore<S, A, P, DS> {
