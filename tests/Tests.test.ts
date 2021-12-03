@@ -369,6 +369,14 @@ describe('createMockStore', () => {
         error: '',
         concat: 'new value,0,,,', // derived state is included
       });
+      expect(ctx.prevState).toEqual({
+        prop1: '',
+        prop2: 0,
+        prop3: '',
+        prop4: '',
+        error: '',
+        concat: ',0,,,', // derived state is included
+      });
     });
 
     await action
@@ -422,6 +430,14 @@ describe('createMockStore', () => {
           error: '',
           concat: ',42,,,', // derived state is included
         });
+        expect(res.prevState).toEqual({
+          prop1: '',
+          prop2: 0,
+          prop3: '',
+          prop4: '',
+          error: '',
+          concat: ',0,,,', // derived state is included
+        });
       });
   });
 
@@ -438,6 +454,14 @@ describe('createMockStore', () => {
           prop4: '',
           error: '',
           concat: ',0,new value,,', // derived state is included
+        });
+        expect(res.prevState).toEqual({
+          prop1: '',
+          prop2: 0,
+          prop3: '',
+          prop4: '',
+          error: '',
+          concat: ',0,,,', // derived state is included
         });
       });
 
