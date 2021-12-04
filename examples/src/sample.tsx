@@ -8,12 +8,11 @@
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import React, { useState } from 'react';
+import React, { useState, createContext, memo } from 'react';
 import { StoreActions } from '../../dist/types';
 import { logDetailedEffects, devtools, logEffects } from '../../dist/middlewares';
-import { createStore, useStoreSlice, useBindStore, slice, pick } from '../../dist';
+import { useStoreContextSlice, useStoreSlice, useGetLocalStore, StoreApi, StoreOptions } from '../../dist';
 import { useRef } from 'react';
-import { immerizeActions } from './immerizeActions';
 import FlashingBox from './FlashingBox';
 
 import Typography from '@material-ui/core/Typography';
@@ -114,23 +113,30 @@ const myActions: StoreActions<MyState, MyActions, MyProps> = {
   },
 };
 
-export const myStore = createStore<MyState, MyActions, MyProps, MyDerivedState>(
-  (p) => ({ list: [p.init.toString()], prop1: '', prop2: '', prop3: '' }),
-  myActions,
-  {
-    name: 'StateDecorator sample',
-    onMount: ({ a }) => {
-      a.loadList();
-    },
-    derivedState: {
-      listFiltered: {
-        getDeps: ({ s }) => [s.list],
-        get: ({ s }) => (s.list == null ? null : s.list.filter((i) => i.indexOf('1') !== -1)),
-      },
+function getInitialState(p: MyProps): MyState {
+  return { list: [p.init.toString()], prop1: '', prop2: '', prop3: '' };
+}
+
+const myOptions: StoreOptions<MyState, MyActions, MyProps, MyDerivedState> = {
+  name: 'StateDecorator sample',
+  onMount: ({ a }) => {
+    a.loadList();
+  },
+  derivedState: {
+    listFiltered: {
+      getDeps: ({ s }) => [s.list],
+      get: ({ s }) => (s.list == null ? null : s.list.filter((i) => i.indexOf('1') !== -1)),
     },
   },
-  [logDetailedEffects(), devtools()]
-);
+};
+
+export const StoreContext = createContext<StoreApi<MyState, MyActions, MyProps, MyDerivedState>>(null);
+
+export function StoreContextProvider(p: MyProps & { children: any }) {
+  const { children, ...props } = p;
+  const store = useGetLocalStore(getInitialState, myActions, props, myOptions);
+  return <StoreContext.Provider value={store}>{p.children}</StoreContext.Provider>;
+}
 
 export default function MyContainer() {
   const [show, setShow] = useState(true);
@@ -155,15 +161,18 @@ export default function MyContainer() {
 }
 
 export function StateContainer(props: MyProps) {
-  useBindStore(myStore, props);
-
-  return <StateView />;
+  return (
+    <StoreContextProvider {...props}>
+      <StateView />
+    </StoreContextProvider>
+  );
 }
 
 export function StateView() {
   const logNodeRef = useRef<HTMLDivElement>();
 
-  const state = useStoreSlice(myStore, (i) => i);
+  const state = useStoreContextSlice(StoreContext, (i) => i);
+
   return (
     <FlashingBox>
       <div style={{ display: 'flex' }}>
@@ -198,7 +207,7 @@ const Child2 = React.memo(function Child2() {
 });
 
 function List() {
-  const s = useStoreSlice(myStore, ['list', 'addItem']);
+  const s = useStoreContextSlice(StoreContext, ['list', 'addItem']);
 
   return (
     <FlashingBox>
@@ -213,7 +222,7 @@ function List() {
 }
 
 function Prop1() {
-  const s = useStoreSlice(myStore, ['prop1', 'setProp1']);
+  const s = useStoreContextSlice(StoreContext, ['prop1', 'setProp1']);
 
   return (
     <FlashingBox>
@@ -228,10 +237,9 @@ function Prop1() {
 }
 
 function LoadList() {
-  const { loadList, loading } = useStoreSlice(myStore, (s) => ({
-    loadList: s.loadList,
-    loading: s.isLoading('loadList'),
-  }));
+  const { loadList, loadingMap } = useStoreContextSlice(StoreContext, ['loadList'], ['loadList']);
+
+  const loading = loadingMap.loadList;
 
   return (
     <FlashingBox>
@@ -244,10 +252,8 @@ function LoadList() {
 }
 
 function LoadFail() {
-  const { loadAndFail, loading } = useStoreSlice(myStore, (s) => ({
-    loadAndFail: s.loadAndFail,
-    loading: s.isLoading('loadAndFail'),
-  }));
+  const { loadAndFail, loadingMap } = useStoreContextSlice(StoreContext, ['loadAndFail'], ['loadAndFail']);
+  const loading = loadingMap.loadAndFail;
 
   return (
     <FlashingBox>
@@ -258,11 +264,11 @@ function LoadFail() {
     </FlashingBox>
   );
 }
+
 function LoadCancel() {
-  const { loadCancel, loading } = useStoreSlice(myStore, (s) => ({
-    loadCancel: s.loadCancel,
-    loading: s.isLoading('loadCancel'),
-  }));
+  const { loadCancel, loadingMap } = useStoreContextSlice(StoreContext, ['loadCancel'], ['loadCancel']);
+
+  const loading = loadingMap.loadCancel;
 
   return (
     <FlashingBox>
@@ -279,7 +285,7 @@ function Prop2() {
   // const s = useStoreSlice(myStore, ({ s, a }) => ({ item: s.prop2, setItem: a.setProp2 }));
   // const s = useStoreSlice(myStore, (s) => ({ item: s.prop2, setItem: s.setProp2 }));
   // const s = useStoreSlice(myStore, (s) => pick(s, 'prop2', 'setProp2'));
-  const s = useStoreSlice(myStore, ['prop2', 'setProp2']);
+  const s = useStoreContextSlice(StoreContext, ['prop2', 'setProp2']);
 
   return (
     <FlashingBox>
@@ -294,7 +300,7 @@ function Prop2() {
 }
 
 function Prop3() {
-  const s = useStoreSlice(myStore, ['prop3', 'setProp3']);
+  const s = useStoreContextSlice(StoreContext, ['prop3', 'setProp3']);
 
   return (
     <FlashingBox>
@@ -310,7 +316,7 @@ function Prop3() {
 }
 
 function Prop3Debounced() {
-  const s = useStoreSlice(myStore, ['prop3', 'setProp3Debounced']);
+  const s = useStoreContextSlice(StoreContext, ['prop3', 'setProp3Debounced']);
 
   return (
     <FlashingBox>

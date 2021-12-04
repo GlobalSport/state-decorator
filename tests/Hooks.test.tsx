@@ -15,6 +15,7 @@ import {
   StoreApi,
   useStoreContextSlice,
 } from '../src';
+import { getTimeoutPromise } from './utils';
 
 type State = {
   prop1: string;
@@ -22,10 +23,15 @@ type State = {
 
 type Actions = {
   setProp1: (p: string) => void;
+  setAsyncProp1: (p: string) => void;
 };
 
 const actionsImpl: StoreActions<State, Actions, any> = {
   setProp1: ({ s, args: [p] }) => ({ ...s, prop1: p }),
+  setAsyncProp1: {
+    getPromise: () => getTimeoutPromise(100, 'ok'),
+    effects: ({ s, args: [p] }) => ({ ...s, prop1: p }),
+  },
 };
 
 const getInitialState = (): State => ({
@@ -83,7 +89,39 @@ describe('react hooks', () => {
     expect(result.current.state).toEqual({ prop1: 'v1' });
   });
 
-  it('useStoreSlice works as expected', () => {
+  it('useStoreSlice works as expected (props)', () => {
+    const store = createStore(getInitialState, actionsImpl);
+    // parent hook will init the store
+    store.init({});
+
+    const { result } = renderHook(() => useStoreSlice(store, ['prop1', 'setProp1']));
+
+    expect(result.current.prop1).toEqual('');
+
+    act(() => {
+      result.current.setProp1('v1');
+    });
+
+    expect(result.current.prop1).toEqual('v1');
+  });
+
+  it('useStoreSlice works as expected (props, loadingMap) ', () => {
+    const store = createStore(getInitialState, actionsImpl);
+    // parent hook will init the store
+    store.init({});
+
+    const { result } = renderHook(() => useStoreSlice(store, ['prop1', 'setAsyncProp1'], ['setAsyncProp1']));
+
+    expect(result.current.prop1).toEqual('');
+
+    act(() => {
+      result.current.setAsyncProp1('v1');
+    });
+
+    expect(result.current.loadingMap.setAsyncProp1).toBeTruthy();
+  });
+
+  it('useStoreSlice works as expected (func)', () => {
     const store = createStore(getInitialState, actionsImpl);
     // parent hook will init the store
     store.init({});
@@ -104,7 +142,7 @@ describe('react hooks', () => {
     expect(result.current.res).toEqual('v1');
   });
 
-  it('useStoreContextSlice works as expected', () => {
+  it('useStoreContextSlice works as expected (func)', () => {
     const wrapper = ({ children }) => <StoreContextProvider>{children}</StoreContextProvider>;
 
     const { result } = renderHook(
@@ -123,5 +161,36 @@ describe('react hooks', () => {
     });
 
     expect(result.current.res).toEqual('v1');
+  });
+
+  it('useStoreContextSlice works as expected (props)', () => {
+    const wrapper = ({ children }) => <StoreContextProvider>{children}</StoreContextProvider>;
+
+    const { result } = renderHook(() => useStoreContextSlice(StoreContext, ['prop1', 'setProp1']), { wrapper });
+
+    expect(result.current.prop1).toEqual('');
+
+    act(() => {
+      result.current.setProp1('v1');
+    });
+
+    expect(result.current.prop1).toEqual('v1');
+  });
+
+  it('useStoreContextSlice works as expected (props, loadingMap)', () => {
+    const wrapper = ({ children }) => <StoreContextProvider>{children}</StoreContextProvider>;
+
+    const { result } = renderHook(
+      () => useStoreContextSlice(StoreContext, ['prop1', 'setAsyncProp1'], ['setAsyncProp1']),
+      { wrapper }
+    );
+
+    expect(result.current.prop1).toEqual('');
+
+    act(() => {
+      result.current.setAsyncProp1('v1');
+    });
+
+    expect(result.current.loadingMap.setAsyncProp1).toBeTruthy();
   });
 });

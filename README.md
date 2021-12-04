@@ -11,11 +11,10 @@ The StateDecorator is a set of Reacts hook that manages a complex component stat
 - Deterministic state changes (clear separation of effects and side effects)
 - Ease asynchronous actions state changes (loading states, success & error handlers, parallel actions management, optimistic updates...)
 - Easily and efficiently share slices of state.
-- Easily testable (uses pure functions, utility functions provided)
+- Easily testable (test framework provided)
 - Easily update state from or react to props changes
-- Ease debugging (trace state changes)
+- Ease debugging (trace state changes, dev tools)
 - Improve code conciseness (no boiler plate code)
-- Enforce separation of container components and presentation components.
 - Strongly typed
 
 # 🏎️ V6: The Store

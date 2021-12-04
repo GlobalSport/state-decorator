@@ -541,12 +541,24 @@ export function useStoreSlice<S, A extends DecoratedActions, P, DS, SLICE>(
  * @param properties list of properties to extract from store
  * @returns The state slice.
  */
-export function useStoreSlice<S, A extends DecoratedActions, P, DS, K extends keyof StateListenerContext<S, DS, A>>(
+export function useStoreSlice<
+  S,
+  A extends DecoratedActions,
+  P,
+  DS,
+  K extends keyof StateListenerContext<S, DS, A>,
+  KL extends keyof A
+>(
   store: StoreApi<S, A, P, DS>,
-  properties: K[]
-): Pick<StateListenerContext<S, DS, A>, K>;
+  properties: K[],
+  loadingProps?: KL[]
+): Pick<StateListenerContext<S, DS, A>, K> & { loadingMap: LoadingMap<Pick<A, KL>> };
 
-export function useStoreSlice<S, A extends DecoratedActions, P, DS>(store: StoreApi<S, A, P, DS>, funcOrArr: any) {
+export function useStoreSlice<S, A extends DecoratedActions, P, DS>(
+  store: StoreApi<S, A, P, DS>,
+  funcOrArr: any,
+  loadingProps?: any
+) {
   const [, forceRefresh] = useReducer((s) => (s > 100 ? 0 : s + 1), 0);
 
   const slicerFunc = useMemo(
@@ -554,14 +566,22 @@ export function useStoreSlice<S, A extends DecoratedActions, P, DS>(store: Store
     [funcOrArr]
   );
 
+  const loadingMapSlicer = useMemo(() => {
+    return (ctx: StateListenerContext<S, DS, A>) =>
+      loadingProps != null && loadingProps.length > 0 ? pick(ctx.loadingMap, loadingProps) : null;
+  }, [loadingProps]);
+
   const sliceRef = useRef<any>(null);
+  const loadingMapRef = useRef<LoadingMap<A>>(null);
+
   if (sliceRef.current === null) {
-    const s = store.state;
-    sliceRef.current = slicerFunc({
-      ...s,
+    const ctx = {
+      ...store.state,
       ...store.actions,
-      ...pick(store, ['actions', 'loading', 'isLoading', 'abortAction', 'loadingMap']),
-    });
+      ...pick(store, ['loading', 'isLoading', 'abortAction', 'loadingMap']),
+    };
+    sliceRef.current = slicerFunc(ctx);
+    loadingMapRef.current = loadingMapSlicer(ctx);
   }
 
   useLayoutEffect(() => {
@@ -569,12 +589,14 @@ export function useStoreSlice<S, A extends DecoratedActions, P, DS>(store: Store
       let hasChanged = false;
 
       const slice = slicerFunc(ctx);
+      const loadingSlice = loadingMapSlicer(ctx);
       const prevSlice = sliceRef.current;
       const compare = globalConfig.comparator;
 
-      hasChanged = prevSlice == null || !compare(slice, prevSlice);
+      hasChanged = prevSlice == null || !compare(slice, prevSlice) || !compare(loadingSlice, loadingMapRef.current);
 
       sliceRef.current = slice;
+      loadingMapRef.current = loadingSlice;
 
       if (hasChanged) {
         forceRefresh();
@@ -584,11 +606,15 @@ export function useStoreSlice<S, A extends DecoratedActions, P, DS>(store: Store
     return unregister;
   }, []);
 
-  return sliceRef.current;
+  const slice = sliceRef.current;
+  const loadingSlice = loadingMapRef.current;
+
+  return loadingSlice == null ? slice : { ...slice, loadingMap: loadingSlice };
 }
 
 /**
- * A react hook to get a state slice from a store context. Will be refresh if, and only if, one property of the slice has changed
+ * A react hook to get a state slice from a store context.
+ * The component be refreshed if, and only if, one property of the slice has changed.
  * @param store The store to listen to.
  * @param slicerFunc A function that returns a state slice
  * @returns The state slice.
@@ -600,9 +626,10 @@ export function useStoreContextSlice<S, A extends DecoratedActions, P, DS, SLICE
 
 /**
  * A react hook to get a state slice from a store context.
- * Will be refresh if, and only if, one property of the slice has changed
+ * The component will be refreshed if, and only if, one property of the slice has changed.
  * @param store The store to listen to.
  * @param properties list of properties to extract from store
+ * @param loadingFlags list of action names to extract their loading state from store (available in loadingMap).
  * @returns The state slice.
  */
 export function useStoreContextSlice<
@@ -610,15 +637,21 @@ export function useStoreContextSlice<
   A extends DecoratedActions,
   P,
   DS,
-  K extends keyof StateListenerContext<S, DS, A>
->(storeContext: Context<StoreApi<S, A, P, DS>>, properties: K[]): Pick<StateListenerContext<S, DS, A>, K>;
+  K extends keyof StateListenerContext<S, DS, A>,
+  KL extends keyof A
+>(
+  storeContext: Context<StoreApi<S, A, P, DS>>,
+  properties: K[],
+  loadingProps?: KL[]
+): Pick<StateListenerContext<S, DS, A>, K> & { loadingMap: LoadingMap<Pick<A, KL>> };
 
 export function useStoreContextSlice<S, A extends DecoratedActions, P, DS>(
   storeContext: Context<StoreApi<S, A, P, DS>>,
-  funcOrArr: any
+  funcOrArr: any,
+  loadingProps?: any
 ) {
   const store = useContext(storeContext);
-  return useStoreSlice(store, funcOrArr);
+  return useStoreSlice(store, funcOrArr, loadingProps);
 }
 
 /**
