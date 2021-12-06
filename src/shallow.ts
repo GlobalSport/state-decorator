@@ -20,8 +20,16 @@ export default function shallow<T extends any, U extends any>(objA: T, objB: U) 
   if (typeof objA !== 'object' || objA === null || typeof objB !== 'object' || objB === null) {
     return false;
   }
+
+  if (objA instanceof Set || objB instanceof Set) {
+    // if they are equal, first condition is true
+    return false;
+  }
+
   const keysA = Object.keys(objA as object);
-  if (keysA.length !== Object.keys(objB as object).length) {
+  const keysB = Object.keys(objB as object);
+
+  if (keysA.length !== keysB.length) {
     return false;
   }
   for (let i = 0; i < keysA.length; i++) {
