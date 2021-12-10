@@ -388,7 +388,7 @@ export function createMockStoreAction<S, A extends DecoratedActions, F extends (
         decorateSyncAction(
           actionName,
           // force no debouncing to trigger side effects directly
-          { ...action, debounceSideEffectsTimeout: 0 },
+          { ...action, debounceSideEffectsTimeout: 0, debounceTimeout: 0 },
           newStateRef,
           derivedStateRef,
           propsRef,
