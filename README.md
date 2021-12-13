@@ -571,7 +571,7 @@ setGlobalConfig({
   notifyError: undefined,
   // Notification function injected in side effects action context (success and error) to notify warning
   notifyWarning: undefined,
-  // Function called to return common error message if error message is not provided or error not managed in action
+  // Function called to return common error message if error message is not provided or error not managed in action. To override locally in action, provide a function that returns _null_.
   getErrorMessage: undefined,
 });
 ```

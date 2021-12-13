@@ -12,10 +12,16 @@
  * @jest-environment jsdom
  */
 
-import { createStore } from '../src/index';
+import { createStore, setGlobalConfig } from '../src/index';
 import { StoreAction, StoreActions } from '../src/types';
 
 describe('Async action', () => {
+  beforeAll(() => {
+    setGlobalConfig({
+      getErrorMessage: () => 'global error',
+    });
+  });
+
   type State = {
     prop1: string;
     prop2: string;
@@ -25,6 +31,8 @@ describe('Async action', () => {
   type Actions = {
     successAction: (p: string) => Promise<string>;
     errorAction: (p: string) => Promise<any>;
+    errorActionGetErrorMsg: (p: string) => Promise<any>;
+    errorActionDefaultErrorMsg: (p: string) => Promise<any>;
     errorRejectAction: (p: string) => Promise<any>;
     cancelAction: (p: string) => Promise<any>;
     cancelActionNoPre: (p: string) => Promise<any>;
@@ -57,6 +65,22 @@ describe('Async action', () => {
     errorAction: {
       ...baseAction,
       getPromise: () => Promise.reject(new Error('failed!')),
+    },
+    errorActionGetErrorMsg: {
+      ...baseAction,
+      getPromise: () => Promise.reject(new Error('failed!')),
+      // override default getErrorMessage
+      getErrorMessage: () => null,
+      errorEffects: null,
+      errorSideEffects: null,
+    },
+    errorActionDefaultErrorMsg: {
+      ...baseAction,
+      getPromise: () => Promise.reject(new Error('failed!')),
+      // override default getErrorMessage
+      getErrorMessage: null,
+      errorEffects: null,
+      errorSideEffects: null,
     },
     errorRejectAction: {
       ...baseAction,
@@ -355,6 +379,67 @@ describe('Async action', () => {
       .then(done.fail)
       .catch(() => {
         done();
+      });
+  });
+
+  it.only('error & override default getErrorMessage', (done) => {
+    const listener = jest.fn();
+    const callback = jest.fn();
+    const callbackError = jest.fn();
+    const callbackCancel = jest.fn();
+    const notifySuccess = jest.fn();
+    const notifyError = jest.fn();
+
+    const store = createStore(getInitialState, actionsImpl, {
+      notifySuccess,
+      notifyError,
+    });
+    store.addStateListener(listener);
+    store.setProps({
+      callback,
+      callbackError,
+      callbackCancel,
+    });
+
+    store.actions
+      .errorActionGetErrorMsg('test')
+      .then(done.fail)
+      .catch(() => {
+        expect(notifySuccess).not.toHaveBeenCalled();
+        expect(notifyError).not.toHaveBeenCalled();
+        done();
+      });
+  });
+
+  it.only('error & not override getErrorMessage', (done) => {
+    const listener = jest.fn();
+    const callback = jest.fn();
+    const callbackError = jest.fn();
+    const callbackCancel = jest.fn();
+    const notifySuccess = jest.fn();
+    const notifyError = jest.fn();
+
+    const store = createStore(getInitialState, actionsImpl, {
+      notifySuccess,
+      notifyError,
+    });
+    store.addStateListener(listener);
+    store.setProps({
+      callback,
+      callbackError,
+      callbackCancel,
+    });
+
+    store.actions
+      .errorActionDefaultErrorMsg('test')
+      // .then(done.fail)
+      .then(() => {
+        expect(notifySuccess).not.toHaveBeenCalled();
+        expect(notifyError).toHaveBeenCalledWith('global error');
+        done();
+      })
+      .catch(() => {
+        done.fail();
       });
   });
 

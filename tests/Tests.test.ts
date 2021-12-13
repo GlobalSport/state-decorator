@@ -560,7 +560,6 @@ describe('createMockStore', () => {
         done.fail();
       })
       .catch((e) => {
-        debugger;
         if (e instanceof ActionError) {
           if (e.sourceError.message === 'my error') {
             done();

@@ -789,7 +789,7 @@ function processPromiseFailed<S, DS, F extends (...args: any[]) => any, A extend
     }
 
     // do not trigger a default error message if the error is already managed by error effects
-    if (!msg && !errorHandled && globalConfig.getErrorMessage) {
+    if (msg === undefined && !errorHandled && globalConfig.getErrorMessage) {
       msg = globalConfig.getErrorMessage(error);
     }
 
