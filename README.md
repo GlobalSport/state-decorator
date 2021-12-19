@@ -76,19 +76,19 @@ type Props = {
 // Initial state & actions
 
 export const getInitialState = (): State => ({
-  selectedUser: null,
+  selectedUserId: null,
   user: null,
 });
 
 export const userAppActions: StoreActions<State, Actions, Props> = {
   // synchronous action (simple form)
-  selectUser: ({ state, args: [id] }) => ({ ...state, selectedUser: id }),
+  selectUser: ({ state, args: [id] }) => ({ ...state, selectedUserId: id }),
 
   // a synchronous action with side effects
   selectAndLoadUser: {
     // same as simple form, using aliases (use short context alias 's' instead of 'state')
     // effects contain only immutable state changes
-    effects: ({ s, args: [id] }) => ({ ...s, selectedUser: id }),
+    effects: ({ s, args: [id] }) => ({ ...s, selectedUserId: id }),
     // side effects (ie. other effects than state changes), using "actions" alias
     sideEffects: ({ a }) => {
       a.loadUser();
