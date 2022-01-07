@@ -820,6 +820,22 @@ function Container(props: Props) {
 
 ## Getting started
 
+1. Create and setup a mock store (_createMockFromStore_)
+2. Test store after initialization (_init_)
+3. Test store after props changes (_onPropsChange_)
+4. Test each action:
+   1. Get mock store action (_getAction_)
+   2. setup store state/prop (_setPartialState_, _setPartialProps_)
+   3. if action is asynchronous, you can mock promise (_promiseResolves_, _promiseRejects_)
+   4. call action with params (_call_)
+   5. await response to test state/actions called...
+
+## Example
+
+The store definition is available at [TodoStore.ts](https://github.com/GlobalSport/state-decorator/blob/develop/tests/fixtures/TodoStore.ts).
+
+The test is available at [Todo.test.ts](https://github.com/GlobalSport/state-decorator/blob/develop/tests/Todo.test.ts).
+
 ```typescript
 import { createMockFromStore } from 'state-decorator/test';
 
@@ -1132,8 +1148,6 @@ describe('Todo', () => {
   });
 });
 ```
-
-[![Edit Todo](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/todo-forked-ml0z6?file=/src/TodoApp.tsx)
 
 ## Error testing
 
