@@ -812,11 +812,10 @@ function Container(props: Props) {
 # Unit testing
 
 - The state decorator provides a testing framework for stores.
-- The base principle is that a mock store is immutable. A new store is created is setting state/props. It allows to share mock store across tests.
-- On each test, reuse/setup store or store action and:
-  - call the action and test state, side effect calls,...
-  - calls have no effects on mock store
-  - test prop changes
+- The base principle is that a mock store is immutable:
+  - a new store is created each time state or props are set.
+  - it allows to share mock store across tests.
+- On a mock store, we can test the store internals after initialiation, after inbound props have changed, after actions are called.
 
 ## Getting started
 
