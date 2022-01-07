@@ -849,6 +849,72 @@ describe('Todo', () => {
       },
     });
 
+  describe('Initialization', () => {
+    it('if not initial todo => load list', () => {
+      store
+        .setPartialState({
+          todoIds: [],
+          todoMap: {},
+        })
+        .init({ initialTodos: null })
+        .test(({ state, actions }) => {
+          // test state after initialization, ie:
+          // - options.onPropsChange with onMount: true
+          // - options.onMount
+          expect(state.todoIds).toEqual([]);
+          expect(state.todoMap).toEqual({});
+
+          // test derived state
+          expect(state.todos).toEqual([]);
+
+          // test side effects also
+          expect(actions.loadRemoteList).toHaveBeenCalled();
+        });
+    });
+
+    it('initial todos => setup state and do not load list', () => {
+      store
+        .setPartialState({
+          todoIds: [],
+          todoMap: {},
+        })
+        .init({
+          initialTodos: [
+            {
+              id: 'item1',
+              title: 'Item 1',
+              completed: false,
+            },
+          ],
+        })
+        .test(({ state, actions }) => {
+          // test state after initialization, ie:
+          // - options.onPropsChange with onMount: true
+          // - options.onMount
+          expect(state.todoIds).toEqual(['item1']);
+          expect(state.todoMap).toEqual({
+            item1: {
+              id: 'item1',
+              title: 'Item 1',
+              completed: false,
+            },
+          });
+
+          // test derived state
+          expect(state.todos).toEqual([
+            {
+              id: 'item1',
+              title: 'Item 1',
+              completed: false,
+            },
+          ]);
+
+          // test side effects also
+          expect(actions.loadRemoteList).not.toHaveBeenCalled();
+        });
+    });
+  });
+
   it('onSetNewTitle', async () => {
     // always return a promise whatever if the action is asynchronous or not
     const { state, prevState } = await store.getAction('onSetNewTitle').call('new Title');
@@ -1062,72 +1128,6 @@ describe('Todo', () => {
 
         // test side effects also
         expect(actions.loadRemoteList).not.toHaveBeenCalled();
-      });
-  });
-
-  describe('Initialization', () => {
-    it('initial todos => setup state and do not load list', () => {
-      store
-        .setPartialState({
-          todoIds: [],
-          todoMap: {},
-        })
-        .init({
-          initialTodos: [
-            {
-              id: 'item1',
-              title: 'Item 1',
-              completed: false,
-            },
-          ],
-        })
-        .test(({ state, actions }) => {
-          // test state after initialization, ie:
-          // - options.onPropsChange with onMount: true
-          // - options.onMount
-          expect(state.todoIds).toEqual(['item1']);
-          expect(state.todoMap).toEqual({
-            item1: {
-              id: 'item1',
-              title: 'Item 1',
-              completed: false,
-            },
-          });
-
-          // test derived state
-          expect(state.todos).toEqual([
-            {
-              id: 'item1',
-              title: 'Item 1',
-              completed: false,
-            },
-          ]);
-
-          // test side effects also
-          expect(actions.loadRemoteList).not.toHaveBeenCalled();
-        });
-    });
-  });
-
-  it('if not initial todo => load list', () => {
-    store
-      .setPartialState({
-        todoIds: [],
-        todoMap: {},
-      })
-      .init({ initialTodos: null })
-      .test(({ state, actions }) => {
-        // test state after initialization, ie:
-        // - options.onPropsChange with onMount: true
-        // - options.onMount
-        expect(state.todoIds).toEqual([]);
-        expect(state.todoMap).toEqual({});
-
-        // test derived state
-        expect(state.todos).toEqual([]);
-
-        // test side effects also
-        expect(actions.loadRemoteList).toHaveBeenCalled();
       });
   });
 });
