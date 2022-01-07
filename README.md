@@ -815,6 +815,7 @@ function Container(props: Props) {
 - The base principle is that a mock store is immutable:
   - a new store is created each time state or props are set.
   - it allows to share mock store across tests.
+- The API is chainable: functions are returning a mock store, excepting test functions.
 - On a mock store, we can test the store internals after initialiation, after inbound props have changed, after actions are called.
 
 ## Getting started
