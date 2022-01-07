@@ -15,7 +15,7 @@ The StateDecorator is a set of Reacts hook that manages a complex component stat
 - Easily update state from or react to props changes
 - Ease debugging (trace state changes, dev tools)
 - Improve code conciseness (no boiler plate code)
-- Strongly typed
+- Strongly typed (Typescript)
 
 # 🏎️ V6: The Store
 
@@ -516,7 +516,7 @@ function Container(p: ContainerProps) {
 
 If an initial action is launched each time a property changes, consider using the **onMount** flag of the **onPropsChange** entry.
 
-## Global and Local Stores VS State sharing
+# Global and Local Stores VS State sharing
 
 There are two ways to share state and actions:
 
@@ -536,14 +536,14 @@ There are two types of stores:
   - action and props can be shared using props or sharing the store itself (see example below)
   - store is destroyed when its React component is unmounted.
 
-### Using props
+## Using props
 
 - Bind a React component to make store state / actions available on React component.
 - Any change in the store (state, loading actions, ...) will trigger a refresh of the bound React component.
 - Pass state / actions using regular React props.
 - Use React.memo to prevent unecessary React re-renders if needed.
 
-#### Global store
+### Global store
 
 ```typescript
 // Declare typings & actions as above
@@ -581,7 +581,7 @@ const Subtitle = memo(function Subtitle(props: { subtitle: string }) {
 });
 ```
 
-#### Local Store
+### Local Store
 
 ```typescript
 import React, { memo } from 'react';
@@ -612,7 +612,7 @@ const Subtitle = memo(function Subtitle(props: { subtitle: string }) {
 });
 ```
 
-### State slices
+## State slices
 
 Using React props implies useless re-renders and optionally memoization.
 
@@ -624,7 +624,7 @@ To overcome this problem, the StateDecorator provides a _useStoreSlice_ and _use
 
 [![Edit Slice](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/slices-v6-eg471?file=/src/SliceView.tsx)
 
-### Global Store
+## Global Store
 
 ```typescript
 // Declare typings & actions as above
@@ -638,8 +638,6 @@ import React, { memo } from 'react';
 import { useStoreSlice } from 'state-decorator';
 import store from './GlobalStore';
 
-// Bind to react component
-// Each time the store state changes, a re-render is done.
 export function Container(props: Props) {
   return (
     <div>
@@ -662,9 +660,11 @@ function Subtitle(props: { subtitle: string }) {
 }
 ```
 
-### Local Store
+## Local Store
 
 ```typescript
+// ------- stores/MyStore.ts --------
+
 import React from 'react';
 import { useGetLocalStore, useStoreContextSlice } from 'state-decorator';
 
@@ -678,11 +678,15 @@ export const StoreContext = createContext<StoreContextProps>(null);
 
 // The StoreContext will allow to access to the store
 // But this context is NOT refreshed if the store state is changed
-function StoreContextProvider(p: { children: any; propIn: string }) {
+export function StoreContextProvider(p: { children: any; propIn: string }) {
   const { children, ...props } = p;
   const store = useGetLocalStore(getInitialState, actionsImpl, props);
   return <StoreContext.Provider value={store}>{children}</StoreContext.Provider>;
 }
+
+// In a container file ------------------------
+
+import { StoreContextProvider } from 'stores/MyStore';
 
 // If Container is destroyed store is destroyed
 export function Container(props: Props) {
@@ -694,7 +698,9 @@ export function Container(props: Props) {
   );
 }
 
-// Components deeper in the component tree...
+// Component deeper in the component tree...
+
+import { StoreContext } from 'stores/MyStore';
 
 function Title() {
   // extracts the "title" slice
