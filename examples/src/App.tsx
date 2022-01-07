@@ -5,7 +5,7 @@ import LocalSlice from './LocalStateSlice';
 import TableApp from './TableApp';
 import TodoApp from './TodoApp';
 import Debounce from './Debounce';
-import DeepTree from './DeepTree';
+import Recipes from './Recipes';
 import Optimistic from './Optimistic';
 import Abort from './Abort';
 import ParallelAbort from './ParallelAbort';
@@ -120,7 +120,7 @@ export default function App() {
             <PropsChangeOnMount />
           </TabPanel>
           <TabPanel tabId={tabId} index={9} classes={classes}>
-            <DeepTree />
+            <Recipes />
           </TabPanel>
         </Box>
       </Paper>
