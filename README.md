@@ -820,7 +820,7 @@ function Container(props: Props) {
 ## Getting started
 
 1. Create and setup a mock store (_createMockFromStore_)
-2. Test store after initialization (_init_)
+2. Test store after initialization (_onInit_)
 3. Test store after props changes (_onPropsChange_)
 4. Test each action:
    1. Get mock store action (_getAction_)
@@ -871,7 +871,7 @@ describe('Todo', () => {
           todoIds: [],
           todoMap: {},
         })
-        .init({ initialTodos: null })
+        .onInit({ initialTodos: null })
         .test(({ state, actions }) => {
           // test state after initialization, ie:
           // - options.onPropsChange with onMount: true
@@ -893,7 +893,7 @@ describe('Todo', () => {
           todoIds: [],
           todoMap: {},
         })
-        .init({
+        .onInit({
           initialTodos: [
             {
               id: 'item1',
@@ -1269,10 +1269,9 @@ TypeError: Cannot set property 'crash' of null
 ### MockStore
 
 | Function        | Arguments                            | Returns             | Description                                                                                 |
-| --------------- | ------------------------------------ | ------------------- | ------------------------------------------------------------------------------------------- |
+| --------------- | ------------------------------------ | ------------------- | ------------------------------------------------------------------------------------------- | --- |
 | getAction       | actionName: keyof A                  | MockStoreAction     | Get a mock action instance                                                                  |
-| init            | props?: Partial<P>                   | MockResult          | Test store initialization (onPropsChanged marked onMount + onMount)                         |
-| onMount         | props: P                             | MockResult          | Test onMount. Does not change internal props.                                               |
+| onInit          | props?: Partial<P>                   | MockResult          | Test store initialization (onPropsChanged marked onMount + onMount)                         |     |
 | onPropsChange   | props: P, init?: boolean             | MockResult          | Test prop changes. Does not change internal props. Init allows to test onMount prop changes |
 | setPartialProps | props: Partial<P>                    | new mock store      | Create a new store with the merge of current props and partial props                        |
 | setPartialState | state: Partial<S>                    | new mock store      | Create a new store with the merge of current state and partial state                        |

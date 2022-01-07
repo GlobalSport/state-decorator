@@ -120,7 +120,7 @@ type MockStore<S, A extends DecoratedActions, P, DS> = {
    * - options.onPropsChange with onMount set to true
    * - options.onMount
    */
-  init: (props?: Partial<P>) => MockResultWithTest<S, A, P, DS>;
+  onInit: (props?: Partial<P>) => MockResultWithTest<S, A, P, DS>;
 
   /** @internal */
   onPropsChangeImpl: (
@@ -176,7 +176,7 @@ export function createMockStore<S, A extends DecoratedActions, P = {}, DS = {}>(
       return this;
     },
     onMount(propsIn = {} as P) {
-      return this.init(propsIn);
+      return this.onInit(propsIn);
     },
     setState(s) {
       return cloneStore(s, undefined) as MockStore<S, A, P, DS>;
@@ -239,7 +239,7 @@ export function createMockStore<S, A extends DecoratedActions, P = {}, DS = {}>(
       };
     },
 
-    init(newProps: Partial<P> = {}) {
+    onInit(newProps: Partial<P> = {}) {
       // reset initial state
       const state = typeof initialState === 'function' ? (initialState as (props: P) => S)(props) : initialState;
 

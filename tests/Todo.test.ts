@@ -33,7 +33,7 @@ describe('Todo', () => {
           todoIds: [],
           todoMap: {},
         })
-        .init({ initialTodos: null })
+        .onInit({ initialTodos: null })
         .test(({ state, actions }) => {
           // test state after initialization, ie:
           // - options.onPropsChange with onMount: true
@@ -55,7 +55,7 @@ describe('Todo', () => {
           todoIds: [],
           todoMap: {},
         })
-        .init({
+        .onInit({
           initialTodos: [
             {
               id: 'item1',

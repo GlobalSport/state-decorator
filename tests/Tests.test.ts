@@ -297,7 +297,7 @@ describe('createMockStore', () => {
 
     it('allows to test initial props changes + onMount', () => {
       mockStore2
-        .init({
+        .onInit({
           prop: 'new_prop',
           prop2: 'new_prop2',
           onMount: null,
@@ -798,7 +798,7 @@ describe('createMockStore', () => {
 
     it('allows to test onMount through init', () => {
       mockStore
-        .init({
+        .onInit({
           prop: '',
           prop2: '',
           onMount: jest.fn(),
