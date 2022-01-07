@@ -192,10 +192,15 @@ export const todoOptions: StoreOptions<State, Actions, Props, DerivedState> = {
   onPropsChange: [
     {
       getDeps: (p) => [p.initialTodos],
-      effects: ({ s, p }) => ({ ...s, ...splitList(p.initialTodos) }),
+      effects: ({ s, p }) => ({ ...s, ...(p.initialTodos ? splitList(p.initialTodos) : {}) }),
       onMount: true,
     },
   ],
+  onMount: ({ a, p }) => {
+    if (p.initialTodos == null) {
+      a.loadRemoteList();
+    }
+  },
 };
 
 const todoStore = createStore(getInitialState, todoActions, todoOptions);

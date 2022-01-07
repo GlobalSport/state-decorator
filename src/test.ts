@@ -47,16 +47,47 @@ type MockStoreAction<S, A extends DecoratedActions, F extends (...args: any[]) =
 };
 
 type MockStore<S, A extends DecoratedActions, P, DS> = {
+  /**
+   * Creates a new store with specified state.
+   */
   setState: (state: S) => MockStore<S, A, P, DS>;
+
+  /**
+   * Creates a new store with specified props.
+   */
   setProps: (props: P) => MockStore<S, A, P, DS>;
+
+  /**
+   * Creates a new store using store state overriden by specified state.
+   */
   setPartialState: (state: Partial<S>) => MockStore<S, A, P, DS>;
+
+  /**
+   * Creates a new store using store props overriden by specified props.
+   */
   setPartialProps: (props: Partial<P>) => MockStore<S, A, P, DS>;
 
+  /**
+   * Executes passed function to test state and/or props
+   */
   test: (f: (state: S & DS, props: P) => void) => MockStore<S, A, P, DS>;
+
+  /**
+   * Test options.onMount
+   * @deprecated Use init() instead
+   */
   onMount: (props: Partial<P>) => MockResultWithTest<S, A, P, DS>;
 
+  /**
+   * Test state and side effect actions after inbound props have changed.
+   */
   onPropsChange: (props: Partial<P>, init?: boolean) => MockResultWithTest<S, A, P, DS>;
 
+  /**
+   * Test store at initialization time:
+   * - options.onPropsChange with onMount set to true
+   * - options.onMount
+   */
   init: (props?: Partial<P>) => MockResultWithTest<S, A, P, DS>;
 
   /** @internal */
@@ -113,38 +144,7 @@ export function createMockStore<S, A extends DecoratedActions, P = {}, DS = {}>(
       return this;
     },
     onMount(propsIn = {} as P) {
-      const actionsRef = getActionsRef(actions);
-
-      if (options?.onMount == null) {
-        throw new Error("There's no onMount set on store options");
-      }
-
-      const p = { ...propsRef.current, ...propsIn };
-      const a = actionsRef.current as any;
-      const s = stateRef.current;
-
-      options.onMount({
-        s,
-        p,
-        a,
-        state: s,
-        props: p,
-        actions: a,
-      });
-
-      const res: MockResult<S, A, P, DS> = {
-        prevState: null,
-        state: getState(),
-        props: p,
-        actions: actionsRef.current,
-      };
-
-      return {
-        ...res,
-        test(testFunc) {
-          testFunc(res);
-        },
-      };
+      return this.init(propsIn);
     },
     setState(s) {
       return cloneStore(s, undefined) as MockStore<S, A, P, DS>;
