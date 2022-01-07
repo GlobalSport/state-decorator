@@ -139,9 +139,7 @@ export type StoreApi<S, A extends DecoratedActions, P, DS = {}> = {
    * A function that takes a list of action names or a tuple of [action name, promiseId] and returns <code>true</code> if any action is loading.
    */
   isLoading: IsLoadingFunc<A>;
-  /**
-   * @internal
-   */
+
   getConfig: () => {
     getInitialState: (p: P) => S;
     options: StoreOptions<S, A, P, DS>;

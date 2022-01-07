@@ -76,7 +76,7 @@ export function createMockFromStore<S, A extends DecoratedActions, P, DS>(
   props: P = {} as P
 ): MockStore<S, A, P, DS> {
   const cfg = store.getConfig();
-  return createMockStore(cfg.getInitialState, cfg.actions as any, props, cfg.options);
+  return createMockStore(cfg.getInitialState, cfg.actions, props, cfg.options);
 }
 
 export function createMockStore<S, A extends DecoratedActions, P = {}, DS = {}>(
