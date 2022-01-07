@@ -29,20 +29,52 @@ type MockResult<S, A extends DecoratedActions, P, DS> = {
 };
 
 type MockResultWithTest<S, A extends DecoratedActions, P, DS> = MockResult<S, A, P, DS> & {
+  /**
+   * Execute function passed as parameter to test state/props/actions called.
+   */
   test: (f: (res: MockResult<S, A, P, DS>) => void) => void;
 };
 
 type MockStoreAction<S, A extends DecoratedActions, F extends (...args: any[]) => any, P, DS> = {
+  /**
+   * Creates a new store action with specified state.
+   */
   setState: (state: S) => MockStoreAction<S, A, F, P, DS>;
+
+  /**
+   * Creates a new store action with specified props.
+   */
   setProps: (props: P) => MockStoreAction<S, A, F, P, DS>;
+
+  /**
+   * Creates a new store action using store state overriden by specified state.
+   */
   setPartialState: (state: Partial<S>) => MockStoreAction<S, A, F, P, DS>;
+
+  /**
+   * Creates a new store action using store props overriden by specified props.
+   */
   setPartialProps: (props: Partial<P>) => MockStoreAction<S, A, F, P, DS>;
 
+  /**
+   * If action is asynchronous, mock the getPromise call to be resolved with specified object.
+   */
   promiseResolves: (res: any /*PromiseResult<F>*/) => MockStoreAction<S, A, F, P, DS>;
+
+  /**
+   * If action is asynchronous, mock the getPromise call to be rejected with specified error.
+   */
   promiseRejects: (err: Error) => MockStoreAction<S, A, F, P, DS>;
 
+  /**
+   * Executes passed function to test state and/or props
+   */
   test: (f: (state: S & DS, props: P) => void) => MockStoreAction<S, A, F, P, DS>;
 
+  /**
+   * Calls the action with specified parameters.
+   * @returns a promise with state/props/actions to assert
+   */
   call: (...args: Parameters<F>) => Promise<MockResult<S, A, P, DS>>;
 };
 
