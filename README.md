@@ -1270,9 +1270,9 @@ TypeError: Cannot set property 'crash' of null
 ### MockStore
 
 | Function        | Arguments                            | Returns             | Description                                                                                 |
-| --------------- | ------------------------------------ | ------------------- | ------------------------------------------------------------------------------------------- | --- |
+| --------------- | ------------------------------------ | ------------------- | ------------------------------------------------------------------------------------------- |
 | getAction       | actionName: keyof A                  | MockStoreAction     | Get a mock action instance                                                                  |
-| onInit          | props?: Partial<P>                   | MockResult          | Test store initialization (onPropsChanged marked onMount + onMount)                         |     |
+| onInit          | props?: Partial<P>                   | MockResult          | Test store initialization (onPropsChanged marked onMount + onMount)                         |
 | onPropsChange   | props: P, init?: boolean             | MockResult          | Test prop changes. Does not change internal props. Init allows to test onMount prop changes |
 | setPartialProps | props: Partial<P>                    | new mock store      | Create a new store with the merge of current props and partial props                        |
 | setPartialState | state: Partial<S>                    | new mock store      | Create a new store with the merge of current state and partial state                        |
