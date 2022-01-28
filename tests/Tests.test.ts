@@ -30,6 +30,7 @@ describe('createMockStore', () => {
     asyncManagedError: () => Promise<any>;
     asyncManagedErrorThrow: () => Promise<any>;
     setOptimistic: (p: string) => Promise<string>;
+    setWrappedAction: () => Promise<string>;
   };
 
   type Props = {
@@ -86,6 +87,10 @@ describe('createMockStore', () => {
       errorEffects: ({ s }) => ({ ...s, error: 'true' }),
       rejectPromiseOnError: true,
     },
+    setWrappedAction: {
+      getPromise: ({ a }) => a.setProp3('res', false),
+      effects: ({ s, res }) => ({ ...s, prop3: res }),
+    },
   };
 
   const options: StoreOptions<State, Actions, Props, DerivedState> = {
@@ -104,6 +109,7 @@ describe('createMockStore', () => {
     },
     onMount: ({ a, p }) => {
       a.setProp1('onMount1');
+      a.setProp3('onMount3', true);
       p.onMount();
     },
   };
@@ -779,9 +785,22 @@ describe('createMockStore', () => {
     });
   });
 
+  it('allows to set props on store mock action', async () => {
+    const action = mockStore.getAction('setWrappedAction').setMockActions({
+      setProp3: (res) => Promise.resolve(res),
+    });
+
+    const { state } = await action.call();
+
+    expect(state.prop3).toEqual('res');
+  });
+
   describe('onMount', () => {
     it('allows to test onMount on store', () => {
       mockStore
+        .setMockActions({
+          setProp3: () => Promise.resolve(''),
+        })
         .onMount({
           prop: '',
           prop2: '',
@@ -791,7 +810,7 @@ describe('createMockStore', () => {
           expect(props.onMount).toHaveBeenCalled();
           expect(actions.setProp1).toHaveBeenCalledWith('onMount1');
           expect(actions.setProp2).not.toHaveBeenCalled();
-          expect(actions.setProp3).not.toHaveBeenCalled();
+          expect(actions.setProp3).toHaveBeenCalled();
           expect(actions.setProp4).not.toHaveBeenCalled();
         });
     });
@@ -806,6 +825,7 @@ describe('createMockStore', () => {
         .test(({ actions, props }) => {
           expect(props.onMount).toHaveBeenCalled();
           expect(actions.setProp1).toHaveBeenCalledWith('onMount1');
+          expect(actions.setProp3).toHaveBeenCalledWith('onMount3', true);
         });
     });
 

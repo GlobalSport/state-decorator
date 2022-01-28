@@ -28,6 +28,8 @@ type MockResult<S, A extends DecoratedActions, P, DS> = {
   readonly actions: MockActions<A, any>;
 };
 
+type MockActionImpl<A> = Partial<Record<keyof A, (...args: any[]) => any>>;
+
 type MockResultWithTest<S, A extends DecoratedActions, P, DS> = MockResult<S, A, P, DS> & {
   /**
    * Execute function passed as parameter to test state/props/actions called.
@@ -55,6 +57,11 @@ type MockStoreAction<S, A extends DecoratedActions, F extends (...args: any[]) =
    * Creates a new store action using store props overriden by specified props.
    */
   setPartialProps: (props: Partial<P>) => MockStoreAction<S, A, F, P, DS>;
+
+  /**
+   * Set implementations to some actions to test side effects.
+   */
+  setMockActions: (implementation: MockActionImpl<A>) => MockStoreAction<S, A, F, P, DS>;
 
   /**
    * If action is asynchronous, mock the getPromise call to be resolved with specified object.
@@ -98,6 +105,11 @@ type MockStore<S, A extends DecoratedActions, P, DS> = {
    * Creates a new store using store props overriden by specified props.
    */
   setPartialProps: (props: Partial<P>) => MockStore<S, A, P, DS>;
+
+  /**
+   * Set implementations to some actions to test side effects.
+   */
+  setMockActions: (implementation: MockActionImpl<A>) => MockStore<S, A, P, DS>;
 
   /**
    * Executes passed function to test state and/or props
@@ -146,7 +158,8 @@ export function createMockStore<S, A extends DecoratedActions, P = {}, DS = {}>(
   initialState: S | ((p: P) => S),
   actions: StoreActions<S, A, P, DS>,
   props: P = {} as P,
-  options: StoreOptions<S, A, P, DS> = {}
+  options: StoreOptions<S, A, P, DS> = {},
+  mockActions?: MockActionImpl<A>
 ): MockStore<S, A, P, DS> {
   const stateRef = createRef<S>();
   const propsRef = createRef<P>(props);
@@ -157,8 +170,14 @@ export function createMockStore<S, A extends DecoratedActions, P = {}, DS = {}>(
     stateRef.current = initialState;
   }
 
-  function cloneStore(newState: S, newProps: P) {
-    return createMockStore(newState ?? stateRef.current, actions, newProps ?? propsRef.current, options);
+  function cloneStore(newState: S, newProps: P, newMockActions?: MockActionImpl<A>) {
+    return createMockStore(
+      newState ?? stateRef.current,
+      actions,
+      newProps ?? propsRef.current,
+      options,
+      newMockActions ?? mockActions
+    );
   }
 
   function getState(newStateRef: Ref<S> = undefined, newPropsRef: Ref<P> = undefined) {
@@ -174,6 +193,9 @@ export function createMockStore<S, A extends DecoratedActions, P = {}, DS = {}>(
     test(f) {
       f(getState(), propsRef.current);
       return this;
+    },
+    setMockActions(mockActions) {
+      return cloneStore(undefined, undefined, mockActions) as MockStore<S, A, P, DS>;
     },
     onMount(propsIn = {} as P) {
       return this.onInit(propsIn);
@@ -194,7 +216,7 @@ export function createMockStore<S, A extends DecoratedActions, P = {}, DS = {}>(
       const newStateRef = createRef(stateRef.current);
       const newPropsRef = createRef({ ...propsRef.current, ...newProps });
       const derivedStateRef = createRef<DerivedState<DS>>({ state: null, deps: {} });
-      const actionsRef = getActionsRef(actions);
+      const actionsRef = getActionsRef(actions, mockActions);
       const setState: SetStateFunc<S, A, P> = (newStateIn, newLoadingMap, actionName, actionType, isAsync) => {
         if (newStateIn != null) {
           newStateRef.current = newStateIn;
@@ -246,7 +268,7 @@ export function createMockStore<S, A extends DecoratedActions, P = {}, DS = {}>(
       const newStateRef = createRef(state);
       const newPropsRef = createRef({ ...propsRef.current, ...newProps });
       const derivedStateRef = createRef<DerivedState<DS>>({ state: null, deps: {} });
-      const actionsRef = getActionsRef(actions);
+      const actionsRef = getActionsRef(actions, mockActions);
 
       const setState: SetStateFunc<S, A, P> = (newStateIn, newLoadingMap, actionName, actionType, isAsync) => {
         if (newStateIn != null) {
@@ -276,17 +298,17 @@ export function createMockStore<S, A extends DecoratedActions, P = {}, DS = {}>(
     },
 
     getAction(actionName) {
-      return createMockStoreAction(stateRef.current, actionName, actions, propsRef.current, null, options);
+      return createMockStoreAction(stateRef.current, actionName, actions, propsRef.current, null, options, undefined);
     },
   };
 }
 
-function getActionsRef<A>(actions: A): Ref<A> {
+function getActionsRef<A>(actions: A, impl: MockActionImpl<A>): Ref<A> {
   const keys = Object.keys(actions) as (keyof A)[];
 
   return createRef<A>(
     keys.reduce<A>((acc, actionName) => {
-      acc[actionName] = mockFactory() as any;
+      acc[actionName] = mockFactory(impl?.[actionName]) as any;
       return acc;
     }, {} as A)
   );
@@ -336,20 +358,27 @@ export function createMockStoreAction<S, A extends DecoratedActions, F extends (
   actions: StoreActions<S, A, P, DS, S>,
   props: P,
   promiseRes: Promise<F> | Error,
-  options: StoreOptions<S, A, P, DS>
+  options: StoreOptions<S, A, P, DS>,
+  mockActions: Partial<Record<keyof A, (...args: any[]) => any>>
 ): MockStoreAction<S, A, F, P, DS> {
   const stateRef = createRef<S>(state);
   const propsRef = createRef<P>(props);
   const promiseResult = promiseRes;
 
-  function cloneStoreAction(newState: S, newProps: P, promiseRes: Promise<F> | Error) {
+  function cloneStoreAction(
+    newState: S,
+    newProps: P,
+    promiseRes: Promise<F> | Error,
+    newMockActions: Partial<Record<keyof A, (...args: any[]) => any>> = mockActions
+  ) {
     return createMockStoreAction(
       newState ?? stateRef.current,
       actionName,
       actions,
       newProps ?? propsRef.current,
       promiseRes ?? promiseResult,
-      options
+      options,
+      newMockActions
     );
   }
 
@@ -363,6 +392,9 @@ export function createMockStoreAction<S, A extends DecoratedActions, F extends (
   }
 
   return {
+    setMockActions(mockActions) {
+      return cloneStoreAction(undefined, undefined, undefined, mockActions) as MockStoreAction<S, A, F, P, DS>;
+    },
     setState(s) {
       return cloneStoreAction(s, undefined, undefined) as MockStoreAction<S, A, F, P, DS>;
     },
@@ -391,10 +423,12 @@ export function createMockStoreAction<S, A extends DecoratedActions, F extends (
       computeDerivedValues(newStateRef, propsRef, derivedStateRef, options);
 
       // create mock action to test side effects
-      const actionsRef = getActionsRef(actions);
+      const actionsRef = getActionsRef(actions, mockActions);
       const loadingMapRef = createRef<InternalLoadingMap<A>>({});
 
-      const setState: SetStateFunc<S, A, P> = (newStateIn, newLoadingMap, actionName, actionType, isAsync, ctx) => {
+      const setState: SetStateFunc<S, A, P> = (
+        newStateIn /* newLoadingMap, actionName, actionType, isAsync, ctx */
+      ) => {
         if (newStateIn != null) {
           newStateRef.current = newStateIn;
         }
