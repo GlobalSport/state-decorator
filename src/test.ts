@@ -59,7 +59,7 @@ type MockStoreAction<S, A extends DecoratedActions, F extends (...args: any[]) =
   setPartialProps: (props: Partial<P>) => MockStoreAction<S, A, F, P, DS>;
 
   /**
-   * Set some implementations to add to jest.fn() for some actions.
+   * Set implementations to some actions to test side effects.
    */
   setMockActions: (implementation: MockActionImpl<A>) => MockStoreAction<S, A, F, P, DS>;
 
@@ -107,7 +107,7 @@ type MockStore<S, A extends DecoratedActions, P, DS> = {
   setPartialProps: (props: Partial<P>) => MockStore<S, A, P, DS>;
 
   /**
-   * Set some implementations to add to jest.fn() for some actions.
+   * Set implementations to some actions to test side effects.
    */
   setMockActions: (implementation: MockActionImpl<A>) => MockStore<S, A, P, DS>;
 
