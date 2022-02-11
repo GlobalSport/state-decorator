@@ -13,6 +13,7 @@ describe('Advanced synchronous action', () => {
     sideEffects: () => void;
     setEffectsDebounced: (p: number) => void;
     setSideEffectsDebounced: (p: number) => void;
+    setSideEffectsDebounced2: (p: number) => void;
     setCancelled: (p: number) => void;
   };
 
@@ -47,6 +48,10 @@ describe('Advanced synchronous action', () => {
       sideEffects: ({ s, p }) => {
         p.callback(s);
       },
+      debounceSideEffectsTimeout: 50,
+    },
+    setSideEffectsDebounced2: {
+      effects: ({ s, args: [p] }) => ({ ...s, prop2: p }),
       debounceSideEffectsTimeout: 50,
     },
     setCancelled: { effects: () => null, sideEffects: ({ p }) => p.callbackCancelled() },
@@ -160,6 +165,25 @@ describe('Advanced synchronous action', () => {
     }, 75);
 
     expect(callback).not.toHaveBeenCalled();
+  });
+
+  it('debounced no side effects', (done) => {
+    const store = createStore(getInitialState, actionsImpl);
+
+    const listener = jest.fn();
+    const callback = jest.fn((s: State) => {});
+
+    const callbackCancelled = jest.fn();
+
+    store.addStateListener(listener);
+    store.setProps({ callback, callbackCancelled });
+
+    const { setSideEffectsDebounced2: setDebounced } = store.actions;
+
+    setDebounced(23);
+
+    // should not crash
+    done();
   });
 
   it('debounced effects', (done) => {

@@ -594,11 +594,11 @@ function executeSyncActionImpl<S, DS, F extends (...args: any[]) => any, A exten
       }
 
       timeoutMap.current[actionName] = setTimeout(() => {
-        action.sideEffects(addSideEffectsContext(ctx, stateRef, derivedStateRef, actionsRef, options.notifyWarning));
+        action.sideEffects?.(addSideEffectsContext(ctx, stateRef, derivedStateRef, actionsRef, options.notifyWarning));
         delete timeoutMap.current[actionName];
       }, action.debounceSideEffectsTimeout);
-    } else if (action.sideEffects) {
-      action.sideEffects(addSideEffectsContext(ctx, stateRef, derivedStateRef, actionsRef, options.notifyWarning));
+    } else {
+      action.sideEffects?.(addSideEffectsContext(ctx, stateRef, derivedStateRef, actionsRef, options.notifyWarning));
     }
   }
 }
