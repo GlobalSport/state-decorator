@@ -32,6 +32,8 @@ import {
   runMiddlewares,
   buildLoadingMap,
   isLoadingImpl,
+  ParallelActionError,
+  buildErrorMap,
 } from './impl';
 
 import {
@@ -42,7 +44,9 @@ import {
   SimpleSyncAction,
   InternalLoadingMap,
   LoadingMap,
+  ErrorMap,
   LoadingParallelMap,
+  ErrorParallelMap,
   StoreOptions,
   AsyncActionPromise,
   InvocationContext,
@@ -67,8 +71,11 @@ export {
   DecoratedActions,
   StoreActions,
   LoadingMap,
-  StoreOptions,
+  ErrorMap,
   LoadingParallelMap,
+  ErrorParallelMap,
+  ParallelActionError,
+  StoreOptions,
   AsyncActionPromise as AsynchActionPromise,
   InvocationContext,
   GetPromiseInvocationContext,
@@ -112,9 +119,17 @@ export type StoreApi<S, A extends DecoratedActions, P, DS = {}> = {
    */
   readonly loadingMap: LoadingMap<A>;
   /**
+   * A map of loading actions map (computed on property access)
+   */
+  readonly errorMap: ErrorMap<A>;
+  /**
    * A map of parallel loading actions map (computed on property access)
    */
   readonly loadingParallelMap: LoadingParallelMap<A>;
+  /**
+   * A map of parallel actions error map (computed on property access)
+   */
+  readonly errorParallelMap: ErrorParallelMap<A>;
   /**
    * Initializes the store with the specified props
    */
@@ -150,7 +165,7 @@ export type StoreApi<S, A extends DecoratedActions, P, DS = {}> = {
 export type StateListenerContext<S, DS, A extends DecoratedActions> = S &
   DS &
   A &
-  Pick<StoreApi<S, A, any, DS>, 'loading' | 'loadingMap' | 'isLoading' | 'abortAction'>;
+  Pick<StoreApi<S, A, any, DS>, 'loading' | 'loadingMap' | 'errorMap' | 'isLoading' | 'abortAction'>;
 
 export type StateListener<S, DS, A extends DecoratedActions> = (ctx: StateListenerContext<S, DS, A>) => void;
 
@@ -179,6 +194,7 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
   const actionsRef = createRef<A>();
   const timeoutRef = createRef<TimeoutMap<A>>();
   const loadingMapRef = createRef<InternalLoadingMap<A>>();
+  const errorMapRef = createRef<ErrorParallelMap<A>>();
   const promisesRef = createRef<PromiseMap<A>>();
   const conflictActionsRef = createRef<ConflictActionsMap<A>>();
   const initializedRef = createRef(false);
@@ -209,6 +225,7 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
       abortAction,
       loading: isAnyLoading(),
       loadingMap: getLoadingMap(),
+      errorMap: getErrorMap(),
     };
 
     Object.keys(stateListeners).forEach((listenerId) => {
@@ -245,6 +262,11 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
 
       loadingMapRef.current = (Object.keys(actionsImpl) as (keyof A)[]).reduce<InternalLoadingMap<A>>((acc, name) => {
         acc[name] = initialActionSet.has(name) ? { [DEFAULT_PROMISE_ID]: true } : {};
+        return acc;
+      }, {});
+
+      errorMapRef.current = (Object.keys(actionsImpl) as (keyof A)[]).reduce<ErrorParallelMap<A>>((acc, name) => {
+        acc[name] = {};
         return acc;
       }, {});
 
@@ -295,6 +317,7 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
       propsRef.current = null;
       stateRef.current = null;
       loadingMapRef.current = null;
+      errorMapRef.current = null;
       promisesRef.current = null;
       conflictActionsRef.current = null;
       derivedStateRef.current = null;
@@ -403,6 +426,7 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
         derivedStateRef,
         propsRef,
         loadingMapRef,
+        errorMapRef,
         actionsRef,
         promisesRef,
         conflictActionsRef,
@@ -463,9 +487,17 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
       const map = loadingMapRef.current;
       const keys = Object.keys(map) as (keyof A)[];
       return keys.reduce<LoadingMap<A>>((acc, actionName) => {
-        acc[actionName] = Object.keys(map[actionName]).find((pId) => !!map[actionName][pId]) != null;
+        const subMap = map[actionName];
+        acc[actionName] = Object.keys(subMap).find((pId) => !!subMap[pId]) != null;
         return acc;
       }, {});
+    }
+    return null;
+  }
+
+  function getErrorMap() {
+    if (initializedRef.current) {
+      return buildErrorMap(errorMapRef.current);
     }
     return null;
   }
@@ -504,9 +536,18 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
     get loadingMap() {
       return getLoadingMap();
     },
+    get errorMap() {
+      return getErrorMap();
+    },
     get loadingParallelMap() {
       if (initializedRef.current) {
         return loadingMapRef.current;
+      }
+      return null;
+    },
+    get errorParallelMap() {
+      if (initializedRef.current) {
+        return errorMapRef.current;
       }
       return null;
     },
@@ -560,6 +601,7 @@ export function useStoreSlice<S, A extends DecoratedActions, P, DS>(store: Store
       isLoading: store.isLoading,
       abortAction: store.abortAction,
       loadingMap: store.loadingMap,
+      errorMap: store.errorMap,
     });
   }
 
@@ -622,7 +664,9 @@ export function useStore<S, A extends DecoratedActions, P, DS = {}>(store: Store
     isLoading: store.isLoading,
     abortAction: store.abortAction,
     loadingMap: store.loadingMap,
+    errorMap: store.errorMap,
     loadingParallelMap: store.loadingParallelMap,
+    errorParallelMap: store.errorParallelMap,
   };
 }
 

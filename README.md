@@ -9,7 +9,7 @@ The StateDecorator is a set of Reacts hook that manages a complex component stat
 # Features
 
 - Deterministic state changes (clear separation of effects and side effects)
-- Ease asynchronous actions state changes (loading states, success & error handlers, parallel actions management, optimistic updates...)
+- Ease asynchronous actions state changes (loading / error states, success & error handlers, parallel actions management, optimistic updates...)
 - Easily and efficiently share slices of state.
 - Easily testable (uses pure functions, utility functions provided)
 - Easily update state from or react to props changes
@@ -316,13 +316,32 @@ const actions: StoreActions<State, Actions> = {
 The loading state of asynchronous actions is automatically computed.
 
 ```typescript
-const { isLoading, loading } = useLocalStore(getInitialState, actionsImpl);
+const { isLoading, loading, loadingMap } = useLocalStore(getInitialState, actionsImpl);
 
 // loading is set to true is at least one asynchronous action is ongoing.
+// loadingMap is action name to boolean or undefined map
 
 // isLoading is a function that accepts 1+ arguments
 // It returns true, if at least one of the specified actions is loading.
 const isOneLoading = isLoading('action1', 'action2', ['parallelAction', 'promiseId']);
+```
+
+## Error state
+
+The last error of each asynchronous actions is available on the errorMap.
+
+```typescript
+const { errorMap } = useLocalStore(getInitialState, actionsImpl);
+
+
+if (errorMap.action1)) {
+  // show retry action
+}
+
+if (errorMap.action1 instanceof MyCustomError ){
+  // show retry action with custom error handling
+}
+
 ```
 
 ## Success / error notifications

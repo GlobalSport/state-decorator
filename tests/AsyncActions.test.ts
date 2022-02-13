@@ -172,6 +172,8 @@ describe('Async action', () => {
 
       expect(isLoading('successAction')).toBeFalsy();
 
+      expect(store.errorMap.successAction).toBeUndefined();
+
       // effect + loadingMap
       expect(listener).toHaveBeenCalledTimes(3);
       expect(callback).toHaveBeenCalledWith('onDone', {
@@ -327,6 +329,7 @@ describe('Async action', () => {
         });
 
         expect(isLoading('errorAction')).toBeFalsy();
+        expect(store.errorMap.errorAction).toBeInstanceOf(Error);
 
         // effect + loadingMap
         expect(listener).toHaveBeenCalledTimes(3);
@@ -382,7 +385,7 @@ describe('Async action', () => {
       });
   });
 
-  it.only('error & override default getErrorMessage', (done) => {
+  it('error & override default getErrorMessage', (done) => {
     const listener = jest.fn();
     const callback = jest.fn();
     const callbackError = jest.fn();
@@ -411,7 +414,7 @@ describe('Async action', () => {
       });
   });
 
-  it.only('error & not override getErrorMessage', (done) => {
+  it('error & not override getErrorMessage', (done) => {
     const listener = jest.fn();
     const callback = jest.fn();
     const callbackError = jest.fn();
