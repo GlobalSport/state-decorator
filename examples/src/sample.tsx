@@ -38,7 +38,7 @@ type MyActions = {
   setProp3Debounced: (item: string) => void;
   resetProp3: () => void;
   loadList: () => Promise<string[]>;
-  loadAndFail: () => Promise<any>;
+  loadAndFail: (fail: boolean) => Promise<any>;
   loadCancel: () => Promise<any>;
 };
 
@@ -100,10 +100,13 @@ const myActions: StoreActions<MyState, MyActions, MyProps> = {
     },
   },
   loadAndFail: {
-    getPromise: () =>
-      new Promise((_, reject) => {
-        setTimeout(reject, 1000, new Error('boom'));
+    getPromise: ({ args: [fail] }) =>
+      new Promise((res, reject) => {
+        fail ? setTimeout(reject, 1000, new Error('boom')) : setTimeout(res, 1000, {});
       }),
+    sideEffects: ({ a }) => {
+      a.setProp2('');
+    },
     errorSideEffects: ({ a }) => {
       a.setProp2('Error');
     },
@@ -173,6 +176,10 @@ export function StateView() {
           <div>prop1: {state.prop1}</div>
           <div>prop2: {state.prop2}</div>
           <div>listFiltered: {state.listFiltered.join(', ')}</div>
+          <div>errorMap:</div>
+          {Object.keys(state.errorMap).map((k) => (
+            <div key={k}>{`${k} -> ${state.errorMap[k]}`}</div>
+          ))}
         </div>
         <div ref={logNodeRef} style={{ flex: 1 }}></div>
       </div>
@@ -252,8 +259,11 @@ function LoadFail() {
   return (
     <FlashingBox>
       <div>Asynchronous load and fail and set "error" to prop2 as side effect</div>
-      <button disabled={loading} onClick={() => loadAndFail()}>
-        {loading ? 'loading...' : 'load'}
+      <button disabled={loading} onClick={() => loadAndFail(true)}>
+        {loading ? 'loading...' : 'load (fail)'}
+      </button>{' '}
+      <button disabled={loading} onClick={() => loadAndFail(false)}>
+        {loading ? 'loading...' : 'load (success)'}
       </button>
     </FlashingBox>
   );

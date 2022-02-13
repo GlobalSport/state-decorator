@@ -17,7 +17,7 @@ function getTimeoutPromise<C>(timeout: number, result: C = null): Promise<C> {
   });
 }
 
-function getFailedTimeoutPromise<C>(timeout: number, err: C = null): Promise<C> {
+function getFailedTimeoutPromise<C>(timeout: number, err: Error): Promise<C> {
   return new Promise((_, rej) => {
     setTimeout(rej, timeout, err);
   });
@@ -510,15 +510,15 @@ describe('Conflicting actions', () => {
 
     const p1 = setValue('v1');
 
-    expect(store.loadingParallelMap['setValue']['v1']).toBeTruthy();
+    expect(store.loadingParallelMap.setValue['v1']).toBeTruthy();
 
-    expect(store.loadingParallelMap['setValue']['v2']).toBeFalsy();
+    expect(store.loadingParallelMap.setValue['v2']).toBeFalsy();
     const p2 = setValue('v2');
-    expect(store.loadingParallelMap['setValue']['v2']).toBeTruthy();
+    expect(store.loadingParallelMap.setValue['v2']).toBeTruthy();
 
-    expect(store.loadingParallelMap['setValue']['v3']).toBeFalsy();
+    expect(store.loadingParallelMap.setValue['v3']).toBeFalsy();
     const p3 = setValue('v3');
-    expect(store.loadingParallelMap['setValue']['v3']).toBeTruthy();
+    expect(store.loadingParallelMap.setValue['v3']).toBeTruthy();
 
     return Promise.all([p1, p2, p3]).then(() => {
       expect(store.state).toEqual({
@@ -527,6 +527,106 @@ describe('Conflicting actions', () => {
       });
       expect(callback).toHaveBeenCalledTimes(3);
       expect(callbackError).not.toHaveBeenCalled();
+    });
+  });
+
+  it('PARALLEL works as expected (error)', () => {
+    const callback = jest.fn();
+    const callbackError = jest.fn();
+
+    let reqCount = 0;
+
+    const store = createStore<State, Actions, Props>(
+      () => ({
+        values: [],
+        errors: [],
+      }),
+      {
+        setValue: {
+          ...setValueAction,
+          conflictPolicy: ConflictPolicy.PARALLEL,
+          getPromiseId: (value: string) => value,
+          getPromise: ({ args: [v] }) =>
+            reqCount++ === 1 ? getFailedTimeoutPromise(50, new Error('failed')) : getTimeoutPromise(50, v),
+        },
+      }
+    );
+
+    store.setProps({
+      callback,
+      callbackError,
+    });
+
+    const setValue = store.actions.setValue;
+
+    const p1 = setValue('v1');
+
+    expect(store.loadingParallelMap.setValue['v1']).toBeTruthy();
+
+    expect(store.loadingParallelMap.setValue['v2']).toBeFalsy();
+    const p2 = setValue('v2');
+    expect(store.loadingParallelMap.setValue['v2']).toBeTruthy();
+
+    expect(store.loadingParallelMap.setValue['v3']).toBeFalsy();
+    const p3 = setValue('v3');
+    expect(store.loadingParallelMap.setValue['v3']).toBeTruthy();
+
+    return Promise.all([p1, p2, p3]).then(() => {
+      expect(store.state).toEqual({
+        values: ['v1', 'v3'],
+        errors: ['v2'],
+      });
+      expect(callback).toHaveBeenCalledTimes(2);
+      expect(callbackError).toHaveBeenCalledTimes(1);
+      expect(store.errorParallelMap.setValue['v1']).toBeUndefined();
+      expect(store.errorParallelMap.setValue['v3']).toBeUndefined();
+      expect(store.errorParallelMap.setValue['v2']).toBeInstanceOf(Error);
+    });
+  });
+
+  it('PARALLEL works as expected (reset error)', () => {
+    const callback = jest.fn();
+    const callbackError = jest.fn();
+
+    let reqCount = 0;
+
+    const store = createStore<State, Actions, Props>(
+      () => ({
+        values: [],
+        errors: [],
+      }),
+      {
+        setValue: {
+          ...setValueAction,
+          conflictPolicy: ConflictPolicy.PARALLEL,
+          getPromiseId: (value: string) => value,
+          getPromise: ({ args: [v] }) =>
+            reqCount++ === 1 ? getFailedTimeoutPromise(50, new Error('failed')) : getTimeoutPromise(50, v),
+        },
+      }
+    );
+
+    store.setProps({
+      callback,
+      callbackError,
+    });
+
+    const setValue = store.actions.setValue;
+
+    const p1 = setValue('v1');
+    const p2 = setValue('v2').then(() => setValue('v2'));
+    const p3 = setValue('v3');
+
+    return Promise.all([p1, p2, p3]).then(() => {
+      expect(store.state).toEqual({
+        values: ['v1', 'v3', 'v2'],
+        errors: ['v2'],
+      });
+      expect(callback).toHaveBeenCalledTimes(3);
+      expect(callbackError).toHaveBeenCalledTimes(1);
+      expect(store.errorParallelMap.setValue['v1']).toBeUndefined();
+      expect(store.errorParallelMap.setValue['v2']).toBeUndefined();
+      expect(store.errorParallelMap.setValue['v3']).toBeUndefined();
     });
   });
 });

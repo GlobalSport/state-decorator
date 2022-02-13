@@ -1,4 +1,4 @@
-import { StoreActions, StoreApi, StoreOptions } from '.';
+import { ErrorMap, ErrorParallelMap, StoreActions, StoreApi, StoreOptions } from '.';
 import {
   computeAsyncActionInput,
   computeDerivedValues,
@@ -14,6 +14,7 @@ import {
   Ref,
   onPropChange,
   buildOnMountInvocationContext,
+  buildErrorMap,
 } from './impl';
 import { AsyncAction, DecoratedActions, InternalLoadingMap } from './types';
 
@@ -26,6 +27,7 @@ type MockResult<S, A extends DecoratedActions, P, DS> = {
   readonly state: S & DS;
   readonly props: P;
   readonly actions: MockActions<A, any>;
+  readonly errorMap: ErrorMap<A>;
 };
 
 type MockActionImpl<A> = Partial<Record<keyof A, (...args: any[]) => any>>;
@@ -258,6 +260,7 @@ export function createMockStore<S, A extends DecoratedActions, P = {}, DS = {}>(
         state: getState(newStateRef, newPropsRef),
         props: newPropsRef.current,
         actions: actionsRef.current,
+        errorMap: {},
       };
     },
 
@@ -287,6 +290,7 @@ export function createMockStore<S, A extends DecoratedActions, P = {}, DS = {}>(
         state: getState(newStateRef, newPropsRef),
         props: newPropsRef.current,
         actions: actionsRef.current,
+        errorMap: {},
       };
 
       return {
@@ -425,6 +429,7 @@ export function createMockStoreAction<S, A extends DecoratedActions, F extends (
       // create mock action to test side effects
       const actionsRef = getActionsRef(actions, mockActions);
       const loadingMapRef = createRef<InternalLoadingMap<A>>({});
+      const errorMapRef = createRef<ErrorParallelMap<A>>({});
 
       const setState: SetStateFunc<S, A, P> = (
         newStateIn /* newLoadingMap, actionName, actionType, isAsync, ctx */
@@ -488,6 +493,7 @@ export function createMockStoreAction<S, A extends DecoratedActions, F extends (
           derivedStateRef,
           propsRef,
           loadingMapRef,
+          errorMapRef,
           promisesRef,
           conflictActionsRef,
           initializedRef,
@@ -506,6 +512,7 @@ export function createMockStoreAction<S, A extends DecoratedActions, F extends (
             prevState: getState(stateRef),
             state: getState(newStateRef),
             props: propsRef.current,
+            errorMap: buildErrorMap(errorMapRef.current),
             actions: (actionsRef.current as any) as MockActions<A, any>,
           };
         })

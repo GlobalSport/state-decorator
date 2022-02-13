@@ -24,6 +24,10 @@ export type LoadingProps<A> = {
   loadingParallelMap: LoadingParallelMap<A>;
 };
 
+export type PromiseIdErrorMap = { [promiseId: string]: Error };
+export type ErrorMap<A> = { [pId in keyof A]?: Error };
+export type ErrorParallelMap<A> = { [P in keyof A]?: PromiseIdErrorMap };
+
 // https://github.com/Microsoft/TypeScript/issues/15300
 export interface DecoratedActions {
   [name: string]: (...args: any[]) => Promise<any> | void;

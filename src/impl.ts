@@ -8,6 +8,7 @@
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import { ErrorMap, ErrorParallelMap } from '.';
 import shallow from './shallow';
 import {
   AsyncAction,
@@ -36,6 +37,7 @@ import {
   OnPropsChangeOptions,
   ContextWithDerived,
   ContextDerivedStateState,
+  PromiseIdErrorMap,
 } from './types';
 
 export type SetStateFunc<S, A, P> = (
@@ -81,6 +83,7 @@ export type AsyncActionExecContext<S, DS, F extends (...args: any[]) => any, A e
   derivedStateRef: Ref<DerivedState<DS>>;
   propsRef: Ref<P>;
   loadingMapRef: Ref<InternalLoadingMap<A>>;
+  errorMapRef: Ref<ErrorParallelMap<A>>;
   promisesRef: Ref<PromiseMap<A>>;
   conflictActionsRef: Ref<ConflictActionsMap<A>>;
   actionsRef: Ref<A>;
@@ -312,6 +315,68 @@ export function buildLoadingMap<A>(
     [actionName]: { ...source[actionName], [promiseId]: false },
   };
   return res;
+}
+
+/** @internal */
+export function updateErrorMap<A>(
+  source: ErrorParallelMap<A>,
+  actionName: keyof A,
+  promiseId: string,
+  error: Error
+): ErrorParallelMap<A> {
+  if (error) {
+    return {
+      ...source,
+      [actionName]: { ...(source[actionName] || {}), [promiseId]: error },
+    };
+  }
+
+  const res: ErrorParallelMap<A> = {
+    ...source,
+    [actionName]: { ...source[actionName], [promiseId]: undefined },
+  };
+
+  return res;
+}
+
+export class ParallelActionError extends Error {
+  public promiseIds: PromiseIdErrorMap;
+  constructor(promiseIds: PromiseIdErrorMap) {
+    super('Error');
+    this.promiseIds = promiseIds;
+    Object.setPrototypeOf(this, ParallelActionError.prototype);
+  }
+}
+
+export function buildErrorMap<A>(map: ErrorParallelMap<A>) {
+  const keys = Object.keys(map) as (keyof A)[];
+  return keys.reduce<ErrorMap<A>>((acc, actionName) => {
+    const subMap = map[actionName];
+
+    // DEFAULT_PROMISE_ID is set internally
+    // if defines it means that action is NOT run in parallel
+    if (subMap[DEFAULT_PROMISE_ID] == null) {
+      // no error
+    } else if (subMap[DEFAULT_PROMISE_ID]) {
+      acc[actionName] = subMap[DEFAULT_PROMISE_ID];
+    } else {
+      const res = Object.keys(subMap).reduce<{ map: PromiseIdErrorMap; hasErr: boolean }>(
+        (acc, promiseId) => {
+          if (subMap[promiseId] != null) {
+            acc.hasErr = true;
+            acc.map[promiseId] = subMap[promiseId];
+          }
+          return acc;
+        },
+        { hasErr: false, map: {} }
+      );
+
+      if (res.hasErr) {
+        acc[actionName] = new ParallelActionError(res.map);
+      }
+    }
+    return acc;
+  }, {});
 }
 
 /** @internal */
@@ -743,6 +808,7 @@ function processPromiseFailed<S, DS, F extends (...args: any[]) => any, A extend
     propsRef,
     actionsRef,
     loadingMapRef,
+    errorMapRef,
     promisesRef,
     conflictActionsRef,
     actionName,
@@ -762,6 +828,9 @@ function processPromiseFailed<S, DS, F extends (...args: any[]) => any, A extend
   if (action.errorEffects) {
     newState = action.errorEffects(ctx);
   }
+
+  // do not trigger a setState by itself because loading state will trigger a set anyway...
+  errorMapRef.current = updateErrorMap(errorMapRef.current, actionName, promiseId, error);
 
   setState(
     newState,
@@ -835,6 +904,7 @@ export function decorateAsyncAction<S, DS, F extends (...args: any[]) => any, A 
     actionsRef,
     promisesRef,
     loadingMapRef,
+    errorMapRef,
     initializedRef,
     conflictActionsRef,
     actionName,
@@ -909,6 +979,8 @@ export function decorateAsyncAction<S, DS, F extends (...args: any[]) => any, A 
         },
       };
     }
+
+    errorMapRef.current = updateErrorMap(errorMapRef.current, actionName, promiseId, null);
 
     setState(
       p == null && !hasChanged ? undefined : stateRef.current,
