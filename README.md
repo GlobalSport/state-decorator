@@ -291,6 +291,21 @@ const actions: StoreActions<State, Actions> = {
 
 <!-- ![Lifecycle](https://raw.githubusercontent.com/GlobalSport/state-decorator/develop/doc/StateDecoratorDiagram.png) -->
 
+```mermaid
+graph TD
+    A(Call action) --> optimisticEffects[optimisticEffects]
+    optimisticEffects --> getPromise
+    getPromise --> promiseSuccess{Successed?}
+    promiseSuccess -->|Yes| effects[effects]
+    effects --> notifySuccess[notifySuccess]
+    notifySuccess --> sideEffects[sideEffects]
+    promiseSuccess -->|No| errorEffects[errorEffects]
+    errorEffects --> notifyError[notifyError]
+    notifyError --> errSideEffetcs[errorSideEffects]
+    errSideEffetcs --> Z
+    sideEffects --> Z(End) 
+```
+
 - check if a previous call to this action is ongoing,
   - if yes, check if the conflict policy is parallel,
     - if yes, let the flow continue.
