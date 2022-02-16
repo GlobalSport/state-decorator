@@ -295,7 +295,7 @@ const actions: StoreActions<State, Actions> = {
 graph TD
     A(Call action) --> optimisticEffects[optimisticEffects]
     optimisticEffects --> getPromise
-    getPromise --> promiseSuccess{Successed?}
+    getPromise --> promiseSuccess{Success?}
     promiseSuccess -->|Yes| effects[effects]
     effects --> notifySuccess[notifySuccess]
     notifySuccess --> sideEffects[sideEffects]
