@@ -293,7 +293,8 @@ const actions: StoreActions<State, Actions> = {
 
 ```mermaid
 graph TD
-    A(Call action) --> optimisticEffects[optimisticEffects]
+    A(Call action) --> preEffects
+    preEffects --> optimisticEffects
     optimisticEffects --> getPromise
     getPromise --> promiseSuccess{Success?}
     promiseSuccess -->|Yes| effects[effects]
