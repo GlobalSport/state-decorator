@@ -237,12 +237,12 @@ const actions: StoreActions<State, Actions> = {
 
 ## Recipes
 
-- If the effects function returns **null**, the side effects, if any, are not executed when the action is called.
+- If the effects function returns `null`, the side effects, if any, are not executed when the action is called.
 - If not effects function is defined by side effects function is provided, the side effects will be executed when the action is called.
 
 ## Cancel action
 
-To cancel effects/side effects just return **null** instead of new state in **effects**.
+To cancel effects/side effects just return `null` instead of new state in **effects**.
 
 # Asynchronous actions
 
@@ -281,11 +281,11 @@ const actions: StoreActions<State, Actions> = {
 };
 ```
 
-- If **null** is returned by **getPromise**, the action is not executed. It allows to cancel an action depending on state or props etc.
+- If `null` is returned by **getPromise**, the action is not executed. It allows to cancel an action depending on state or props etc.
 
 - **getGetPromise** is a shortcut that sets the conflict policy to **ConflictPolicy.REUSE** and **retryCount** to 3.
 
-- To cancel any effects just return **null** instead of new state in **xxxEffects**.
+- To cancel any effects just return `null` instead of new state in **xxxEffects**.
 
 ## Asynchronous action lifecycle
 
@@ -300,11 +300,15 @@ graph TD
     promiseSuccess -->|Yes| effects[effects]
     effects --> notifySuccess[notifySuccess]
     notifySuccess --> sideEffects[sideEffects]
+    sideEffects --> promiseResolved[Promise is resolved]
+    promiseResolved --> Z(End)
     promiseSuccess -->|No| errorEffects[errorEffects]
     errorEffects --> notifyError[notifyError]
     notifyError --> errSideEffetcs[errorSideEffects]
-    errSideEffetcs --> Z
-    sideEffects --> Z(End) 
+    errSideEffetcs --> errorManaged{Error managed?}
+    errorManaged --> |Yes| promiseResolved
+    errorManaged --> |No| promiseRejected
+    promiseRejected --> Z
 ```
 
 - check if a previous call to this action is ongoing,
@@ -324,6 +328,7 @@ graph TD
     - **errorEffects**: change state from promise arguments and returned error.
     - if **notifyError** is set, call it with **getErrorMessage()**.
     - **errorSideEffects**: trigger a side effect with no change on state.
+    - Global **asyncErrorHandler** is called (with a flag indicating that the error was managed or not, see [Error management](#ErrorManagement) for more details).
 
 - If a conflicting action is stored, process it.
 
@@ -342,24 +347,6 @@ const { isLoading, loading, loadingMap } = useLocalStore(getInitialState, action
 const isOneLoading = isLoading('action1', 'action2', ['parallelAction', 'promiseId']);
 ```
 
-## Error state
-
-The last error of each asynchronous actions is available on the errorMap.
-
-```typescript
-const { errorMap } = useLocalStore(getInitialState, actionsImpl);
-
-
-if (errorMap.action1)) {
-  // show retry action
-}
-
-if (errorMap.action1 instanceof MyCustomError ){
-  // show retry action with custom error handling
-}
-
-```
-
 ## Success / error notifications
 
 A notification function can be called when the asynchronous action succeeded or failed.
@@ -371,9 +358,38 @@ A notification function can be called when the asynchronous action succeeded or 
    1. _getErrorMessage_ (message built from the error and action context).
    2. _getSuccessMessage_ (message built from the action context)
 
+```typescript
+// global notification functions
+setGlobalConfig({
+  notifySuccess: (msg) => console.log(msg),
+  notifyError: (msg) => console.log(msg),
+});
+
+// local notification functions
+const store = useLocalStore(getInitialState, actionsImpl, props, {
+  notifySuccess: (msg) => console.log(msg),
+  notifyError: (msg) => console.log(msg),
+});
+```
+
+```typescript
+// action implementation
+const actions: StoreActions<State, Actions> = {
+  loadList: {
+    getPromise: () => new Promise((_, reject) => setTimeout(reject, 500, new Error('Too bad'))),
+    getSuccessMessage: () => 'success!',
+    getErrorMessage: ({ err }) => `Error: ${err.message}`,
+  },
+};
+```
+
 ## <a name="ErrorManagement"></a>Error management
 
-When an asynchronous action fails, if the state needs to be updated, set the _errorEffects_ property of the asynchronous action.
+### Effects and side effects
+
+When an asynchronous action fails, if the state needs to be updated, set the **errorEffects** property of the asynchronous action.
+
+If some actions need to be triggered, set **errorSideEffects**.
 
 ```typescript
 const actions: StoreActions<State, Actions> = {
@@ -388,7 +404,40 @@ const actions: StoreActions<State, Actions> = {
 };
 ```
 
-**Note:** If an error message or an error reducer is defined, the error will be trapped to prevent other error management (console traces...). If, for any reason, you need to have the promise to be rejected, set **rejectPromiseOnError** to _true_.
+### Promise result
+
+If **getPromise** is failing and the error is _managed_, the action promise will be returned as **resolved** to prevent other error managements (console traces…) to be executed, otherwise it will be returned as **rejected**.
+
+An error is _managed_ if:
+
+- **errorEffects** is defined and is not returning `null`.
+- or **errorSideEffects** is defined,
+- or **notifyError** is defined and **getErrorMessage** is not returning `null`,
+- or **isErrorManaged** is set to `true`.
+
+If the error is managed but you need to have the promise to be rejected, set **rejectPromiseOnError** to `true`.
+
+Global **asyncErrorHandler** is called for each error with this _managed_ flag for global error management (logging).
+
+### Error state
+
+In order to display UI after an error, the last error of each asynchronous action is available on **errorMap**.
+
+```typescript
+const { errorMap } = useLocalStore(getInitialState, actionsImpl);
+
+
+if (errorMap.action1)) {
+  // show retry action
+}
+
+if (errorMap.action1 instanceof MyCustomError){
+  // show retry action with custom error handling
+}
+
+```
+
+Recipe: When only using the **errorMap** to manage errors (ie. there's no effects nor message and so on), the error is considered _not managed_ resulting in a rejected promise and global **asyncErrorHandler** called with _managed_ flag set to false. In that case, set **isErrorManaged** to `true` to specify that the error is _managed_ externally.
 
 ## <a name="ConflictingActions"></a>Conflicting actions
 
@@ -1340,7 +1389,7 @@ TypeError: Cannot set property 'crash' of null
 
 # Immutability
 
-- Immutability: each effects **must** return a new state instance (or **null** if there's no change).
+- Immutability: each effects **must** return a new state instance (or `null` if there's no change).
 - I recommend using [Immer](https://github.com/immerjs/immer) to manage complex cases (deep nesting). A **immerizeActions** action decorator is provided to decorate each effect with Immer.
 
 # Limitations
