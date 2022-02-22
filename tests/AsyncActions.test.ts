@@ -34,6 +34,9 @@ describe('Async action', () => {
     errorActionGetErrorMsg: (p: string) => Promise<any>;
     errorActionDefaultErrorMsg: (p: string) => Promise<any>;
     errorRejectAction: (p: string) => Promise<any>;
+    errorNotManaged: (p: string) => Promise<any>;
+    errorisErrorManaged: (p: string) => Promise<any>;
+    errorisErrorManagedButReject: (p: string) => Promise<any>;
     cancelAction: (p: string) => Promise<any>;
     cancelActionNoPre: (p: string) => Promise<any>;
     retryAction: (p: string) => Promise<any>;
@@ -95,6 +98,27 @@ describe('Async action', () => {
       ...baseAction,
       getPromise: () => null,
       preEffects: () => null,
+    },
+    errorNotManaged: {
+      getPromise: () => Promise.reject(new Error('failed!')),
+      getErrorMessage: () => null,
+      errorEffects: null,
+      errorSideEffects: null,
+    },
+    errorisErrorManaged: {
+      isErrorManaged: true,
+      getPromise: () => Promise.reject(new Error('failed!')),
+      getErrorMessage: () => null,
+      errorEffects: null,
+      errorSideEffects: null,
+    },
+    errorisErrorManagedButReject: {
+      isErrorManaged: true,
+      getPromise: () => Promise.reject(new Error('failed!')),
+      getErrorMessage: () => null,
+      errorEffects: null,
+      errorSideEffects: null,
+      rejectPromiseOnError: true,
     },
     retryAction: {
       ...baseAction,
@@ -317,6 +341,12 @@ describe('Async action', () => {
       callbackCancel,
     });
 
+    const asyncErrorHandler = jest.fn();
+
+    setGlobalConfig({
+      asyncErrorHandler,
+    });
+
     const { isLoading } = store;
 
     const promise = store.actions
@@ -341,6 +371,10 @@ describe('Async action', () => {
         expect(notifySuccess).not.toHaveBeenCalled();
         expect(notifyError).toHaveBeenCalled();
 
+        expect(asyncErrorHandler).toHaveBeenCalled();
+        // managed flag
+        expect(asyncErrorHandler.mock.calls[0][1]).toBeTruthy();
+
         done();
       })
       .catch((e) => {
@@ -359,30 +393,101 @@ describe('Async action', () => {
   });
 
   it('error & reject action', (done) => {
-    const listener = jest.fn();
-    const callback = jest.fn();
-    const callbackError = jest.fn();
-    const callbackCancel = jest.fn();
-    const notifySuccess = jest.fn();
-    const notifyError = jest.fn();
-
-    const store = createStore(getInitialState, actionsImpl, {
-      notifySuccess,
-      notifyError,
+    const store = createStore(getInitialState, actionsImpl);
+    store.init({
+      callback: null,
+      callbackCancel: null,
+      callbackError: null,
     });
-    store.addStateListener(listener);
-    store.setProps({
-      callback,
-      callbackError,
-      callbackCancel,
+
+    const asyncErrorHandler = jest.fn();
+
+    setGlobalConfig({
+      asyncErrorHandler,
     });
 
     store.actions
       .errorRejectAction('test')
       .then(done.fail)
       .catch(() => {
+        expect(asyncErrorHandler).toHaveBeenCalled();
+        // managed flag
+        expect(asyncErrorHandler.mock.calls[0][1]).toBeTruthy();
+
         done();
       });
+  });
+
+  it('error not managed', (done) => {
+    const store = createStore(getInitialState, actionsImpl);
+    store.init({
+      callback: null,
+      callbackCancel: null,
+      callbackError: null,
+    });
+
+    const asyncErrorHandler = jest.fn();
+
+    setGlobalConfig({
+      asyncErrorHandler,
+    });
+
+    store.actions
+      .errorNotManaged('test')
+      .then(done.fail)
+      .catch(() => {
+        expect(asyncErrorHandler).toHaveBeenCalled();
+        // managed flag
+        expect(asyncErrorHandler.mock.calls[0][1]).toBeFalsy();
+        done();
+      });
+  });
+
+  it('error not managed (skip error management)', (done) => {
+    const store = createStore(getInitialState, actionsImpl);
+    store.init({
+      callback: null,
+      callbackCancel: null,
+      callbackError: null,
+    });
+    const asyncErrorHandler = jest.fn();
+
+    setGlobalConfig({
+      asyncErrorHandler,
+    });
+
+    store.actions
+      .errorisErrorManaged('test')
+      .then(() => {
+        expect(asyncErrorHandler).toHaveBeenCalled();
+        expect(asyncErrorHandler.mock.calls[0][1]).toBeTruthy();
+        done();
+      })
+      .catch(done.fail);
+  });
+
+  it('error not managed (skip error management + reject)', (done) => {
+    const store = createStore(getInitialState, actionsImpl);
+    store.init({
+      callback: null,
+      callbackCancel: null,
+      callbackError: null,
+    });
+    const asyncErrorHandler = jest.fn();
+
+    setGlobalConfig({
+      asyncErrorHandler,
+    });
+
+    store.actions
+      .errorisErrorManagedButReject('test')
+      .then(done.fail)
+      .catch(() => {
+        expect(asyncErrorHandler).toHaveBeenCalled();
+        expect(asyncErrorHandler.mock.calls[0][1]).toBeTruthy();
+        done();
+      })
+      .catch(done.fail);
   });
 
   it('error & override default getErrorMessage', (done) => {

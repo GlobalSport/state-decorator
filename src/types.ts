@@ -277,6 +277,13 @@ export type AsyncActionBase<S, F extends (...args: any[]) => any, A, P, DS, FxRe
   rejectPromiseOnError?: boolean;
 
   /**
+   * When the error will not be managed by an errorEffect, errorSideEffect, getErrorMessage,
+   * the state decorator will not display an error message and will not return a failed promise
+   * (unless <code>rejectPromiseOnError</code>) is set.
+   */
+  isErrorManaged?: boolean;
+
+  /**
    * Handle side effects when the request succeeded.
    * @param result The result of the request
    * @param newData The data after the reducer is applied
