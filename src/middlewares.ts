@@ -1,3 +1,18 @@
+/*! *****************************************************************************
+Copyright (c) GlobalSport SAS.
+
+Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
+LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
+OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+PERFORMANCE OF THIS SOFTWARE.
+***************************************************************************** */
+
 import type {
   AsyncAction,
   DecoratedActions,
@@ -35,7 +50,7 @@ export function logEffects<S, A extends DecoratedActions, P>(
         }
       },
       destroy: null,
-      effects: (action, oldState, newState, loading: boolean) => {
+      effects: (action, _oldState, newState, loading: boolean) => {
         if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') {
           logger(
             storeName,
@@ -508,7 +523,7 @@ export function devtools<S, A extends DecoratedActions, P>(): MiddlewareFactory<
         });
       },
 
-      effects(ctx, oldState, newState) {
+      effects(ctx, _oldState, newState) {
         if (newState != null) {
           const cleanCtx: any = {
             ...ctx.context,
