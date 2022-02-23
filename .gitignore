@@ -1,6 +1,7 @@
 node_modules
 .history
 dist
+lib
 .rpt2*
 .vscode/launch.json
 stats.html

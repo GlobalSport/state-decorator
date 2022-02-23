@@ -1,3 +1,18 @@
+/*! *****************************************************************************
+Copyright (c) GlobalSport SAS.
+
+Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
+LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
+OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+PERFORMANCE OF THIS SOFTWARE.
+***************************************************************************** */
+
 import { ErrorMap, ErrorParallelMap, StoreActions, StoreApi, StoreOptions } from '.';
 import {
   computeAsyncActionInput,
@@ -142,7 +157,7 @@ type MockStore<S, A extends DecoratedActions, P, DS> = {
     newPropsRef: Ref<P>,
     newDerivedStateRef: Ref<DerivedState<DS>>,
     newActionsRef: Ref<StoreActions<S, A, P, DS, S>>,
-    setState: SetStateFunc<S, A, P>,
+    setState: SetStateFunc<S, A>,
     init?: boolean
   ) => MockResult<S, A, P, DS>;
   getAction: <K extends keyof A>(name: K) => MockStoreAction<S, A, A[K], P, DS>;
@@ -218,14 +233,14 @@ export function createMockStore<S, A extends DecoratedActions, P = {}, DS = {}>(
       const newStateRef = createRef(stateRef.current);
       const newPropsRef = createRef({ ...propsRef.current, ...newProps });
       const derivedStateRef = createRef<DerivedState<DS>>({ state: null, deps: {} });
-      const actionsRef = getActionsRef(actions, mockActions);
-      const setState: SetStateFunc<S, A, P> = (newStateIn, newLoadingMap, actionName, actionType, isAsync) => {
+      const actionsRef = getActionsRef(actions as any, mockActions);
+      const setState: SetStateFunc<S, A> = (newStateIn, _newLoadingMap, _actionName, _actionType, _isAsync) => {
         if (newStateIn != null) {
           newStateRef.current = newStateIn;
         }
       };
 
-      const res = this.onPropsChangeImpl(newStateRef, newPropsRef, derivedStateRef, actionsRef, setState, init);
+      const res = this.onPropsChangeImpl(newStateRef, newPropsRef, derivedStateRef, actionsRef as any, setState, init);
 
       return {
         ...res,
@@ -239,7 +254,7 @@ export function createMockStore<S, A extends DecoratedActions, P = {}, DS = {}>(
       newPropsRef: Ref<P>,
       newDerivedStateRef: Ref<DerivedState<DS>>,
       actionsRef: Ref<StoreActions<S, A, P, DS, S>>,
-      setState: SetStateFunc<S, A, P>,
+      setState: SetStateFunc<S, A>,
       init?: boolean
     ) {
       computeDerivedValues(stateRef, propsRef, newDerivedStateRef, options);
@@ -271,15 +286,15 @@ export function createMockStore<S, A extends DecoratedActions, P = {}, DS = {}>(
       const newStateRef = createRef(state);
       const newPropsRef = createRef({ ...propsRef.current, ...newProps });
       const derivedStateRef = createRef<DerivedState<DS>>({ state: null, deps: {} });
-      const actionsRef = getActionsRef(actions, mockActions);
+      const actionsRef = getActionsRef(actions as any, mockActions);
 
-      const setState: SetStateFunc<S, A, P> = (newStateIn, newLoadingMap, actionName, actionType, isAsync) => {
+      const setState: SetStateFunc<S, A> = (newStateIn, _newLoadingMap, _actionName, _actionType, _isAsync) => {
         if (newStateIn != null) {
           newStateRef.current = newStateIn;
         }
       };
 
-      this.onPropsChangeImpl(newStateRef, newPropsRef, derivedStateRef, actionsRef, setState, true);
+      this.onPropsChangeImpl(newStateRef, newPropsRef, derivedStateRef, actionsRef as any, setState, true);
 
       if (options?.onMount) {
         options.onMount(buildOnMountInvocationContext(newStateRef, derivedStateRef, newPropsRef, actionsRef as any));
@@ -427,13 +442,11 @@ export function createMockStoreAction<S, A extends DecoratedActions, F extends (
       computeDerivedValues(newStateRef, propsRef, derivedStateRef, options);
 
       // create mock action to test side effects
-      const actionsRef = getActionsRef(actions, mockActions);
+      const actionsRef = getActionsRef(actions as any, mockActions);
       const loadingMapRef = createRef<InternalLoadingMap<A>>({});
       const errorMapRef = createRef<ErrorParallelMap<A>>({});
 
-      const setState: SetStateFunc<S, A, P> = (
-        newStateIn /* newLoadingMap, actionName, actionType, isAsync, ctx */
-      ) => {
+      const setState: SetStateFunc<S, A> = (newStateIn /* newLoadingMap, actionName, actionType, isAsync, ctx */) => {
         if (newStateIn != null) {
           newStateRef.current = newStateIn;
         }

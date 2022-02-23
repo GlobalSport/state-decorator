@@ -7,7 +7,26 @@ module.exports = {
   testRegex: '/tests/.*/*.test.tsx?$',
   testPathIgnorePatterns: ['/.history/', '/node_modules/', '/jest/'],
   transform: {
-    '.(ts|tsx|js)': 'babel-jest',
+    '.(ts|tsx|js)': [
+      '@swc/jest',
+      {
+        sourceMaps: true,
+        jsc: {
+          parser: {
+            tsx: true,
+            syntax: 'typescript',
+          },
+          transform: {
+            react: {
+              importSource: 'react',
+              runtime: 'automatic',
+              throwIfNamespace: true,
+              useBuiltins: true,
+            },
+          },
+        },
+      },
+    ],
   },
   testEnvironment: 'jsdom',
 };

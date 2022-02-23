@@ -1,14 +1,18 @@
-/*
- * Copyright 2019 Globalsport SAS
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- */
+/*! *****************************************************************************
+Copyright (c) GlobalSport SAS.
 
-import { ErrorMap, ErrorParallelMap } from '.';
+Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
+LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
+OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+PERFORMANCE OF THIS SOFTWARE.
+***************************************************************************** */
+
 import shallow from './shallow';
 import {
   AsyncAction,
@@ -38,9 +42,11 @@ import {
   ContextWithDerived,
   ContextDerivedStateState,
   PromiseIdErrorMap,
+  ErrorMap,
+  ErrorParallelMap,
 } from './types';
 
-export type SetStateFunc<S, A, P> = (
+export type SetStateFunc<S, A> = (
   newState: S,
   newLoadingMap: InternalLoadingMap<A>,
   actionName: keyof A | 'onPropsChange',
@@ -89,7 +95,7 @@ export type AsyncActionExecContext<S, DS, F extends (...args: any[]) => any, A e
   actionsRef: Ref<A>;
   initializedRef: Ref<boolean>;
   options: StoreOptions<S, A, P, any>;
-  setState: SetStateFunc<S, A, P>;
+  setState: SetStateFunc<S, A>;
 };
 
 /** @internal */
@@ -610,7 +616,7 @@ export function decorateSimpleSyncAction<S, DS, F extends (...args: any[]) => an
   derivedStateRef: Ref<DerivedState<DS>>,
   propsRef: Ref<P>,
   initializedRef: Ref<boolean>,
-  setState: SetStateFunc<S, A, P>
+  setState: SetStateFunc<S, A>
 ) {
   return (...args: Parameters<F>) => {
     // store was destroyed
@@ -635,7 +641,7 @@ function executeSyncActionImpl<S, DS, F extends (...args: any[]) => any, A exten
   actionsRef: Ref<A>,
   timeoutMap: Ref<TimeoutMap<A>>,
   options: StoreOptions<S, A, P, any>,
-  setState: SetStateFunc<S, A, P>,
+  setState: SetStateFunc<S, A>,
   args: Parameters<F>
 ) {
   const ctx = buildEffectsInvocationContext(stateRef, derivedStateRef, propsRef, args, undefined);
@@ -679,7 +685,7 @@ export function decorateSyncAction<S, DS, F extends (...args: any[]) => any, A e
   initializedRef: Ref<boolean>,
   timeoutMap: Ref<TimeoutMap<A>>,
   options: StoreOptions<S, A, P, any>,
-  setState: SetStateFunc<S, A, P>
+  setState: SetStateFunc<S, A>
 ) {
   return (...args: Parameters<F>) => {
     // store was destroyed
@@ -1187,7 +1193,7 @@ export function onPropChange<S, P, A, DS>(
   oldProps: P,
   actionsRef: Ref<A>,
   options: StoreOptions<S, A, P, DS>,
-  setState: SetStateFunc<S, A, P>,
+  setState: SetStateFunc<S, A>,
   isInit: boolean
 ) {
   const hasDerivedState = options?.derivedState != null;
