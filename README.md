@@ -17,6 +17,14 @@ The StateDecorator is a set of Reacts hook that manages a complex component stat
 - Improve code conciseness (no boiler plate code)
 - Strongly typed (Typescript)
 
+# V7: Partial state and new hooks
+
+- All effects can now return a partial state that will be merged with current state.
+- More documentation on global and local store use cases.
+- **useLocalStore** and **useStore** now have a parameter to specify if the React component must re-rerender after a state change.
+- New **useStoreContextSlice** hook was added to get a slice of a store in a context.
+- Removed useBindStore hook.
+
 # 🏎️ V6: The Store
 
 - The v6 is the merge of all the state decorator features and an architecture freely inspired from [zustand](https://github.com/pmndrs/zustand) (kudos to them).
