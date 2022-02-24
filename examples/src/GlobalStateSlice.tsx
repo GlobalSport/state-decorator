@@ -33,11 +33,11 @@ function getTimeoutPromise<C>(timeout: number, result: C = null): Promise<C> {
 const actionsImpl: StoreActions<State, Actions, {}> = {
   setValue1: {
     getPromise: ({ args: [v] }) => getTimeoutPromise(500, v),
-    effects: ({ s, res }) => ({ ...s, value1: res }),
+    effects: ({ s, res }) => ({ value1: res }),
   },
   setValue2: {
     getPromise: ({ args: [v] }) => getTimeoutPromise(1000, v),
-    effects: ({ s, res }) => ({ ...s, value2: res }),
+    effects: ({ s, res }) => ({ value2: res }),
   },
 };
 

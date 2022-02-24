@@ -42,11 +42,11 @@ describe('middlewares', () => {
   };
 
   const actions: StoreActions<State, Actions, Props> = {
-    setSimpleSync: ({ s, args: [v] }) => ({ ...s, propSimpleSync: v }),
-    setSync: { effects: ({ s, args: [v] }) => ({ ...s, propSync: v }) },
+    setSimpleSync: ({ s, args: [v] }) => ({ propSimpleSync: v }),
+    setSync: { effects: ({ s, args: [v] }) => ({ propSync: v }) },
     setAsync: {
       getPromise: ({ args: [v] }) => Promise.resolve(v),
-      effects: ({ s, res }) => ({ ...s, propAsync: res }),
+      effects: ({ s, res }) => ({ propAsync: res }),
     },
     setAsyncParallel: {
       conflictPolicy: ConflictPolicy.PARALLEL,
@@ -54,38 +54,34 @@ describe('middlewares', () => {
       getPromise: ({ args: [v, , willFail, timeout], promiseId }) =>
         willFail ? getFailedTimeoutPromise(timeout, new Error('error'), promiseId) : getTimeoutPromise(timeout, v),
       optimisticEffects: ({ s, args: [v], promiseId }) => ({
-        ...s,
         propAsyncParallel: {
           ...s.propAsyncParallel,
           [promiseId]: v,
         },
       }),
       errorEffects: ({ s, promiseId }) => ({
-        ...s,
         propAsyncParallel: { ...s.propAsyncParallel, [promiseId]: 'error' },
       }),
     },
     setOptimisticSuccess: {
       getPromise: ({ args: [v] }) => Promise.resolve(v),
       optimisticEffects: ({ s, args: [v] }) => ({
-        ...s,
         propOptimistic: v,
       }),
     },
     setOptimisticFail: {
       getPromise: ({ args: [v], promiseId }) => getFailedTimeoutPromise(50, new Error(v), promiseId),
       optimisticEffects: ({ s, args: [v] }) => ({
-        ...s,
         propOptimistic: v,
       }),
-      errorEffects: ({ s, err }) => ({ ...s, propError: err.message }),
+      errorEffects: ({ s, err }) => ({ propError: err.message }),
     },
   };
 
   const options: StoreOptions<State, Actions, Props, any> = {
     onPropsChange: {
       getDeps: (p) => [p.propIn],
-      effects: ({ s, p }) => ({ ...s, propProps: p.propIn }),
+      effects: ({ s, p }) => ({ propProps: p.propIn }),
     },
   };
 

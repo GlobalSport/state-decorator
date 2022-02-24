@@ -81,13 +81,12 @@ export const getInitialState = (): State => ({
 
 export const userAppActions: StoreActions<State, Actions, Props> = {
   // synchronous action (simple form)
-  selectUser: ({ state, args: [id] }) => ({ ...state, selectedUserId: id }),
+  selectUser: ({ args: [id] }) => ({ selectedUserId: id }),
 
   // a synchronous action with side effects
   selectAndLoadUser: {
-    // same as simple form, using aliases (use short context alias 's' instead of 'state')
     // effects contain only immutable state changes
-    effects: ({ s, args: [id] }) => ({ ...s, selectedUserId: id }),
+    effects: ({ args: [id] }) => ({ selectedUserId: id }),
     // side effects (ie. other effects than state changes), using "actions" alias
     sideEffects: ({ a }) => {
       a.loadUser();
@@ -99,9 +98,9 @@ export const userAppActions: StoreActions<State, Actions, Props> = {
     // promise provider, can use action context (ctx) to get current state, args, props etc.
     getPromise: (ctx) => Promise.resolve({ firstName: 'John', lastName: 'Doe' }),
     // state changes
-    effects: ({ s, res }) => ({ ...s, user: res }),
+    effects: ({ res }) => ({ user: res }),
     // state changes if error
-    errorEffects: ({ s, error }) => ({ ...s, user: null }),
+    errorEffects: ({ error }) => ({ user: null }),
     // side effects here
     sideEffects: ({ res, actions }) => {},
     // side effects if error
@@ -190,14 +189,14 @@ The StateDecorator is taking a list of actions and decorate them to inject state
 ## Short form
 
 ```typescript
-action: (ctx) => ctx.state, // state changes
+action: (ctx) => ctx.state, // changes to be merged to current state
 ```
 
 Example:
 
 ```typescript
 const actions: StoreActions<State, Actions> = {
-  setText: ({ s, args: [newText] }) => ({ ...s, text: newText }),
+  setText: ({ args: [newText] }) => ({ text: newText }),
 };
 ```
 
@@ -222,7 +221,7 @@ Example:
 ```typescript
 const actions: StoreActions<State, Actions> = {
   setText: {
-    effects: ({ s, args: [newText] }) => ({ ...s, text: newText }),
+    effects: ({ args: [newText] }) => ({ text: newText }),
     // use either debounceTimeout or debounceSideEffectsTimeout
     // debounceTimeout: 5000,
     debounceSideEffectsTimeout: 5000,
@@ -272,7 +271,7 @@ Example:
 const actions: StoreActions<State, Actions> = {
   loadList: {
     getPromise: () => fetch('https://myapi/myservices').then((res) => (res.ok ? res.json() : Promise.reject())),
-    effects: ({ s, res }) => ({ ...s, list: res }),
+    effects: ({ res }) => ({ list: res }),
     sideEffects: ({ a }) => {
       a.otherAction();
     },
@@ -395,7 +394,7 @@ If some actions need to be triggered, set **errorSideEffects**.
 const actions: StoreActions<State, Actions> = {
   loadList: {
     getPromise: () => new Promise((_, reject) => setTimeout(reject, 500, new Error('Too bad'))),
-    errorEffects: ({ state, error }) => ({ ...state, error: error.message, list: [] }),
+    errorEffects: ({ error }) => ({ error: error.message, list: [] }),
     getErrorMessage: ({ err }) => err.message,
     errorSideEffects: ({ error }) => {
       Logger.log(error);
@@ -519,8 +518,8 @@ Example:
 const actions: StoreActions<State, Actions> = {
   deleteItem: {
     getPromise: ([id]) => new Promise((resolve) => setTimeout(resolve, 500)),
-    optimisticEffects: (state, args) => ({ ...state, list: list.filter((item) => item.id === args[0]) }),
-    errorEffects: (state, error: Error) => ({ ...state, error: error.message }),
+    optimisticEffects: ({ args: [id] }) => ({ list: list.filter((item) => item.id === id) }),
+    errorEffects: ({err} => ({ err: error.message }),
   },
 };
 ```
@@ -556,9 +555,9 @@ export const actionsAbort: StoreActions<State, Actions, Props> = {
           reject(new DOMException('Aborted', 'AbortError'));
         });
       }),
-    errorEffects: ({s, err}) => (err.name === 'AbortError' ? { ...s, isAborted: true } : { ...s, isError: true }),
-    effects: ({s}) => ({ ...s, isSuccess: true }),
-    errorSideEffects: ({s, err}) => {
+    errorEffects: ({ err}) => (err.name === 'AbortError' ? { isAborted: true } : { isError: true }),
+    effects: () => ({ isSuccess: true }),
+    errorSideEffects: ({ err }) => {
       if (e.name === 'AbortError') {
         console.log('AbortError side effect');
       } else {
@@ -688,7 +687,7 @@ const store = createStore(getInitialState, actionsImpl, {
     // list of depedencies that should trigger effects & side effects if changed
     getDeps: (p) => [p.id],
     // state changes, indices contains the indices of dependencies that have changed
-    effects: ({ state, props, indices, isInit }) => ({ ...state, selectedId: props.id }),
+    effects: ({ props, indices, isInit }) => ({ selectedId: props.id }),
     // other changes (use short aliases)
     sideEffects: ({ p, a, indices, isInit }) => {
       a.loadItem(p.id);
@@ -724,7 +723,7 @@ const store = createStore(getInitialState, actionsImpl, {
     },
     {
       getDeps: (p) => [p.otherProp],
-      effects: ({ state, props, indices }) => ({ ...state, otherProp: props.otherProp }),
+      effects: ({ props, indices }) => ({ otherProp: props.otherProp }),
       sideEffects: ({ p, a }) => {
         a.otherSideEffect(p.otherProp);
       },
@@ -747,7 +746,7 @@ const store = createStore(getInitialState, actionsImpl, {
   onPropsChange: [
     {
       getDeps: (p) => [p.userId],
-      effects: ({ s, p }) => ({ ...s, userId: p.userId }),
+      effects: ({ p }) => ({ userId: p.userId }),
       sideEffects: ({ p, a }) => {
         a.loadUser(p.userId);
       },
@@ -761,7 +760,7 @@ const store = createStore(getInitialState, actionsImpl, {
   onPropsChange: [
     {
       getDeps: (p) => [p.userId],
-      effects: ({ s, p, isInit }) => (isInit ? null : { ...s, userId: p.userId }),
+      effects: ({ p, isInit }) => (isInit ? null : { userId: p.userId }),
       sideEffects: ({ p, a }) => {
         a.loadUser(p.userId);
       },

@@ -644,6 +644,10 @@ function notInitWarning<A>(actionName: keyof A) {
   }
 }
 
+function mergeState<S>(stateRef: Ref<S>, newState: Partial<S>): S {
+  return newState == null ? null : { ...stateRef.current, ...newState };
+}
+
 /** @internal */
 export function decorateSimpleSyncAction<S, DS, F extends (...args: any[]) => any, A extends DecoratedActions, P>(
   actionName: keyof A,
@@ -662,7 +666,7 @@ export function decorateSimpleSyncAction<S, DS, F extends (...args: any[]) => an
     }
 
     const ctx = buildInvocationContext(stateRef, derivedStateRef, propsRef, args);
-    const newState = action(ctx);
+    const newState = mergeState(stateRef, action(ctx));
     setState(newState, null, actionName, 'effects', false, ctx, false);
   };
 }
@@ -685,7 +689,7 @@ function executeSyncActionImpl<S, DS, F extends (...args: any[]) => any, A exten
 
   let actionDropped = false;
   if (action.effects != null) {
-    const newState: S = action.effects(ctx);
+    const newState: S = mergeState(stateRef, action.effects(ctx));
     if (newState === null) {
       actionDropped = true;
     } else {
@@ -809,7 +813,7 @@ function processPromiseSuccess<S, DS, F extends (...args: any[]) => any, A exten
 
   if (action.effects) {
     try {
-      newState = action.effects(ctx);
+      newState = mergeState(stateRef, action.effects(ctx));
     } catch (e) {
       return Promise.reject(new EffectError(e));
     }
@@ -886,7 +890,7 @@ function processPromiseFailed<S, DS, F extends (...args: any[]) => any, A extend
 
   if (action.errorEffects) {
     try {
-      newState = action.errorEffects(ctx);
+      newState = mergeState(stateRef, action.errorEffects(ctx));
     } catch (e) {
       error = new EffectError(e, err);
     }
@@ -1007,7 +1011,7 @@ export function decorateAsyncAction<S, DS, F extends (...args: any[]) => any, A 
     const ctx = buildInvocationContext(stateRef, derivedStateRef, propsRef, args, promiseId);
     if (action.preEffects) {
       try {
-        newState = action.preEffects(ctx);
+        newState = mergeState(stateRef, action.preEffects(ctx));
       } catch (error) {
         globalConfig.asyncErrorHandler(
           new EffectError(error),
@@ -1323,7 +1327,7 @@ export function onPropChange<S, P, A, DS>(
 
       if (propChanged) {
         const ctx = buildOnPropChangeEffects(newStateRef, derivedStateRef, propsRef, indices, index, isInit);
-        const newState = propsChange.effects?.(ctx) ?? null;
+        const newState = mergeState(stateRef, propsChange.effects?.(ctx));
 
         if (newState != null) {
           stateChanged = true;

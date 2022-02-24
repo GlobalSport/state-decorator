@@ -70,7 +70,7 @@ const splitList = (items: TodoItem[]) => ({
 // Actions implementation
 
 export const todoActions: StoreActions<State, Actions> = {
-  onSetNewTitle: ({ s, args: [newTitle] }) => ({ ...s, newTitle }),
+  onSetNewTitle: ({ args: [newTitle] }) => ({ newTitle }),
   onCreate: {
     effects: ({ s }) => {
       const newTodo: TodoItem = {
@@ -80,7 +80,6 @@ export const todoActions: StoreActions<State, Actions> = {
       };
 
       return {
-        ...s,
         idCount: s.idCount + 1,
         todoMap: {
           ...s.todoMap,
@@ -96,7 +95,6 @@ export const todoActions: StoreActions<State, Actions> = {
 
   onEdit: {
     effects: ({ s, args: [id, title] }) => ({
-      ...s,
       todoMap: {
         ...s.todoMap,
         [id]: {
@@ -112,7 +110,6 @@ export const todoActions: StoreActions<State, Actions> = {
 
   onDelete: {
     effects: ({ s, args: [id] }) => ({
-      ...s,
       todoMap: Object.keys(s.todoMap).reduce<State['todoMap']>((acc, key) => {
         if (key !== id) {
           acc[key] = s.todoMap[key];
@@ -128,7 +125,6 @@ export const todoActions: StoreActions<State, Actions> = {
 
   onToggle: {
     effects: ({ s, args: [id] }) => ({
-      ...s,
       todoMap: {
         ...s.todoMap,
         [id]: {
@@ -147,7 +143,6 @@ export const todoActions: StoreActions<State, Actions> = {
       const removeSet = new Set(s.todoIds.filter((id) => s.todoMap[id].completed));
 
       return {
-        ...s,
         todoIds: s.todoIds.filter((i) => !removeSet.has(i)),
         todoMap: Object.keys(s.todoMap).reduce<State['todoMap']>((acc, key) => {
           if (!removeSet.has(key)) {
@@ -162,23 +157,21 @@ export const todoActions: StoreActions<State, Actions> = {
     },
   },
 
-  onSetFilter: ({ s, args: [filter] }) => ({
-    ...s,
+  onSetFilter: ({ args: [filter] }) => ({
     filter,
   }),
   loadRemoteList: {
-    preEffects: ({ s }) => ({ ...s, error: false }),
+    preEffects: () => ({ error: false }),
     getPromise: () => Promise.resolve([]),
-    effects: ({ s, res }) => ({
-      ...s,
+    effects: ({ res }) => ({
       ...splitList(res),
     }),
-    errorEffects: ({ s }) => ({ ...s, error: true }),
+    errorEffects: () => ({ error: true }),
   },
   updateRemoteList: {
-    preEffects: ({ s }) => ({ ...s, error: false }),
+    preEffects: () => ({ error: false }),
     getPromise: () => Promise.resolve(),
-    errorEffects: ({ s }) => ({ ...s, error: true }),
+    errorEffects: () => ({ error: true }),
   },
 };
 
@@ -192,7 +185,7 @@ export const todoOptions: StoreOptions<State, Actions, Props, DerivedState> = {
   onPropsChange: [
     {
       getDeps: (p) => [p.initialTodos],
-      effects: ({ s, p }) => ({ ...s, ...(p.initialTodos ? splitList(p.initialTodos) : {}) }),
+      effects: ({ p }) => ({ ...(p.initialTodos ? splitList(p.initialTodos) : {}) }),
       onMount: true,
     },
   ],

@@ -93,7 +93,6 @@ const todoActions: StoreActions<State, Actions> = {
     }),
 
   onSetFilter: ({ s, args: [filter] }) => ({
-    ...s,
     filter,
   }),
 };

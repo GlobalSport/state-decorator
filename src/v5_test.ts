@@ -162,8 +162,9 @@ export function testV6SyncAction<S, F extends (...args: any[]) => any, A, P>(
   test: (action: SynchAction<S, F, P>) => any | Promise<any>
 ) {
   if (isV6SyncAction(action)) {
-    const decoratedAction: SynchAction<S, F, P> = (s, args, p) =>
-      action({
+    const decoratedAction: SynchAction<S, F, P> = (s, args, p) => ({
+      ...s,
+      ...action({
         s,
         args,
         p,
@@ -172,7 +173,8 @@ export function testV6SyncAction<S, F extends (...args: any[]) => any, A, P>(
         state: s,
         props: p,
         promiseId: null,
-      });
+      }),
+    });
 
     test(decoratedAction);
     return Promise.resolve();
@@ -191,8 +193,9 @@ export function testV6AdvancedSyncAction<S, F extends (...args: any[]) => any, A
 ) {
   if (isV6AdvancedAction(actionIn)) {
     const decoratedAction: AdvancedSynchAction<S, F, A, P> = {
-      action: (s, args, p) =>
-        actionIn.effects({
+      action: (s, args, p) => ({
+        ...s,
+        ...actionIn.effects({
           s,
           args,
           p,
@@ -204,6 +207,7 @@ export function testV6AdvancedSyncAction<S, F extends (...args: any[]) => any, A
           result: null,
           promiseId: null,
         }),
+      }),
 
       onActionDone: (s, args, p, a, notifyWarning) => {
         actionIn.sideEffects({
@@ -303,61 +307,73 @@ export function testV6AsyncAction<S, F extends (...args: any[]) => any, A, P>(
 
       reducer: (s, res, args, p) =>
         actionIn.effects
-          ? actionIn.effects({
-              s,
-              args,
-              p,
-              res,
-              ds: null,
-              derived: null,
-              state: s,
-              props: p,
-              result: res,
-              promiseId: null,
-            })
+          ? {
+              ...s,
+              ...actionIn.effects({
+                s,
+                args,
+                p,
+                res,
+                ds: null,
+                derived: null,
+                state: s,
+                props: p,
+                result: res,
+                promiseId: null,
+              }),
+            }
           : null,
 
       preReducer: (s, args, p) =>
         actionIn.preEffects
-          ? actionIn.preEffects({
-              s,
-              args,
-              p,
-              ds: null,
-              derived: null,
-              state: s,
-              props: p,
-              promiseId: null,
-            })
+          ? {
+              ...s,
+              ...actionIn.preEffects({
+                s,
+                args,
+                p,
+                ds: null,
+                derived: null,
+                state: s,
+                props: p,
+                promiseId: null,
+              }),
+            }
           : null,
       optimisticReducer: (s, args, p) =>
         actionIn.optimisticEffects
-          ? actionIn.optimisticEffects({
-              s,
-              args,
-              p,
-              ds: null,
-              derived: null,
-              state: s,
-              props: p,
-              promiseId: actionIn.getPromiseId?.(...args),
-            })
+          ? {
+              ...s,
+              ...actionIn.optimisticEffects({
+                s,
+                args,
+                p,
+                ds: null,
+                derived: null,
+                state: s,
+                props: p,
+                promiseId: actionIn.getPromiseId?.(...args),
+              }),
+            }
           : null,
 
       errorReducer: (s, err, args, p) =>
         actionIn.errorEffects
-          ? actionIn.errorEffects({
-              s,
-              args,
-              p,
-              err,
-              ds: null,
-              derived: null,
-              state: s,
-              props: p,
-              error: err,
-              promiseId: actionIn.getPromiseId?.(...args),
-            })
+          ? {
+              ...s,
+              ...actionIn.errorEffects({
+                s,
+                args,
+                p,
+                err,
+                ds: null,
+                derived: null,
+                state: s,
+                props: p,
+                error: err,
+                promiseId: actionIn.getPromiseId?.(...args),
+              }),
+            }
           : null,
 
       onDone: (s, res, args, p, a, notifyWarning) => {

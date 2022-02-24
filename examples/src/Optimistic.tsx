@@ -33,17 +33,16 @@ export const getInitialState = (): State => ({
 
 export const optimisticActions: StoreActions<State, Actions> = {
   sendAction: {
-    preEffects: ({ s }) => ({ ...s, status: 'running' }),
+    preEffects: ({ s }) => ({ status: 'running' }),
     getPromise: ({ args: [willFail] }) => new Promise((res, rej) => setTimeout(willFail ? rej : res, 5000)),
-    optimisticEffects: ({ s }) => ({ ...s, value: 'Optimistic value' }),
-    errorEffects: ({ s }) => ({ ...s, status: 'errored' }),
+    optimisticEffects: ({ s }) => ({ value: 'Optimistic value' }),
+    errorEffects: ({ s }) => ({ status: 'errored' }),
     effects: ({ s }) => ({
-      ...s,
       value: 'Success value',
       status: 'succeeded',
     }),
   },
-  resetValue: (s) => ({ ...s, value: 'Initial value', status: 'paused' }),
+  resetValue: (s) => ({ value: 'Initial value', status: 'paused' }),
 };
 
 const store = createStore(getInitialState, optimisticActions, { notifyError: () => {} }, [

@@ -17,7 +17,7 @@ describe('onPropsChange', () => {
   };
 
   const actionsImpl: StoreActions<State, Actions, Props> = {
-    setProp1: ({ s }) => ({ ...s, prop1: 'test' }),
+    setProp1: () => ({ prop1: 'test' }),
   };
 
   function getInitialState(p: Props): State {
@@ -30,7 +30,7 @@ describe('onPropsChange', () => {
   const options: StoreOptions<State, Actions, Props> = {
     onPropsChange: {
       getDeps: (p) => [p.input],
-      effects: ({ s, p }) => ({ ...s, prop1: p.input, prop2: 'changed' }),
+      effects: ({ p }) => ({ prop1: p.input, prop2: 'changed' }),
     },
   };
 
@@ -185,7 +185,7 @@ describe('onPropsChange', () => {
     const options: StoreOptions<State, Actions, Props> = {
       onPropsChange: {
         getDeps: (p) => (count++ % 2 ? [p.input] : [false, p.input]),
-        effects: ({ s, p }) => ({ ...s, prop1: p.input, prop2: 'changed' }),
+        effects: ({ p }) => ({ prop1: p.input, prop2: 'changed' }),
       },
     };
 
@@ -246,21 +246,21 @@ describe('onPropsChange', () => {
         onPropsChange: [
           {
             getDeps: (p) => [p.input],
-            effects: ({ s, p }) => ({ ...s, prop1: p.input }),
+            effects: ({ p }) => ({ prop1: p.input }),
             sideEffects: ({ s, indices }) => {
               callback(`${s.prop1}-${s.prop2}`, indices);
             },
           },
           {
             getDeps: (p) => [p.input2],
-            effects: ({ s, p }) => ({ ...s, prop2: p.input2 }),
+            effects: ({ p }) => ({ prop2: p.input2 }),
             sideEffects: ({ s }) => {
               callback2(`${s.prop1}-${s.prop2}`);
             },
           },
           {
             getDeps: (p) => [p.input2, p.input],
-            effects: ({ s }) => ({ ...s, prop1: `${s.prop1}_2`, prop2: `${s.prop2}_2` }),
+            effects: ({ s }) => ({ prop1: `${s.prop1}_2`, prop2: `${s.prop2}_2` }),
             sideEffects: ({ s, indices }) => {
               callback3(`${s.prop1}-${s.prop2}`, indices);
             },
@@ -318,14 +318,14 @@ describe('onPropsChange', () => {
           },
           {
             getDeps: (p) => [p.input2],
-            effects: ({ s, p }) => ({ ...s, prop2: p.input2 }),
+            effects: ({ p }) => ({ prop2: p.input2 }),
             sideEffects: ({ s }) => {
               callback2(`${s.prop1}-${s.prop2}`);
             },
           },
           {
             getDeps: (p) => [p.input, p.input2],
-            effects: ({ s }) => ({ ...s, prop1: `${s.prop1}_2`, prop2: `${s.prop2}_2` }),
+            effects: ({ s }) => ({ prop1: `${s.prop1}_2`, prop2: `${s.prop2}_2` }),
           },
         ],
       };

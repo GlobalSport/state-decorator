@@ -25,10 +25,10 @@ type Actions = {
 };
 
 const actionsImpl: StoreActions<State, Actions, any> = {
-  setProp1: ({ s, args: [p] }) => ({ ...s, prop1: p }),
+  setProp1: ({ args: [p] }) => ({ prop1: p }),
   setAsyncProp1: {
     getPromise: () => getTimeoutPromise(100, 'ok'),
-    effects: ({ s, args: [p] }) => ({ ...s, prop1: p }),
+    effects: ({ args: [p] }) => ({ prop1: p }),
   },
 };
 

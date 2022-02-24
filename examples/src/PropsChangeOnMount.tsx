@@ -36,7 +36,7 @@ export const actions: StoreActions<State, Actions, Props> = {
             });
           })
         : null,
-    effects: ({ s, res: user }) => ({ ...s, user }),
+    effects: ({ s, res: user }) => ({ user }),
   },
 };
 

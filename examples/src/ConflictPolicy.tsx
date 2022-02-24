@@ -40,18 +40,17 @@ function ConflictingPolicy(props: Props) {
   const actionsImpl = useMemo(() => {
     const actionsImpl: StoreActions<State, Actions> = {
       onTextChange: {
-        effects: ({ s }) => ({ ...s, calls: s.calls + 1 }),
+        effects: ({ s }) => ({ calls: s.calls + 1 }),
         sideEffects: ({ args: [text], a }) => a.onSaveText(text),
       },
       onSaveText: {
         conflictPolicy: props.conflictPolicy,
-        preEffects: ({ s }) => ({ ...s, status: 'running' }),
+        preEffects: ({ s }) => ({ status: 'running' }),
         getPromise: ({ args: [text] }) =>
           new Promise((resolve) => {
             window.setTimeout(resolve, 2000, text);
           }),
         effects: ({ s, res: text }) => ({
-          ...s,
           text,
           executions: s.executions + 1,
           status: 'succeeded',

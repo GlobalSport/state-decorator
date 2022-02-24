@@ -42,7 +42,7 @@ export const actionsAbort: StoreActions<State, Actions, Props> = {
         });
       }),
     errorEffects: ({ err }) => (err.name === 'AbortError' ? { status: 'aborted' } : { status: 'errored' }),
-    effects: ({ s }) => ({ ...s, status: 'succeeded' }),
+    effects: ({ s }) => ({ status: 'succeeded' }),
     errorSideEffects: ({ err }) => {
       if (err.name === 'AbortError') {
         console.log('AbortError side effect');
