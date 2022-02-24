@@ -366,11 +366,11 @@ export function optimisticActions<S, A extends DecoratedActions, P>(
           const onPropsChanges = Array.isArray(storeContext.options.onPropsChange)
             ? storeContext.options.onPropsChange
             : [storeContext.options.onPropsChange];
-          state = (onPropsChanges[ctx.index].effects as any)(ctx);
+          state = { ...state, ...(onPropsChanges[ctx.index].effects as any)(ctx) };
         } else if (isSimpleSyncAction(storeContext.actions[action.actionName])) {
-          state = (storeContext.actions[action.actionName] as any)(ctx);
+          state = { ...state, ...(storeContext.actions[action.actionName] as any)(ctx) };
         } else {
-          state = (storeContext.actions[action.actionName] as any)[action.effectType](ctx);
+          state = { ...state, ...(storeContext.actions[action.actionName] as any)[action.effectType](ctx) };
         }
       }
 
@@ -451,11 +451,14 @@ export function optimisticActions<S, A extends DecoratedActions, P>(
             pushActionToHistory(name, 'optimisticEffects', context, state);
             return {
               loading: false,
-              state: action.optimisticEffects({
-                ...(context as any),
-                state,
-                s: state,
-              }),
+              state: {
+                ...state,
+                ...action.optimisticEffects({
+                  ...(context as any),
+                  state,
+                  s: state,
+                }),
+              },
             };
           }
           // The promise was successful

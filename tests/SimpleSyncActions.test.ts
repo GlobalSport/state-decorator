@@ -14,8 +14,8 @@ describe('Sync action', () => {
   };
 
   const actionsImpl: StoreActions<State, Actions, any> = {
-    setProp1: ({ s, args: [p] }) => ({ ...s, prop1: p }),
-    setProp2: ({ s, args: [p] }) => ({ ...s, prop2: p }),
+    setProp1: ({ args: [p] }) => ({ prop1: p }),
+    setProp2: ({ args: [p] }) => ({ prop2: p }),
     setCancelled: () => null,
   };
 

@@ -43,7 +43,6 @@ const actions: StoreActions<State, Actions, Props> = {
     const id = p.generateId();
 
     return {
-      ...s,
       shapeIds: s.shapeIds.concat([id]),
       shapeMap: {
         ...s.shapeMap,
@@ -52,11 +51,9 @@ const actions: StoreActions<State, Actions, Props> = {
     };
   },
   selectShape: ({ s, args: [id] }) => ({
-    ...s,
     selectedId: id,
   }),
   moveShape: ({ s, args: [id, x, y] }) => ({
-    ...s,
     shapeMap: {
       ...s.shapeMap,
       [id]: {
@@ -67,7 +64,6 @@ const actions: StoreActions<State, Actions, Props> = {
     },
   }),
   setShapeColor: ({ s, args: [id, color] }) => ({
-    ...s,
     shapeMap: {
       ...s.shapeMap,
       [id]: {
