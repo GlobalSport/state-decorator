@@ -1,5 +1,5 @@
 import React from 'react';
-import useLocalStore, { StoreActions, ConflictPolicy, AbortActionCallback } from '../../dist';
+import useLocalStore, { StoreActions, ConflictPolicy, AbortActionCallback } from '../../lib/es';
 import { Status } from './types';
 import AbortView from './AbortView';
 export type AbortProps = {};

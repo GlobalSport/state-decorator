@@ -1,9 +1,11 @@
 import React from 'react';
 import ConflictPolicies from './ConflictPolicies';
-import Slice from './Slice';
+import Slice from './GlobalStateSlice';
+import LocalSlice from './LocalStateSlice';
 import TableApp from './TableApp';
 import TodoApp from './TodoApp';
 import Debounce from './Debounce';
+import Recipes from './Recipes';
 import Optimistic from './Optimistic';
 import Abort from './Abort';
 import ParallelAbort from './ParallelAbort';
@@ -16,6 +18,7 @@ import { useState } from 'react';
 
 import { makeStyles } from '@material-ui/core/styles';
 import PropsChangeOnMount from './PropsChangeOnMount';
+import Typography from '@material-ui/core/Typography';
 
 type TabPanelProps = {
   children?: React.ReactNode;
@@ -76,6 +79,7 @@ export default function App() {
           <Tab label="Debounce" />
           <Tab label="State sharing" />
           <Tab label="Props change onmount" />
+          <Tab label="Recipes" />
         </Tabs>
         <Box flex={1} className={classes.content}>
           <TabPanel tabId={tabId} index={0} classes={classes}>
@@ -85,7 +89,16 @@ export default function App() {
             <TableApp />
           </TabPanel>
           <TabPanel tabId={tabId} index={2} classes={classes}>
-            <Slice />
+            <Box>
+              <Box mb={2}>
+                <Typography variant="body1">Global State</Typography>
+                <Slice />
+              </Box>
+              <Box mb={2}>
+                <Typography variant="body1">Local State</Typography>
+                <LocalSlice />
+              </Box>
+            </Box>
           </TabPanel>
           <TabPanel tabId={tabId} index={3} classes={classes}>
             <ConflictPolicies />
@@ -105,6 +118,9 @@ export default function App() {
           </TabPanel>
           <TabPanel tabId={tabId} index={8} classes={classes}>
             <PropsChangeOnMount />
+          </TabPanel>
+          <TabPanel tabId={tabId} index={9} classes={classes}>
+            <Recipes />
           </TabPanel>
         </Box>
       </Paper>

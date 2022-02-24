@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import useStateDecorator, { StoreActions, ConflictPolicy } from '../../dist';
+import useStateDecorator, { StoreActions, ConflictPolicy } from '../../lib/es';
 import ConflictPolicyView from './ConflictPolicyView';
 import { Status } from './types';
 

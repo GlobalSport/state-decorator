@@ -19,7 +19,8 @@
     "build": "yarn rollup && yarn copy",
     "analyze": "cross-env NODE_ENV=analyze rollup -c rollup.config.js",
     "rollup": "cross-env NODE_ENV=production rollup -c rollup.config.js",
-    "tslint": "tslint -p ./tsconfig.json --fix"
+    "tslint": "tslint -p ./tsconfig.json --fix",
+    "prepare": "husky install"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^17.1.0",
@@ -30,13 +31,12 @@
     "@testing-library/react-hooks": "^5.1.0",
     "@types/jest": "^26.0.0",
     "@types/react": "^16.9.0",
-    "babel-plugin-transform-es2015-modules-commonjs": "^6.26.2",
     "copyfiles": "^2.2.0",
     "cross-env": "^5.2.0",
-    "husky": "^1.0.0-rc.15",
+    "husky": ">=6",
     "jest": "^27.0.0",
     "json": "^9.0.6",
-    "lint-staged": "^7.3.0",
+    "lint-staged": ">=10",
     "prettier": "^2.1.5",
     "react": "^16.9.0",
     "react-dom": "16.9.0",
@@ -60,9 +60,9 @@
   "lint-staged": {
     "src/*.{ts,tsx}": [
       "tslint -p ./tsconfig.json -e 'tests/**' -e 'dist/**'",
-      "prettier --write",
-      "git add"
-    ]
+      "prettier --write"
+    ],
+    "*.{js,css,md}": "prettier --write"
   },
   "keywords": [
     "state",
@@ -70,11 +70,6 @@
     "react",
     "javascript"
   ],
-  "husky": {
-    "hooks": {
-      "pre-commit": "lint-staged"
-    }
-  },
   "dependencies": {
     "fast-deep-equal": "^3.1.3"
   },
