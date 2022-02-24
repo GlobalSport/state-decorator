@@ -13,7 +13,7 @@ OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 PERFORMANCE OF THIS SOFTWARE.
 ***************************************************************************** */
 
-import { useEffect, useLayoutEffect, useMemo, useReducer, useRef } from 'react';
+import { Context, useContext, useEffect, useLayoutEffect, useMemo, useReducer, useRef } from 'react';
 import {
   computeAsyncActionInput,
   createRef,
@@ -620,7 +620,6 @@ type useStoreSlice<S, A extends DecoratedActions, P, DS, SLICE> = (
  * A react hook to get a state slice. Will be refresh if, and only if, one property of the slice has changed
  * @param store The store to listen to.
  * @param slicerFunc A function that returns a state slice
- * @param comparator An optional function to compare if slice property has changed (shallow test by default)
  * @returns The state slice.
  */
 export function useStoreSlice<S, A extends DecoratedActions, P, DS, SLICE>(
@@ -628,12 +627,30 @@ export function useStoreSlice<S, A extends DecoratedActions, P, DS, SLICE>(
   slicerFunc: (ctx: StateListenerContext<S, DS, A>) => SLICE
 ): SLICE;
 
-export function useStoreSlice<S, A extends DecoratedActions, P, DS, K extends keyof StateListenerContext<S, DS, A>>(
+/**
+ * A react hook to get a state slice. Will be refresh if, and only if, one property of the slice has changed
+ * @param store The store to listen to.
+ * @param properties list of properties to extract from store
+ * @returns The state slice.
+ */
+export function useStoreSlice<
+  S,
+  A extends DecoratedActions,
+  P,
+  DS,
+  K extends keyof StateListenerContext<S, DS, A>,
+  KL extends keyof A
+>(
   store: StoreApi<S, A, P, DS>,
-  properties: K[]
-): Pick<StateListenerContext<S, DS, A>, K>;
+  properties: K[],
+  loadingProps?: KL[]
+): Pick<StateListenerContext<S, DS, A>, K> & { loadingMap: LoadingMap<Pick<A, KL>> };
 
-export function useStoreSlice<S, A extends DecoratedActions, P, DS>(store: StoreApi<S, A, P, DS>, funcOrArr: any) {
+export function useStoreSlice<S, A extends DecoratedActions, P, DS>(
+  store: StoreApi<S, A, P, DS>,
+  funcOrArr: any,
+  loadingProps?: any
+) {
   const [, forceRefresh] = useReducer((s) => (s > 100 ? 0 : s + 1), 0);
 
   const slicerFunc = useMemo(
@@ -641,19 +658,22 @@ export function useStoreSlice<S, A extends DecoratedActions, P, DS>(store: Store
     [funcOrArr]
   );
 
+  const loadingMapSlicer = useMemo(() => {
+    return (ctx: StateListenerContext<S, DS, A>) =>
+      loadingProps != null && loadingProps.length > 0 ? pick(ctx.loadingMap, loadingProps) : null;
+  }, [loadingProps]);
+
   const sliceRef = useRef<any>(null);
+  const loadingMapRef = useRef<LoadingMap<A>>(null);
+
   if (sliceRef.current === null) {
-    const s = store.state;
-    sliceRef.current = slicerFunc({
-      ...s,
+    const ctx = {
+      ...store.state,
       ...store.actions,
-      actions: store.actions,
-      loading: store.loading,
-      isLoading: store.isLoading,
-      abortAction: store.abortAction,
-      loadingMap: store.loadingMap,
-      errorMap: store.errorMap,
-    });
+      ...pick(store, ['actions', 'loading', 'isLoading', 'abortAction', 'loadingMap', 'errorMap']),
+    };
+    sliceRef.current = slicerFunc(ctx);
+    loadingMapRef.current = loadingMapSlicer(ctx);
   }
 
   useLayoutEffect(() => {
@@ -661,12 +681,14 @@ export function useStoreSlice<S, A extends DecoratedActions, P, DS>(store: Store
       let hasChanged = false;
 
       const slice = slicerFunc(ctx);
+      const loadingSlice = loadingMapSlicer(ctx);
       const prevSlice = sliceRef.current;
       const compare = globalConfig.comparator;
 
-      hasChanged = prevSlice == null || !compare(slice, prevSlice);
+      hasChanged = prevSlice == null || !compare(slice, prevSlice) || !compare(loadingSlice, loadingMapRef.current);
 
       sliceRef.current = slice;
+      loadingMapRef.current = loadingSlice;
 
       if (hasChanged) {
         forceRefresh();
@@ -676,80 +698,98 @@ export function useStoreSlice<S, A extends DecoratedActions, P, DS>(store: Store
     return unregister;
   }, []);
 
-  return sliceRef.current;
+  const slice = sliceRef.current;
+  const loadingSlice = loadingMapRef.current;
+
+  return loadingSlice == null ? slice : { ...slice, loadingMap: loadingSlice };
+}
+
+/**
+ * A react hook to get a state slice from a store context.
+ * The component be refreshed if, and only if, one property of the slice has changed.
+ * @param store The store to listen to.
+ * @param slicerFunc A function that returns a state slice
+ * @returns The state slice.
+ */
+export function useStoreContextSlice<S, A extends DecoratedActions, P, DS, SLICE>(
+  storeContext: Context<StoreApi<S, A, P, DS>>,
+  slicerFunc: (ctx: StateListenerContext<S, DS, A>) => SLICE
+): SLICE;
+
+/**
+ * A react hook to get a state slice from a store context.
+ * The component will be refreshed if, and only if, one property of the slice has changed.
+ * @param store The store to listen to.
+ * @param properties list of properties to extract from store
+ * @param loadingFlags list of action names to extract their loading state from store (available in loadingMap).
+ * @returns The state slice.
+ */
+export function useStoreContextSlice<
+  S,
+  A extends DecoratedActions,
+  P,
+  DS,
+  K extends keyof StateListenerContext<S, DS, A>,
+  KL extends keyof A
+>(
+  storeContext: Context<StoreApi<S, A, P, DS>>,
+  properties: K[],
+  loadingProps?: KL[]
+): Pick<StateListenerContext<S, DS, A>, K> & { loadingMap: LoadingMap<Pick<A, KL>> };
+
+export function useStoreContextSlice<S, A extends DecoratedActions, P, DS>(
+  storeContext: Context<StoreApi<S, A, P, DS>>,
+  funcOrArr: any,
+  loadingProps?: any
+) {
+  const store = useContext(storeContext);
+  return useStoreSlice(store, funcOrArr, loadingProps);
 }
 
 /**
  * Binds the store to this component.
- * Store will be destroyed when component is unmouted.
+ * Store will NOT be destroyed when component is unmouted.
  * Props passed to actions will come from this components.
  * If store is configured to react of props changes, it will used passed props.
- * A store must be bound to only one React component.
- * This component will be refreshed for every change in the store.
+ * The component will be refreshed for every change in the store.
  *
  * @param store The store to listen to.
  * @param props The parent component props
- * @returns The state, actions and isLoading function.
+ * @param refreshOnUpdate Whether refresh the component if store state changes.
+ * @returns The store.
  */
-export function useStore<S, A extends DecoratedActions, P, DS = {}>(store: StoreApi<S, A, P, DS>, props: P = null) {
+export function useStore<S, A extends DecoratedActions, P, DS = {}>(
+  store: StoreApi<S, A, P, DS>,
+  props: P = null,
+  refreshOnUpdate: boolean = true
+) {
   const [, forceRefresh] = useReducer((s) => (s > 100 ? 0 : s + 1), 0);
 
   const storeRef = useRef(store);
 
   store.setProps(props);
 
-  useLayoutEffect(
-    () =>
+  useLayoutEffect(() => {
+    if (refreshOnUpdate) {
       storeRef.current.addStateListener(() => {
         forceRefresh();
-      }),
-    []
-  );
+      });
+    }
+  }, [refreshOnUpdate]);
 
-  useEffect(() => () => store.destroy(), []);
-
-  return {
-    state: store.state,
-    actions: store.actions,
-    loading: store.loading,
-    isLoading: store.isLoading,
-    abortAction: store.abortAction,
-    loadingMap: store.loadingMap,
-    errorMap: store.errorMap,
-    loadingParallelMap: store.loadingParallelMap,
-    errorParallelMap: store.errorParallelMap,
-  };
-}
-
-/**
- * Binds the store to this component.
- * Store will be destroyed when component is unmouted.
- * Props passed to actions will come from this components.
- * If store is configured to react of props changes, it will used passed props.
- * A store must be bound to only one React component.
- *
- * This component will NOT be refreshed for any change in the store.
- *
- * @param store The store to listen to.
- * @param props The parent component props
- */
-export function useBindStore<S, A extends DecoratedActions, P, DS = {}>(store: StoreApi<S, A, P, DS>, props: P = null) {
-  // access to store in debugger
-  useRef(store);
-
-  store.setProps(props);
-  useEffect(() => {
-    return () => store.destroy();
-  }, []);
   return store;
 }
 
 /**
  * Creates and manages a local store.
+ * The component will be refreshed for every change in the store.
+ * Store will NOT be destroyed when component is unmouted.
+ *
  * @param getInitialState Function to compute initial state from props.
  * @param actionImpl Actions implementation.
  * @param props Owner component props to update state or react on prop changes
  * @param options The store options.
+ * @param refreshOnUpdate Whether refresh the component if store state changes.
  * @returns The state, actions and isLoading function.
  */
 export function useLocalStore<S, A extends DecoratedActions, P, DS = {}>(
@@ -757,14 +797,22 @@ export function useLocalStore<S, A extends DecoratedActions, P, DS = {}>(
   actionImpl: StoreActions<S, A, P, DS>,
   props?: P,
   options?: StoreOptions<S, A, P, DS>,
-  middlewares?: MiddlewareFactory<S, A, P>[]
+  middlewares?: MiddlewareFactory<S, A, P>[],
+  refreshOnUpdate: boolean = true
 ) {
   const storeRef = useRef<StoreApi<S, A, P, DS>>();
   if (storeRef.current == null) {
     storeRef.current = createStore(getInitialState, actionImpl, options, middlewares);
   }
 
-  return useStore(storeRef.current, props);
+  useEffect(
+    () => () => {
+      storeRef.current?.destroy();
+    },
+    []
+  );
+
+  return useStore(storeRef.current, props, refreshOnUpdate);
 }
 
 export default useLocalStore;

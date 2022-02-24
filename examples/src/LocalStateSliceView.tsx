@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useContext } from 'react';
 
-import { slice, useStoreSlice } from '../../src';
+import { useStoreContextSlice, useStoreSlice } from '../../lib/es';
 
 import FlashingBox from './FlashingBox';
-import { store } from './Slice';
+import { StoreContextProvider, StoreContext } from './LocalStateSlice';
 
 import Box from '@material-ui/core/Box';
 import Button from '@material-ui/core/Button';
@@ -16,7 +16,7 @@ import { makeStyles } from '@material-ui/core/styles';
 function Buttons() {
   const styles = useStyles();
 
-  const a = useStoreSlice(store, ['setValue1', 'setValue2']);
+  const a = useStoreContextSlice(StoreContext, ['setValue1', 'setValue2']);
 
   return (
     <FlashingBox>
@@ -59,16 +59,13 @@ function Value(p: ValueProps) {
 }
 
 function Value1() {
-  const { value, isLoading } = useStoreSlice(store, (s) => ({
-    value: s.value1,
-    isLoading: s.isLoading('setValue1'),
-  }));
+  const { value1, loadingMap } = useStoreContextSlice(StoreContext, ['value1'], ['setValue1']);
 
-  return <Value title="Value 1" value={value} isLoading={isLoading} />;
+  return <Value title="Value 1" value={value1} isLoading={loadingMap.setValue1} />;
 }
 
 function Value2() {
-  const { value, isLoading } = useStoreSlice(store, (s) => ({
+  const { value, isLoading } = useStoreContextSlice(StoreContext, (s) => ({
     value: s.value2,
     isLoading: s.isLoading('setValue2'),
   }));
@@ -76,15 +73,10 @@ function Value2() {
   return <Value title="Value 2" value={value} isLoading={isLoading} />;
 }
 
-function SliceView() {
+function Container() {
   return (
     <FlashingBox>
-      <Box>
-        <Typography variant="h6">Slices</Typography>
-        <Typography variant="caption">
-          Each component is using only a slice of the state and is refreshed only if slice changed (flashing when is
-          rendered)
-        </Typography>
+      <StoreContextProvider>
         <Box mt={1}>
           <Buttons />
           <Grid container spacing={1}>
@@ -96,7 +88,23 @@ function SliceView() {
             </Grid>
           </Grid>
         </Box>
+      </StoreContextProvider>
+    </FlashingBox>
+  );
+}
+
+function SliceView() {
+  return (
+    <FlashingBox>
+      <Box>
+        <Typography variant="h6">Slices</Typography>
+        <Typography variant="caption">
+          Each component is using only a slice of the state and is refreshed only if slice changed (flashing when is
+          rendered)
+        </Typography>
       </Box>
+      <Container />
+      <Container />
     </FlashingBox>
   );
 }

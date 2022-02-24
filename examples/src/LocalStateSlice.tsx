@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { createContext } from 'react';
 
-import { useBindStore, StoreActions, createStore, useStoreSlice } from '../../src/';
-import { devtools } from '../../src/middlewares';
-import SliceView from './SliceView';
+import { StoreActions, useLocalStore, StoreApi } from '../../lib/es';
+import FlashingBox from './FlashingBox';
+import SliceView from './LocalStateSliceView';
 
 // Types
 export type State = {
@@ -41,12 +41,21 @@ const actionsImpl: StoreActions<State, Actions, {}> = {
   },
 };
 
-export const store = createStore(getInitialState, actionsImpl, { name: 'Slice store' }, [devtools()]);
+type StoreContextProps = StoreApi<State, Actions, any>;
+
+export const StoreContext = createContext<StoreContextProps>(null);
+
+export function StoreContextProvider(p: { children: any }) {
+  const store = useLocalStore(getInitialState, actionsImpl, null, {}, [], false);
+  return <StoreContext.Provider value={store}>{p.children}</StoreContext.Provider>;
+}
 
 function Slice() {
-  useBindStore(store);
-
-  return <SliceView />;
+  return (
+    <FlashingBox>
+      <SliceView />
+    </FlashingBox>
+  );
 }
 
 export default Slice;
