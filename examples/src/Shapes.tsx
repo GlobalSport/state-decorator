@@ -2,8 +2,8 @@ import React, { Fragment, memo } from 'react';
 import { useRef } from 'react';
 import { useEffect } from 'react';
 import { useCallback } from 'react';
-import { createStore, useStore, useStoreSlice, StoreApi, useBindStore, slice } from '../../dist';
-import { StoreActions } from '../../dist/types';
+import { createStore, useStoreSlice, StoreApi } from '../../lib/es';
+import { StoreActions } from '../../lib/es/types';
 import { immerizeActions } from './immerizeActions';
 
 type Shape = {
@@ -27,6 +27,7 @@ type Actions = {
   moveShape: (id: string, x: number, y: number) => void;
   setShapeColor: (id: string, color: string) => void;
 };
+
 type Props = {
   generateId: () => string;
 };
@@ -103,14 +104,13 @@ const store = createStore(getInitialState, actions);
 
 function ShapesApp() {
   console.log('render app');
-  useBindStore(store, { generateId });
 
   return <ShapesAppView />;
 }
 
 // memo nothing to not refresh on state change
 const ShapesAppView = memo(function ShapesAppView() {
-  const { addShape } = useStoreSlice(store, slice('addShape'));
+  const { addShape } = useStoreSlice(store, ['addShape']);
 
   return (
     <div>
@@ -125,7 +125,7 @@ const ShapesAppView = memo(function ShapesAppView() {
 });
 
 function Board() {
-  const { addShape } = useStoreSlice(store, slice('addShape'));
+  const { addShape } = useStoreSlice(store, ['addShape']);
 
   return (
     <div
@@ -138,7 +138,7 @@ function Board() {
 }
 
 function ShapeList() {
-  const { shapeIds: ids } = useStoreSlice(store, slice('shapeIds'));
+  const { shapeIds: ids } = useStoreSlice(store, ['shapeIds']);
 
   return (
     <Fragment>

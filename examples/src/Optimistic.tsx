@@ -1,6 +1,6 @@
 import React from 'react';
-import { createStore, IsLoadingFunc, StoreActions, useStore } from '../../dist';
-import { optimisticActions as optimisticActionsMiddleware } from '../../dist/middlewares';
+import { createStore, IsLoadingFunc, StoreActions, useStore } from '../../lib/es';
+import { optimisticActions as optimisticActionsMiddleware } from '../../lib/es/middlewares';
 
 import OptimisticView from './OptimisticView';
 import { Status } from './types';
