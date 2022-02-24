@@ -24,9 +24,9 @@ describe('Advanced synchronous action', () => {
   };
 
   const actionsImpl: StoreActions<State, Actions, Props> = {
-    setProp1: { effects: ({ s, args: [p] }) => ({ ...s, prop1: p }) },
+    setProp1: { effects: ({ args: [p] }) => ({ prop1: p }) },
     setProp2: {
-      effects: ({ s, args: [p] }) => ({ ...s, prop2: p }),
+      effects: ({ args: [p] }) => ({ prop2: p }),
       sideEffects: ({ s, p }) => {
         p.callback(s);
       },
@@ -37,21 +37,21 @@ describe('Advanced synchronous action', () => {
       },
     },
     setEffectsDebounced: {
-      effects: ({ s, args: [p] }) => ({ ...s, prop2: p }),
+      effects: ({ args: [p] }) => ({ prop2: p }),
       sideEffects: ({ s, p }) => {
         p.callback(s);
       },
       debounceTimeout: 50,
     },
     setSideEffectsDebounced: {
-      effects: ({ s, args: [p] }) => ({ ...s, prop2: p }),
+      effects: ({ args: [p] }) => ({ prop2: p }),
       sideEffects: ({ s, p }) => {
         p.callback(s);
       },
       debounceSideEffectsTimeout: 50,
     },
     setSideEffectsDebounced2: {
-      effects: ({ s, args: [p] }) => ({ ...s, prop2: p }),
+      effects: ({ args: [p] }) => ({ prop2: p }),
       debounceSideEffectsTimeout: 50,
     },
     setCancelled: { effects: () => null, sideEffects: ({ p }) => p.callbackCancelled() },

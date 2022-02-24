@@ -36,7 +36,7 @@ const validate = (v: string) => (v.length > 10 ? 'Greater than 10 characters' : 
 const debounceActions: StoreActions<State, Actions> = {
   // Advanced action with state change and side effects
   onChange: {
-    effects: ({ s, args: [value] }) => ({ ...s, value, calls: s.calls + 1 }),
+    effects: ({ s, args: [value] }) => ({ value, calls: s.calls + 1 }),
     debounceSideEffectsTimeout: 500,
     sideEffects: ({ actions }) => {
       // action side effects
@@ -46,7 +46,6 @@ const debounceActions: StoreActions<State, Actions> = {
 
   // Simple action with only state change
   validate: ({ s }) => ({
-    ...s,
     validationMessage: validate(s.value),
     callsDebounced: s.callsDebounced + 1,
   }),

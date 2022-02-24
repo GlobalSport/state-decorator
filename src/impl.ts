@@ -608,6 +608,10 @@ function notInitWarning<A>(actionName: keyof A) {
   }
 }
 
+function mergeState<S>(stateRef: Ref<S>, newState: Partial<S>): S {
+  return newState == null ? null : { ...stateRef.current, ...newState };
+}
+
 /** @internal */
 export function decorateSimpleSyncAction<S, DS, F extends (...args: any[]) => any, A extends DecoratedActions, P>(
   actionName: keyof A,
@@ -626,7 +630,7 @@ export function decorateSimpleSyncAction<S, DS, F extends (...args: any[]) => an
     }
 
     const ctx = buildInvocationContext(stateRef, derivedStateRef, propsRef, args);
-    const newState = action(ctx);
+    const newState = mergeState(stateRef, action(ctx));
     setState(newState, null, actionName, 'effects', false, ctx, false);
   };
 }
@@ -648,7 +652,7 @@ function executeSyncActionImpl<S, DS, F extends (...args: any[]) => any, A exten
 
   let actionDropped = false;
   if (action.effects != null) {
-    const newState: S = action.effects(ctx);
+    const newState: S = mergeState(stateRef, action.effects(ctx));
     if (newState === null) {
       actionDropped = true;
     } else {
@@ -763,7 +767,7 @@ function processPromiseSuccess<S, DS, F extends (...args: any[]) => any, A exten
   const ctx = buildEffectsInvocationContext(stateRef, derivedStateRef, propsRef, args, promiseResult, promiseId);
 
   if (action.effects) {
-    newState = action.effects(ctx);
+    newState = mergeState(stateRef, action.effects(ctx));
   }
 
   setState(
@@ -832,7 +836,7 @@ function processPromiseFailed<S, DS, F extends (...args: any[]) => any, A extend
   const ctx = buildErrorEffectsInvocationContext(stateRef, derivedStateRef, propsRef, args, error, promiseId);
 
   if (action.errorEffects) {
-    newState = action.errorEffects(ctx);
+    newState = mergeState(stateRef, action.errorEffects(ctx));
   }
 
   // do not trigger a setState by itself because loading state will trigger a set anyway...
@@ -949,7 +953,7 @@ export function decorateAsyncAction<S, DS, F extends (...args: any[]) => any, A 
 
     const ctx = buildInvocationContext(stateRef, derivedStateRef, propsRef, args, promiseId);
     if (action.preEffects) {
-      newState = action.preEffects(ctx);
+      newState = mergeState(stateRef, action.preEffects(ctx));
 
       // apply internal state change for calls to other actions in the getPromise
       if (newState) {
@@ -1254,7 +1258,7 @@ export function onPropChange<S, P, A, DS>(
 
       if (propChanged) {
         const ctx = buildOnPropChangeEffects(newStateRef, derivedStateRef, propsRef, indices, index, isInit);
-        const newState = propsChange.effects?.(ctx) ?? null;
+        const newState = mergeState(stateRef, propsChange.effects?.(ctx));
 
         if (newState != null) {
           stateChanged = true;

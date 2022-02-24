@@ -49,10 +49,10 @@ describe('Async action', () => {
   };
 
   const baseAction: StoreAction<State, Actions['successAction'], Actions, Props> = {
-    preEffects: ({ s }) => ({ ...s, prop1: 'pre' }),
+    preEffects: ({ s }) => ({ prop1: 'pre' }),
     getPromise: () => Promise.resolve('resolved'),
-    effects: ({ s, res: prop1, args: [prop2] }) => ({ ...s, prop1, prop2 }),
-    errorEffects: ({ s, err }) => ({ ...s, error: err.message }),
+    effects: ({ s, res: prop1, args: [prop2] }) => ({ prop1, prop2 }),
+    errorEffects: ({ s, err }) => ({ error: err.message }),
     sideEffects: ({ s, p }) => {
       p.callback('onDone', s);
     },
@@ -808,7 +808,7 @@ describe('Async action', () => {
 
     const actionsImpl: StoreActions<State, Actions> = {
       masterAction: {
-        preEffects: ({ s }) => ({ ...s, value: 'preMaster' }),
+        preEffects: () => ({ value: 'preMaster' }),
         getPromise: ({ s, a }) => {
           expect(s.value).toEqual('preMaster');
           return a.childAction();
@@ -819,7 +819,7 @@ describe('Async action', () => {
         },
       },
       childAction: {
-        preEffects: ({ s }) => ({ ...s, value: 'preChild' }),
+        preEffects: () => ({ value: 'preChild' }),
         getPromise: ({ s }) => {
           expect(s.value).toEqual('preChild');
           return Promise.resolve('');

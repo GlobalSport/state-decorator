@@ -265,7 +265,7 @@ describe('Todo', () => {
   //     onPropsChange: [
   //       {
   //         getDeps: (p) => [p.initialTodos],
-  //         effects: ({ s, p }) => ({ ...s, ...splitList(p.initialTodos) }),
+  //         effects: ({ s, p }) => ({  ...splitList(p.initialTodos) }),
   //         onMount: true,
   //       },
   //     ],

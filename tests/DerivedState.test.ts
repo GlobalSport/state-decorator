@@ -30,19 +30,19 @@ describe('Derived state', () => {
   };
 
   const actionsImpl: StoreActions<State, Actions, any, DerivedState> = {
-    setList: ({ s, args: [list], ds }) => {
+    setList: ({ args: [list], ds }) => {
       expect(ds).toBeDefined();
-      return { ...s, list };
+      return { list };
     },
-    setFilter: ({ s, ds, args: [filter] }) => {
+    setFilter: ({ ds, args: [filter] }) => {
       expect(ds).toBeDefined();
-      return { ...s, filter };
+      return { filter };
     },
-    setOther: ({ s, args: [other] }) => ({ ...s, other }),
+    setOther: ({ args: [other] }) => ({ other }),
     setListSideEffects: {
-      effects: ({ s, args: [list], ds }) => {
+      effects: ({ args: [list], ds }) => {
         expect(ds).toBeDefined();
-        return { ...s, list };
+        return { list };
       },
       sideEffects: ({ ds, p }) => {
         expect(ds).toBeDefined();
@@ -50,9 +50,9 @@ describe('Derived state', () => {
       },
     },
     setListDebouncedSideEffects: {
-      effects: ({ s, args: [list], ds }) => {
+      effects: ({ args: [list], ds }) => {
         expect(ds).toBeDefined();
-        return { ...s, list };
+        return { list };
       },
       debounceSideEffectsTimeout: 10,
       sideEffects: ({ ds, p }) => {
@@ -62,9 +62,9 @@ describe('Derived state', () => {
     },
     setAsyncListSideEffects: {
       getPromise: () => Promise.resolve(),
-      effects: ({ s, args: [list], ds }) => {
+      effects: ({ args: [list], ds }) => {
         expect(ds).toBeDefined();
-        return { ...s, list };
+        return { list };
       },
       sideEffects: ({ ds, p }) => {
         expect(ds).toBeDefined();
@@ -73,9 +73,9 @@ describe('Derived state', () => {
     },
     setAsyncErrorListSideEffects: {
       getPromise: () => Promise.reject(),
-      errorEffects: ({ s, args: [list], ds }) => {
+      errorEffects: ({ args: [list], ds }) => {
         expect(ds).toBeDefined();
-        return { ...s, list };
+        return { list };
       },
       errorSideEffects: ({ ds, p }) => {
         expect(ds).toBeDefined();
@@ -358,7 +358,7 @@ describe('Derived state', () => {
       ...options,
       onPropsChange: {
         getDeps: (p) => [p.filterIn, p.effectProp],
-        effects: ({ s, p }) => ({ ...s, filter: p.filterIn, other: p.effectProp }),
+        effects: ({ p }) => ({ filter: p.filterIn, other: p.effectProp }),
       },
     };
 

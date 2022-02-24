@@ -82,11 +82,11 @@ export type PromiseProvider<S, DS, F extends (...args: any[]) => any, A, P> = (
 /**
  * Simple form of a synchronous action.
  */
-export type SimpleSyncAction<S, F extends (...args: any[]) => any, P, DS, FxRes = S> = (
+export type SimpleSyncAction<S, F extends (...args: any[]) => any, P, DS, FxRes = Partial<S>> = (
   ctx: InvocationContext<S, DS, F, P>
 ) => FxRes | null;
 
-export type SyncAction<S, F extends (...args: any[]) => any, A, P, DS, FxRes = S> = {
+export type SyncAction<S, F extends (...args: any[]) => any, A, P, DS, FxRes = Partial<S>> = {
   /**
    * Function that update the state when the action is called.
    */
@@ -250,7 +250,7 @@ export type Middleware<S, A extends DecoratedActions, P> = {
   destroy: () => void;
 };
 
-export type AsyncActionBase<S, F extends (...args: any[]) => any, A, P, DS, FxRes = S> = {
+export type AsyncActionBase<S, F extends (...args: any[]) => any, A, P, DS, FxRes = Partial<S>> = {
   /**
    * This action can be aborted. An abortSignal will be injected to the <code>promise</code> / <code>promiseGet</code>.
    */
@@ -352,21 +352,21 @@ export type AsyncActionBase<S, F extends (...args: any[]) => any, A, P, DS, FxRe
   isTriggerRetryError?: (e: Error) => boolean;
 };
 
-export type AsyncActionPromise<S, F extends (...args: any[]) => any, A, P, DS = {}, FxRes = S> = AsyncActionBase<
+export type AsyncActionPromise<
   S,
-  F,
+  F extends (...args: any[]) => any,
   A,
   P,
-  DS,
-  FxRes
-> & {
+  DS = {},
+  FxRes = Partial<S>
+> = AsyncActionBase<S, F, A, P, DS, FxRes> & {
   /**
    * The request, returns a promise
    */
   getPromise: PromiseProvider<S, DS, F, A, P>;
 };
 
-export type AsyncActionPromiseGet<S, F extends (...args: any[]) => any, A, P, DS, FxRes = S> = AsyncActionBase<
+export type AsyncActionPromiseGet<S, F extends (...args: any[]) => any, A, P, DS, FxRes = Partial<S>> = AsyncActionBase<
   S,
   F,
   A,
@@ -383,11 +383,11 @@ export type AsyncActionPromiseGet<S, F extends (...args: any[]) => any, A, P, DS
   getGetPromise: PromiseProvider<S, DS, F, A, P>;
 };
 
-export type AsyncAction<S, F extends (...args: any[]) => any, A, P, DS = {}, FxRes = S> =
+export type AsyncAction<S, F extends (...args: any[]) => any, A, P, DS = {}, FxRes = Partial<S>> =
   | AsyncActionPromise<S, F, A, P, DS, FxRes>
   | AsyncActionPromiseGet<S, F, A, P, DS, FxRes>;
 
-export type StoreAction<S, F extends (...args: any[]) => any, A, P, DS = {}, FxRes = S> =
+export type StoreAction<S, F extends (...args: any[]) => any, A, P, DS = {}, FxRes = Partial<S>> =
   | AsyncAction<S, F, A, P, DS, FxRes>
   | SimpleSyncAction<S, F, P, DS, FxRes>
   | SyncAction<S, F, A, P, DS, FxRes>;
@@ -396,7 +396,7 @@ export type StoreAction<S, F extends (...args: any[]) => any, A, P, DS = {}, FxR
  * S: The type of the state
  * A: The type of the actions to pass to the children (used to check keys only).
  */
-export type StoreActions<S, A extends DecoratedActions, P = {}, DS = {}, FxRes = S> = {
+export type StoreActions<S, A extends DecoratedActions, P = {}, DS = {}, FxRes = Partial<S>> = {
   [Prop in keyof A]: StoreAction<S, A[Prop], A, P, DS, FxRes>;
 };
 
@@ -421,7 +421,7 @@ type DerivedStateOption<S, P, DS> = {
 export type OnPropsChangeOptions<S, DS, A, P> = {
   onMount?: boolean;
   getDeps: (p: P) => any[];
-  effects?: (ctx: OnPropsChangeEffectsContext<S, DS, P>) => S;
+  effects?: (ctx: OnPropsChangeEffectsContext<S, DS, P>) => Partial<S>;
   sideEffects?: (ctx: OnPropsChangeSideEffectsContext<S, P, A>) => void;
 };
 

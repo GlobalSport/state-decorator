@@ -47,24 +47,19 @@ type MyProps = {
 
 const myActions: StoreActions<MyState, MyActions, MyProps> = {
   addItem: ({ s, args: [param] }) => ({
-    ...s,
     list: [...s.list, param],
   }),
-  setProp1: ({ s, args: [v] }) => ({
-    ...s,
+  setProp1: ({ args: [v] }) => ({
     prop1: v,
   }),
-  setProp2: ({ s, args: [v] }) => ({
-    ...s,
+  setProp2: ({ args: [v] }) => ({
     prop2: v,
   }),
-  resetProp3: ({ s }) => ({
-    ...s,
+  resetProp3: () => ({
     prop3: '',
   }),
   setProp3: {
-    effects: ({ s, args: [v] }) => ({
-      ...s,
+    effects: ({ args: [v] }) => ({
       prop3: v,
     }),
     sideEffects: ({ a }) => {
@@ -74,7 +69,6 @@ const myActions: StoreActions<MyState, MyActions, MyProps> = {
   },
   setProp3Debounced: {
     effects: ({ s, args: [v] }) => ({
-      ...s,
       prop3: v,
     }),
     sideEffects: ({ a }) => {
@@ -93,7 +87,7 @@ const myActions: StoreActions<MyState, MyActions, MyProps> = {
         setTimeout(resolve, 1000, res);
       });
     },
-    effects: ({ s, res: list }) => ({ ...s, list }),
+    effects: ({ res: list }) => ({ list }),
     sideEffects: ({ s, a }) => {
       a.setProp1(s.list[0]);
     },
@@ -112,7 +106,7 @@ const myActions: StoreActions<MyState, MyActions, MyProps> = {
   },
   loadCancel: {
     getPromise: () => null,
-    effects: ({ s }) => ({ ...s, prop2: 'test' }),
+    effects: () => ({ prop2: 'test' }),
   },
 };
 

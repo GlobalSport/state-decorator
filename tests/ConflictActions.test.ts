@@ -37,8 +37,8 @@ describe('Conflicting actions', () => {
 
   const setValueAction: StoreAction<State, Actions['setValue'], Actions, Props> = {
     getPromise: ({ args: [value] }) => getTimeoutPromise(50, value),
-    effects: ({ s, args: [res] }) => ({ ...s, values: s.values.concat(res) }),
-    errorEffects: ({ s, args: [value] }) => ({ ...s, errors: s.errors.concat(value) }),
+    effects: ({ s, args: [res] }) => ({ values: s.values.concat(res) }),
+    errorEffects: ({ s, args: [value] }) => ({ errors: s.errors.concat(value) }),
     sideEffects: ({ s, p }) => {
       p.callback('onDone', s);
     },
@@ -98,8 +98,8 @@ describe('Conflicting actions', () => {
           }
           return getTimeoutPromise(50, value) as Promise<string>;
         },
-        effects: ({ s, args: [res] }) => ({ ...s, values: s.values.concat(res) }),
-        errorEffects: ({ s, args: [value] }) => ({ ...s, errors: s.errors.concat(value) }),
+        effects: ({ s, args: [res] }) => ({ values: s.values.concat(res) }),
+        errorEffects: ({ s, args: [value] }) => ({ errors: s.errors.concat(value) }),
         sideEffects: ({ s, p }) => {
           p.callback('onDone', s);
         },
