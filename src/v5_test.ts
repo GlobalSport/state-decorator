@@ -162,24 +162,28 @@ export function testV6SyncAction<S, F extends (...args: any[]) => any, A, P>(
   test: (action: SynchAction<S, F, P>) => any | Promise<any>
 ) {
   if (isV6SyncAction(action)) {
-    const decoratedAction: SynchAction<S, F, P> = (s, args, p) => ({
-      ...s,
-      ...action({
+    const decoratedAction: SynchAction<S, F, P> = (s, args, p) =>
+      mergeState(
         s,
-        args,
-        p,
-        ds: null,
-        derived: null,
-        state: s,
-        props: p,
-        promiseId: null,
-      }),
-    });
-
+        action({
+          s,
+          args,
+          p,
+          ds: null,
+          derived: null,
+          state: s,
+          props: p,
+          promiseId: null,
+        })
+      );
     test(decoratedAction);
     return Promise.resolve();
   }
   return Promise.reject(new Error('This action is not a synchronous action'));
+}
+
+function mergeState<S>(s: S, newState: Partial<S>): S {
+  return newState == null ? null : { ...s, ...newState };
 }
 
 /**
@@ -193,22 +197,22 @@ export function testV6AdvancedSyncAction<S, F extends (...args: any[]) => any, A
 ) {
   if (isV6AdvancedAction(actionIn)) {
     const decoratedAction: AdvancedSynchAction<S, F, A, P> = {
-      action: (s, args, p) => ({
-        ...s,
-        ...actionIn.effects({
+      action: (s, args, p) =>
+        mergeState(
           s,
-          args,
-          p,
-          ds: null,
-          derived: null,
-          state: s,
-          props: p,
-          res: null,
-          result: null,
-          promiseId: null,
-        }),
-      }),
-
+          actionIn.effects({
+            s,
+            args,
+            p,
+            ds: null,
+            derived: null,
+            state: s,
+            props: p,
+            res: null,
+            result: null,
+            promiseId: null,
+          })
+        ),
       onActionDone: (s, args, p, a, notifyWarning) => {
         actionIn.sideEffects({
           s,
@@ -307,9 +311,9 @@ export function testV6AsyncAction<S, F extends (...args: any[]) => any, A, P>(
 
       reducer: (s, res, args, p) =>
         actionIn.effects
-          ? {
-              ...s,
-              ...actionIn.effects({
+          ? mergeState(
+              s,
+              actionIn.effects({
                 s,
                 args,
                 p,
@@ -320,15 +324,15 @@ export function testV6AsyncAction<S, F extends (...args: any[]) => any, A, P>(
                 props: p,
                 result: res,
                 promiseId: null,
-              }),
-            }
+              })
+            )
           : null,
 
       preReducer: (s, args, p) =>
         actionIn.preEffects
-          ? {
-              ...s,
-              ...actionIn.preEffects({
+          ? mergeState(
+              s,
+              actionIn.preEffects({
                 s,
                 args,
                 p,
@@ -337,14 +341,14 @@ export function testV6AsyncAction<S, F extends (...args: any[]) => any, A, P>(
                 state: s,
                 props: p,
                 promiseId: null,
-              }),
-            }
+              })
+            )
           : null,
       optimisticReducer: (s, args, p) =>
         actionIn.optimisticEffects
-          ? {
-              ...s,
-              ...actionIn.optimisticEffects({
+          ? mergeState(
+              s,
+              actionIn.optimisticEffects({
                 s,
                 args,
                 p,
@@ -353,15 +357,15 @@ export function testV6AsyncAction<S, F extends (...args: any[]) => any, A, P>(
                 state: s,
                 props: p,
                 promiseId: actionIn.getPromiseId?.(...args),
-              }),
-            }
+              })
+            )
           : null,
 
       errorReducer: (s, err, args, p) =>
         actionIn.errorEffects
-          ? {
-              ...s,
-              ...actionIn.errorEffects({
+          ? mergeState(
+              s,
+              actionIn.errorEffects({
                 s,
                 args,
                 p,
@@ -372,8 +376,8 @@ export function testV6AsyncAction<S, F extends (...args: any[]) => any, A, P>(
                 props: p,
                 error: err,
                 promiseId: actionIn.getPromiseId?.(...args),
-              }),
-            }
+              })
+            )
           : null,
 
       onDone: (s, res, args, p, a, notifyWarning) => {
