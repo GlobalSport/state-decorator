@@ -17,8 +17,10 @@
     "clean": "rimraf ./dist",
     "copy": "copyfiles -f package.json README.md LICENSE lib && json -I -f lib/package.json -e \"this.private=false; this.devDependencies=undefined; this.optionalDependencies=undefined; this.scripts=undefined; this.husky=undefined; this['lint-staged']=undefined; \"",
     "build": "yarn rollup && yarn copy",
+    "build:dev": "yarn rollup:dev && yarn copy",
     "analyze": "cross-env NODE_ENV=analyze rollup -c rollup.config.js",
     "rollup": "cross-env NODE_ENV=production rollup -c rollup.config.js",
+    "rollup:dev": "cross-env NODE_ENV=development rollup -c rollup.config.js",
     "tslint": "tslint -p ./tsconfig.json --fix"
   },
   "devDependencies": {
