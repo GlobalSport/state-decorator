@@ -36,6 +36,7 @@ describe('Async action', () => {
     errorRejectAction: (p: string) => Promise<any>;
     errorNotManaged: (p: string) => Promise<any>;
     errorisErrorManaged: (p: string) => Promise<any>;
+    errorisErrorManagedNoErrorMsg: (p: string) => Promise<any>;
     errorisErrorManagedButReject: (p: string) => Promise<any>;
     cancelAction: (p: string) => Promise<any>;
     cancelActionNoPre: (p: string) => Promise<any>;
@@ -80,7 +81,7 @@ describe('Async action', () => {
     errorActionDefaultErrorMsg: {
       ...baseAction,
       getPromise: () => Promise.reject(new Error('failed!')),
-      // override default getErrorMessage
+      // NOT override default getErrorMessage
       getErrorMessage: null,
       errorEffects: null,
       errorSideEffects: null,
@@ -109,6 +110,13 @@ describe('Async action', () => {
       isErrorManaged: true,
       getPromise: () => Promise.reject(new Error('failed!')),
       getErrorMessage: () => null,
+      errorEffects: null,
+      errorSideEffects: null,
+    },
+    errorisErrorManagedNoErrorMsg: {
+      isErrorManaged: true,
+      getPromise: () => Promise.reject(new Error('failed!')),
+      getErrorMessage: null,
       errorEffects: null,
       errorSideEffects: null,
     },
@@ -456,6 +464,12 @@ describe('Async action', () => {
       asyncErrorHandler,
     });
 
+    const getErrorMessage = () => 'global error';
+
+    setGlobalConfig({
+      getErrorMessage,
+    });
+
     store.actions
       .errorisErrorManaged('test')
       .then(() => {
@@ -474,6 +488,12 @@ describe('Async action', () => {
       callbackError: null,
     });
     const asyncErrorHandler = jest.fn();
+
+    const getErrorMessage = () => 'global error';
+
+    setGlobalConfig({
+      getErrorMessage,
+    });
 
     setGlobalConfig({
       asyncErrorHandler,
@@ -509,6 +529,42 @@ describe('Async action', () => {
       callbackCancel,
     });
 
+    const getErrorMessage = () => 'global error';
+
+    setGlobalConfig({
+      getErrorMessage,
+    });
+
+    store.actions
+      .errorisErrorManagedNoErrorMsg('test')
+      .then(() => {
+        expect(notifySuccess).not.toHaveBeenCalled();
+        expect(notifyError).not.toHaveBeenCalled();
+        done();
+      })
+      .catch(done.fail);
+  });
+
+  it('error & override default getErrorMessage', (done) => {
+    const listener = jest.fn();
+    const callback = jest.fn();
+    const callbackError = jest.fn();
+    const callbackCancel = jest.fn();
+    const notifySuccess = jest.fn();
+    const notifyError = jest.fn();
+
+    const store = createStore(getInitialState, actionsImpl, {
+      notifySuccess,
+      notifyError,
+    });
+
+    store.addStateListener(listener);
+    store.setProps({
+      callback,
+      callbackError,
+      callbackCancel,
+    });
+
     store.actions
       .errorActionGetErrorMsg('test')
       .then(done.fail)
@@ -536,6 +592,12 @@ describe('Async action', () => {
       callback,
       callbackError,
       callbackCancel,
+    });
+
+    const getErrorMessage = () => 'global error';
+
+    setGlobalConfig({
+      getErrorMessage,
     });
 
     store.actions

@@ -10,7 +10,7 @@ module.exports = {
     '.(ts|tsx|js)': [
       '@swc/jest',
       {
-        sourceMaps: true,
+        sourceMaps: 'inline',
         jsc: {
           parser: {
             tsx: true,
