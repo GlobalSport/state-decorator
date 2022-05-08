@@ -202,6 +202,8 @@ export type ErrorSideEffectsInvocationContext<
 > = ErrorEffectsInvocationContext<S, DS, F, P> & InvocationContextActions<A> & WarningNotifyFunc;
 
 export type OnMountInvocationContext<S, A, P> = ContextBase<S, P> & InvocationContextActions<A>;
+export type AbortedActions<A> = Partial<Record<keyof A, string[]>>;
+export type OnUnMountInvocationContext<S, A, P> = ContextBase<S, P> & { abortedActions: AbortedActions<A> };
 
 export type EffectsType = 'preEffects' | 'effects' | 'errorEffects' | 'optimisticEffects' | null;
 
@@ -466,7 +468,7 @@ export type StoreOptions<S, A, P = {}, DS = {}> = {
   /**
    * Callback on store destruction.
    */
-  onUnmount?: (ctx: OnMountInvocationContext<S, A, P>) => Promise<any> | void;
+  onUnmount?: (ctx: OnUnMountInvocationContext<S, A, P>) => Promise<any> | void;
 
   /**
    * Compute derived state

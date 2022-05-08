@@ -39,6 +39,7 @@ import {
   isLoadingImpl,
   ParallelActionError,
   buildErrorMap,
+  buildOnUnMountInvocationContext,
 } from './impl';
 
 import {
@@ -70,6 +71,7 @@ import {
   MiddlewareFactory,
   MiddlewareStoreContext,
   LoadingProps,
+  AbortedActions,
 } from './types';
 
 export {
@@ -315,9 +317,33 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
     }
   }
 
+  function abortActionsOnDestroy() {
+    const abortedActions: AbortedActions<A> = Object.keys(actionsImpl).reduce((acc, actionName) => {
+      const action = actionsImpl[actionName];
+      if (isAsyncAction(action) && action.abortable) {
+        const map = loadingMapRef.current[actionName];
+        const aborted = Object.keys(map).reduce((acc, promiseId) => {
+          if (map[promiseId]) {
+            // ongoing action
+            abortAction(actionName, promiseId);
+            acc.push(promiseId);
+          }
+          return acc;
+        }, []);
+        if (aborted.length > 0) {
+          acc[actionName] = aborted;
+        }
+      }
+      return acc;
+    }, {});
+    return abortedActions;
+  }
+
   function destroy() {
     if (initializedRef.current) {
-      options?.onUnmount?.(buildOnMountInvocationContext(stateRef, derivedStateRef, propsRef, actionsRef));
+      const abortedActions = abortActionsOnDestroy();
+
+      options?.onUnmount?.(buildOnUnMountInvocationContext(stateRef, derivedStateRef, propsRef, abortedActions));
 
       propsRef.current = null;
       stateRef.current = null;

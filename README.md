@@ -567,11 +567,13 @@ export const actionsAbort: StoreActions<State, Actions, Props> = {
 };
 ```
 
+Note: ongoing abortable actions will be automatically aborted on store destruction (during React component unmount for example). The list of aborted actions is available in the **onUnmount** callback in the store's options.
+
 [![Edit Abort](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/abort-v6-uvnl7)
 
 ## Call actions on mount
 
-When a hook that creates / binds a store is mounted, the **onMount** option is called.
+When store is created (for example whe React component in mounted), the **onMount** option is called.
 
 ```typescript
 import { createStore } from 'state-decorator';
@@ -581,14 +583,24 @@ const store = createStore(getInitialState, actionsImpl, {
     a.loadList;
   },
 });
-
-// onMount is called when this component is mounted
-function Container(p: ContainerProps) {
-  useBindStore(store, p);
-}
 ```
 
 If an initial action is launched each time a property changes, consider using the **onMount** flag of the **onPropsChange** entry.
+
+## Call actions on store destruction / unmount
+
+When the store is destroyed (for example on React component unmounted), the **onUnmount** option is called.
+
+```typescript
+import { createStore } from 'state-decorator';
+
+const store = createStore(getInitialState, actionsImpl, {
+  onUnmount: ({ s, abortedActions }) => {
+    // ex: store s in local storage
+    // ex: clean cache of aborted actions
+  },
+});
+```
 
 ## State sharing and slices
 

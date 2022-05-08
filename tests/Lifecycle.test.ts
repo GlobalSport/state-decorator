@@ -1,4 +1,4 @@
-import { createStore, StoreActions } from '../src';
+import { ConflictPolicy, createStore, StoreActions, StoreOptions } from '../src';
 
 function getTimeoutPromise<C>(timeout: number, result: C = null): Promise<C> {
   return new Promise((res) => {
@@ -150,6 +150,85 @@ describe('Lifecycle', () => {
 
       store.destroy();
     });
+
+    it('Ongoing abortable actions are automatically aborted', (done) => {
+      type State = {
+        value: number | null;
+      };
+
+      type Actions = {
+        onLoad: () => void;
+        onLoadAbortable: () => Promise<number>;
+        onLoadAbortableParallel: (id: string) => Promise<number>;
+      };
+
+      const mockAbort = jest.fn();
+
+      const storeActions: StoreActions<State, Actions> = {
+        onLoad: {
+          getPromise: () => getTimeoutPromise(100, 1),
+        },
+        onLoadAbortable: {
+          abortable: true,
+          getPromise: ({ abortSignal }) =>
+            new Promise((resolve, reject) => {
+              const timeout = window.setTimeout(resolve, 2500, 1);
+              abortSignal.addEventListener('abort', () => {
+                mockAbort();
+                window.clearTimeout(timeout);
+                reject(new DOMException('Aborted', 'AbortError'));
+              });
+            }),
+          effects: ({ s, res: v }) => ({ ...s, value: v }),
+        },
+        onLoadAbortableParallel: {
+          abortable: true,
+          conflictPolicy: ConflictPolicy.PARALLEL,
+          getPromiseId: (id) => id,
+          getPromise: ({ abortSignal }) =>
+            new Promise((resolve, reject) => {
+              const timeout = window.setTimeout(resolve, 2500, 1);
+              abortSignal.addEventListener('abort', () => {
+                mockAbort();
+                window.clearTimeout(timeout);
+                reject(new DOMException('Aborted', 'AbortError'));
+              });
+            }),
+          effects: ({ s, res: v }) => ({ ...s, value: v }),
+        },
+      };
+
+      function getInitialState(): State {
+        return {
+          value: null,
+        };
+      }
+
+      const storeOptions: StoreOptions<State, Actions> = {
+        onUnmount: ({ abortedActions }) => {
+          try {
+            expect(mockAbort).toHaveBeenCalled();
+            expect(abortedActions.onLoad).toBeUndefined();
+            expect(!!abortedActions.onLoadAbortable).toBeTruthy();
+            expect(abortedActions.onLoadAbortable).toHaveLength(1);
+            expect(abortedActions.onLoadAbortableParallel).toEqual(['id1', 'id2']);
+            done();
+          } catch (e) {
+            done.fail(e);
+          }
+        },
+      };
+
+      const store = createStore(getInitialState, storeActions, storeOptions);
+
+      store.init({});
+
+      store.actions.onLoadAbortable();
+      store.actions.onLoadAbortableParallel('id1');
+      store.actions.onLoadAbortableParallel('id2');
+
+      store.destroy();
+    });
   });
 
   describe('listeners', () => {
@@ -220,6 +299,7 @@ describe('Lifecycle', () => {
       store.destroy();
     });
   });
+
   describe('onPropsChanges called on mount', () => {
     type State = {
       prop1: string;

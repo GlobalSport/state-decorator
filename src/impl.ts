@@ -44,6 +44,8 @@ import {
   PromiseIdErrorMap,
   ErrorMap,
   ErrorParallelMap,
+  OnUnMountInvocationContext,
+  AbortedActions,
 } from './types';
 
 export type SetStateFunc<S, A> = (
@@ -468,6 +470,16 @@ export function buildOnMountInvocationContext<S, DS, A, P>(
   actionsRef: Ref<A>
 ): OnMountInvocationContext<S, A, P> {
   return addContextActions(buildInvocationContextBase(stateRef, derivedStateRef, propsRef), actionsRef);
+}
+
+/** @internal */
+export function buildOnUnMountInvocationContext<S, DS, A, P>(
+  stateRef: Ref<S>,
+  derivedStateRef: Ref<DerivedState<DS>>,
+  propsRef: Ref<P>,
+  abortedActions: AbortedActions<A>
+): OnUnMountInvocationContext<S, A, P> {
+  return { ...buildInvocationContextBase(stateRef, derivedStateRef, propsRef), abortedActions };
 }
 
 /** @internal */
