@@ -434,6 +434,12 @@ export type StoreOptions<S, A, P = {}, DS = {}> = {
   name?: string;
 
   /**
+   * Indicates that all asynchronous actions errors are managed externally.
+   * Same as setting isErrorManaged to true for all actions.
+   */
+  isErrorManaged?: boolean;
+
+  /**
    * List of action names that are marked as loading at initial time.
    * If you must start your initial actions in a useSideEffect, a render is done before
    * first actions can be trigerred, some actions can be marked as loading at initial time.

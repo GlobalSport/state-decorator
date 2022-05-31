@@ -862,7 +862,7 @@ function processPromiseFailed<S, DS, F extends (...args: any[]) => any, A extend
 
   let errorHandled = false;
 
-  if (newState != null || action.errorSideEffects || action.isErrorManaged) {
+  if (newState != null || action.errorSideEffects || action.isErrorManaged || options.isErrorManaged) {
     errorHandled = true;
   }
 

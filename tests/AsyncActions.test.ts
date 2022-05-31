@@ -480,6 +480,59 @@ describe('Async action', () => {
       .catch(done.fail);
   });
 
+  it('error not managed (skip error management, in options)', (done) => {
+    const store = createStore(getInitialState, actionsImpl, { isErrorManaged: true });
+    store.init({
+      callback: null,
+      callbackCancel: null,
+      callbackError: null,
+    });
+    const asyncErrorHandler = jest.fn();
+
+    setGlobalConfig({
+      asyncErrorHandler,
+    });
+
+    const getErrorMessage = () => 'global error';
+
+    setGlobalConfig({
+      getErrorMessage,
+    });
+
+    store.actions
+      .errorNotManaged('test')
+      .then(() => {
+        expect(asyncErrorHandler).toHaveBeenCalled();
+        expect(asyncErrorHandler.mock.calls[0][1]).toBeTruthy();
+        done();
+      })
+      .catch(done.fail);
+  });
+
+  it('error not managed (skip error management, NOT in options)', (done) => {
+    const store = createStore(getInitialState, actionsImpl);
+    store.init({
+      callback: null,
+      callbackCancel: null,
+      callbackError: null,
+    });
+    const asyncErrorHandler = jest.fn();
+
+    setGlobalConfig({
+      asyncErrorHandler,
+    });
+
+    store.actions
+      .errorNotManaged('test')
+      .then(done.fail)
+      .catch(() => {
+        expect(asyncErrorHandler).toHaveBeenCalled();
+        // managed flag
+        expect(asyncErrorHandler.mock.calls[0][1]).toBeFalsy();
+        done();
+      });
+  });
+
   it('error not managed (skip error management + reject)', (done) => {
     const store = createStore(getInitialState, actionsImpl);
     store.init({
