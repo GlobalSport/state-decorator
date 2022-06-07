@@ -72,6 +72,7 @@ import {
   MiddlewareStoreContext,
   LoadingProps,
   AbortedActions,
+  ErrorProps,
 } from './types';
 
 export {
@@ -103,6 +104,7 @@ export {
   setGlobalConfig,
   LoadingProps,
   AbortActionCallback,
+  ErrorProps,
 };
 
 export type IsLoadingFunc<A> = (...props: (keyof A | [keyof A, string])[]) => boolean;
