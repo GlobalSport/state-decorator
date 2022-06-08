@@ -29,6 +29,8 @@ export type LoadingProps<A> = {
   loadingParallelMap: LoadingParallelMap<A>;
 };
 
+export type LoadingMapProps<A> = Pick<LoadingProps<A>, 'loadingMap'>;
+
 export type PromiseIdErrorMap = { [promiseId: string]: Error };
 export type ErrorMap<A> = { [pId in keyof A]?: Error };
 export type ErrorParallelMap<A> = { [P in keyof A]?: PromiseIdErrorMap };

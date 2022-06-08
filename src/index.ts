@@ -73,6 +73,7 @@ import {
   LoadingProps,
   AbortedActions,
   ErrorProps,
+  LoadingMapProps,
 } from './types';
 
 export {
@@ -105,6 +106,7 @@ export {
   LoadingProps,
   AbortActionCallback,
   ErrorProps,
+  LoadingMapProps,
 };
 
 export type IsLoadingFunc<A> = (...props: (keyof A | [keyof A, string])[]) => boolean;
