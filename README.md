@@ -862,7 +862,7 @@ Example:
 
 ```
 [StateDecorator sample] loadList effects {list: Array(10), prop1: "", prop2: "", prop3: ""} loading: false
-middlewares.ts:36 [StateDecorator sample] setProp1 effects {list: Array(10), prop1: "92", prop2: "", prop3: ""}
+[StateDecorator sample] setProp1 effects {list: Array(10), prop1: "92", prop2: "", prop3: ""}
 ```
 
 ## Detailed Logger
