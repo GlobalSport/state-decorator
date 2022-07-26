@@ -655,34 +655,6 @@ export function SubComponent() {
 
 [![Edit Slice](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/slices-v6-eg471?file=/src/SliceView.tsx)
 
-# Global configuration
-
-Overrides configuration to set properties that will be used by all stores.
-
-```typescript
-// all parameters are optional
-setGlobalConfig({
-  // Used to clone state and props when managing optimistic conflicting actions.
-  clone: defaultCloneFunc,
-  // Compare to objets and returns if they are equal (slices).
-  comparator: shallow,
-  // Callback function to handle asychronous actions rejected promise (error reporting).
-  asyncErrorHandler: () => {},
-  // Tests if the error will trigger a retry of the action or will fail directly (retry promises)
-  retryOnErrorFunction: (error: Error) => error instanceof TypeError,
-  // Notification function on successful asynchronous action (if success message is set on action)
-  notifySuccess: undefined,
-  // Notification function on failed asynchronous action (if error message is set on action)
-  notifyError: undefined,
-  // Notification function injected in side effects action context (success and error) to notify warning
-  notifyWarning: undefined,
-  // Function called to return common error message if error message is not provided or error not managed in action.
-  // To override locally in action, provide a function that returns _null_.
-  // If _isErrorManaged_ is set to _true_, this function will not be called.
-  getErrorMessage: undefined,
-});
-```
-
 # Update store when props change
 
 ## Getting started
@@ -988,6 +960,61 @@ function Subtitle(props: { subtitle: string }) {
   return <div>{subtitle}</div>;
 }
 ```
+
+# Derived state
+
+A derived state is a state that can be deduced from state and props.
+
+```typescript
+import { createStore } from 'state-decorator';
+
+type State = {
+  value: number;
+};
+
+type Actions = {
+  add1: () => void;
+};
+
+type Props = {
+  propIn: number;
+};
+
+type DerivedState = {
+  derivedProp: number;
+};
+
+const store = createStore<State, Actions, Props, DerivedState>(
+  () => ({ value: 0 }),
+  {
+    add1: ({ s }) => ({ ...s, value: s.value + 1 }),
+  },
+  {
+    derivedState: {
+      derivedProp: {
+        // get the list of dependencies to be checked to trigger the computation of the derived state
+        // if state.value AND/OR props.prop1 changes, derivedProp is recomputed
+        getDeps: ({ state, props }) => [state.value, props.propIn],
+        // compute derived state from state & props (use short aliases)
+        get: ({ s, p }) => s.value * p.propIn,
+      },
+    },
+  }
+);
+
+export function App(props: Props) {
+  const { state } = useStore(store, props);
+  // state contains the store state and derived state
+  return <div>{state.derivedProp}</div>;
+}
+```
+
+## Recipes
+
+- Derived state is the same as using _useMemo_ in sub component.
+- If the derived state is needed in one component only, it may prove better to use a _useMemo_ in this component to save memory when the component is unmounted and store not.
+- In general, do **not** compute derived values directly in state, it's error prone as you can forget some places or implement different logic.
+- Use derived state especially if this state is shared accross several sub components
 
 # Global configuration
 
