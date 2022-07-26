@@ -580,6 +580,39 @@ Note: ongoing abortable actions will be automatically aborted on store destructi
 
 [![Edit Abort](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/abort-v6-uvnl7)
 
+## Helper effect functions
+
+For common / simple use cases, some helpers functions are provided to write basic action effects and improve actions readability.
+
+Example
+
+```typescript
+import { setArgIn } from 'state-decorator/helpers';
+
+type State = {
+  myProp: string;
+};
+
+type Actions = {
+  setMyProp: (v: string) => void;
+};
+
+const actions: StoreActions<State, Actions> = {
+  setMyProp: setArgIn('myProp'),
+  // same as
+  // setMyProp: ({ args: [v] }) => ({ myProp: v }),
+};
+```
+
+| Name         | Purpose                                                                                                                     |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------- |
+| setArgIn     | Effect function to update a state property from action first argument                                                       |
+| setTrueIn    | Effect function to update a boolean state property to true                                                                  |
+| setFalseIn   | Effect function to update a boolean state property to false                                                                 |
+| toggleProp   | Effect function to toggle a boolean state property                                                                          |
+| setMapItem   | Effect function to update a state property of type Record<string, T> using first action argument as key and second as value |
+| setArrayItem | Effect function to update a state property of type T[] using first action argument as index and second as value             |
+
 ## Call actions on mount
 
 When store is created (for example whe React component in mounted), the **onMount** option is called.

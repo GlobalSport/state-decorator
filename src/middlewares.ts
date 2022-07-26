@@ -289,7 +289,7 @@ export function optimisticActions<S, A extends DecoratedActions, P>(
     };
 
     const getActionId = (name: keyof A, promiseId: string) => {
-      return `${name}_${promiseId}`;
+      return `${name.toString()}_${promiseId}`;
     };
 
     /**
@@ -541,7 +541,7 @@ export function devtools<S, A extends DecoratedActions, P>(): MiddlewareFactory<
 
           devtools.send(
             {
-              type: `${ctx.name} ${ctx.type}`,
+              type: `${ctx.name.toString()} ${ctx.type}`,
               args: cleanCtx.args,
               context: cleanCtx,
             },

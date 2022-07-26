@@ -317,7 +317,15 @@ export function createMockStore<S, A extends DecoratedActions, P = {}, DS = {}>(
     },
 
     getAction(actionName) {
-      return createMockStoreAction(stateRef.current, actionName, actions, propsRef.current, null, options, undefined);
+      return createMockStoreAction(
+        stateRef.current,
+        actionName,
+        actions,
+        propsRef.current,
+        null,
+        options,
+        undefined
+      ) as any;
     },
   };
 }
@@ -374,7 +382,7 @@ export class ActionError<S = any, P = any, A = any> extends Error {
 export function createMockStoreAction<S, A extends DecoratedActions, F extends (...args: any[]) => any, P, DS>(
   state: S,
   actionName: keyof A,
-  actions: StoreActions<S, A, P, DS, S>,
+  actions: StoreActions<S, A, P, DS>,
   props: P,
   promiseRes: Promise<F> | Error,
   options: StoreOptions<S, A, P, DS>,
