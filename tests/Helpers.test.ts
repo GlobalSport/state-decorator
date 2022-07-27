@@ -1,4 +1,4 @@
-import { setArgIn, setArrayItem, setFalseIn, setMapItem, setTrueIn, toggleProp } from '../src/helpers';
+import { setArgIn, setArrayItem, setFalseIn, setMapItem, setResIn, setTrueIn, toggleProp } from '../src/helpers';
 
 type State = {
   myProp: string;
@@ -14,6 +14,10 @@ const defaultState: State = {
   myArr: [],
 };
 
+function invoke(f: Function, state: State, args: any[] = [], res: any = undefined): State {
+  return { ...state, ...f({ state, args, res }) };
+}
+
 describe('Helper effect functions', () => {
   it('setArgIn', () => {
     const f = setArgIn<State, 'myProp'>('myProp');
@@ -21,7 +25,7 @@ describe('Helper effect functions', () => {
       ...defaultState,
     };
 
-    const newState = f({ s: state, args: ['newValue'] });
+    const newState = invoke(f, state, ['newValue']);
     expect(newState.myProp).toEqual('newValue');
   });
 
@@ -32,7 +36,8 @@ describe('Helper effect functions', () => {
       myBool: false,
     };
 
-    const newState = f({ s: state });
+    const newState = invoke(f, state);
+
     expect(newState.myBool).toBeTruthy();
   });
 
@@ -44,7 +49,8 @@ describe('Helper effect functions', () => {
       myBool: true,
     };
 
-    const newState = f({ s: state });
+    const newState = invoke(f, state);
+
     expect(newState.myBool).toBeFalsy();
   });
 
@@ -56,7 +62,8 @@ describe('Helper effect functions', () => {
       myBool: true,
     };
 
-    const newState = f({ s: state });
+    const newState = invoke(f, state);
+
     expect(newState.myBool).toBeFalsy();
   });
 
@@ -68,7 +75,8 @@ describe('Helper effect functions', () => {
       myBool: false,
     };
 
-    const newState = f({ s: state });
+    const newState = invoke(f, state);
+
     expect(newState.myBool).toBeTruthy();
   });
 
@@ -78,7 +86,8 @@ describe('Helper effect functions', () => {
       ...defaultState,
     };
 
-    const newState = f({ s: state, args: ['id', 'value'] });
+    const newState = invoke(f, state, ['id', 'value']);
+
     expect(newState.myMap).toEqual({
       id: 'value',
     });
@@ -89,8 +98,18 @@ describe('Helper effect functions', () => {
     const state: State = {
       ...defaultState,
     };
+    const newState = invoke(f, state, [0, 'value']);
 
-    const newState = f({ s: state, args: [0, 'value'] });
     expect(newState.myArr).toEqual(['value']);
+  });
+
+  it('setResIn', () => {
+    const f = setResIn<State, 'myProp'>('myProp');
+    const state: State = {
+      ...defaultState,
+    };
+
+    const newState = invoke(f, state, [], 'newValue');
+    expect(newState.myProp).toEqual('newValue');
   });
 });
