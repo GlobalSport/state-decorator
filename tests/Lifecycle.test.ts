@@ -1,6 +1,6 @@
 import { ConflictPolicy, createStore, StoreActions, StoreOptions } from '../src';
 
-function getTimeoutPromise<C>(timeout: number, result: C = null): Promise<C> {
+function getTimeoutPromise<C>(timeout: number, result: C | null = null): Promise<C> {
   return new Promise((res) => {
     setTimeout(res, timeout, result);
   });
@@ -300,6 +300,62 @@ describe('Lifecycle', () => {
     });
   });
 
+  describe('onMount', () => {
+    type State = {};
+    type Actions = {};
+    type Props = {
+      callback: () => void;
+    };
+
+    const options: StoreOptions<State, Actions, Props> = {
+      onMount: ({ p }) => {
+        p.callback();
+      },
+    };
+
+    function getInitialState(p: Props): State {
+      return {};
+    }
+
+    const store = createStore(getInitialState, {}, options);
+
+    const callback = jest.fn();
+
+    store.init({ callback });
+
+    expect(callback).toHaveBeenCalled();
+  });
+
+  describe('onMountDeferred', () => {
+    type State = {};
+    type Actions = {};
+    type Props = {
+      callback: () => void;
+    };
+
+    const options: StoreOptions<State, Actions, Props> = {
+      onMountDeferred: ({ p }) => {
+        p.callback();
+      },
+    };
+
+    function getInitialState(p: Props): State {
+      return {};
+    }
+
+    const store = createStore(getInitialState, {}, options);
+
+    const callback = jest.fn();
+
+    store.init({ callback });
+
+    expect(callback).not.toHaveBeenCalled();
+
+    store.invokeOnMountDeferred();
+
+    expect(callback).toHaveBeenCalled();
+  });
+
   describe('onPropsChanges called on mount', () => {
     type State = {
       prop1: string;
@@ -406,6 +462,47 @@ describe('Lifecycle', () => {
         prop1: 'effect',
         prop2: '',
       });
+    });
+
+    it('simple side effect (deferred)', () => {
+      type State = {};
+      type Actions = {};
+      type Props = {
+        callback: () => void;
+      };
+
+      function getInitialState(p: Props): State {
+        return {};
+      }
+
+      const store = createStore<State, Actions, Props>(
+        getInitialState,
+        {},
+        {
+          onPropsChange: [
+            {
+              getDeps: (p) => [],
+              sideEffects: ({ p }) => {
+                p.callback();
+              },
+              onMountDeferred: true,
+            },
+          ],
+        }
+      );
+
+      const callback = jest.fn(() => {});
+
+      store.init({
+        callback,
+      });
+
+      // side effect not called because deferred
+      expect(callback).not.toHaveBeenCalled();
+
+      store.invokeOnMountDeferred();
+
+      expect(callback).toHaveBeenCalled();
     });
 
     it('effect + side effect', () => {

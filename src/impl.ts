@@ -1267,7 +1267,8 @@ export function onPropChange<S, P, A, DS>(
   actionsRef: Ref<A>,
   options: StoreOptions<S, A, P, DS>,
   setState: SetStateFunc<S, A>,
-  isInit: boolean
+  isInit: boolean,
+  isDeferred: boolean
 ) {
   const hasDerivedState = options?.derivedState != null;
 
@@ -1302,7 +1303,7 @@ export function onPropChange<S, P, A, DS>(
       const indices: number[] = [];
 
       if (isInit) {
-        if (propsChange.onMount) {
+        if ((!isDeferred && propsChange.onMount) || (isDeferred && propsChange.onMountDeferred)) {
           propChanged = true;
         } else {
           // skip this onPropsChange

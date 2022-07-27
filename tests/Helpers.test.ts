@@ -15,7 +15,7 @@ const defaultState: State = {
 };
 
 function invoke(f: Function, state: State, args: any[] = [], res: any = undefined): State {
-  return { ...state, ...f({ state, args, res }) };
+  return { ...state, ...f({ s: state, args, res }) };
 }
 
 describe('Helper effect functions', () => {

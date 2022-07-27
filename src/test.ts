@@ -158,7 +158,8 @@ type MockStore<S, A extends DecoratedActions, P, DS> = {
     newDerivedStateRef: Ref<DerivedState<DS>>,
     newActionsRef: Ref<StoreActions<S, A, P, DS, S>>,
     setState: SetStateFunc<S, A>,
-    init?: boolean
+    init?: boolean,
+    deferred?: boolean
   ) => MockResult<S, A, P, DS>;
   getAction: <K extends keyof A>(name: K) => MockStoreAction<S, A, A[K], P, DS>;
 };
@@ -240,7 +241,15 @@ export function createMockStore<S, A extends DecoratedActions, P = {}, DS = {}>(
         }
       };
 
-      const res = this.onPropsChangeImpl(newStateRef, newPropsRef, derivedStateRef, actionsRef as any, setState, init);
+      const res = this.onPropsChangeImpl(
+        newStateRef,
+        newPropsRef,
+        derivedStateRef,
+        actionsRef as any,
+        setState,
+        init,
+        false
+      );
 
       return {
         ...res,
@@ -255,7 +264,8 @@ export function createMockStore<S, A extends DecoratedActions, P = {}, DS = {}>(
       newDerivedStateRef: Ref<DerivedState<DS>>,
       actionsRef: Ref<StoreActions<S, A, P, DS, S>>,
       setState: SetStateFunc<S, A>,
-      init?: boolean
+      init?: boolean,
+      isDeferred?: boolean
     ) {
       computeDerivedValues(stateRef, propsRef, newDerivedStateRef, options);
 
@@ -267,7 +277,8 @@ export function createMockStore<S, A extends DecoratedActions, P = {}, DS = {}>(
         actionsRef as any,
         options,
         setState,
-        init
+        init,
+        isDeferred
       );
 
       return {
@@ -294,10 +305,20 @@ export function createMockStore<S, A extends DecoratedActions, P = {}, DS = {}>(
         }
       };
 
-      this.onPropsChangeImpl(newStateRef, newPropsRef, derivedStateRef, actionsRef as any, setState, true);
+      // sync
+      this.onPropsChangeImpl(newStateRef, newPropsRef, derivedStateRef, actionsRef as any, setState, true, false);
 
       if (options?.onMount) {
         options.onMount(buildOnMountInvocationContext(newStateRef, derivedStateRef, newPropsRef, actionsRef as any));
+      }
+
+      // deferred
+      this.onPropsChangeImpl(newStateRef, newPropsRef, derivedStateRef, actionsRef as any, setState, true, true);
+
+      if (options?.onMountDeferred) {
+        options.onMountDeferred(
+          buildOnMountInvocationContext(newStateRef, derivedStateRef, newPropsRef, actionsRef as any)
+        );
       }
 
       const res: MockResult<S, A, P, DS> = {

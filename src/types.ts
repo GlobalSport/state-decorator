@@ -435,6 +435,7 @@ type DerivedStateOption<S, P, DS> = {
 
 export type OnPropsChangeOptions<S, DS, A, P> = {
   onMount?: boolean;
+  onMountDeferred?: boolean;
   getDeps: (p: P) => any[];
   effects?: (ctx: OnPropsChangeEffectsContext<S, DS, P>) => Partial<S>;
   sideEffects?: (ctx: OnPropsChangeSideEffectsContext<S, P, A>) => void;
@@ -483,6 +484,12 @@ export type StoreOptions<S, A, P = {}, DS = {}> = {
    * Initial actions.
    */
   onMount?: (ctx: OnMountInvocationContext<S, A, P>) => void;
+
+  /**
+   * Initial actions executed after initial render.
+   *
+   */
+  onMountDeferred?: (ctx: OnMountInvocationContext<S, A, P>) => void;
 
   /**
    * Callback on store destruction.

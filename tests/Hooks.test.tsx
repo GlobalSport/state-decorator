@@ -12,6 +12,7 @@ import {
   StoreActions,
   StoreApi,
   useStoreContextSlice,
+  StoreOptions,
 } from '../src';
 import { getTimeoutPromise } from './utils';
 
@@ -21,7 +22,7 @@ type State = {
 
 type Actions = {
   setProp1: (p: string) => void;
-  setAsyncProp1: (p: string) => void;
+  setAsyncProp1: (p: string) => Promise<string>;
 };
 
 const actionsImpl: StoreActions<State, Actions, any> = {
@@ -56,12 +57,31 @@ describe('react hooks', () => {
   });
 
   it('useLocalStore works as expected', () => {
-    const { result } = renderHook(() => useLocalStore(getInitialState, actionsImpl));
+    const callback = jest.fn();
+    const callback2 = jest.fn();
+
+    const options: StoreOptions<State, Actions> = {
+      onMountDeferred: () => {
+        callback();
+      },
+      onPropsChange: {
+        onMountDeferred: true,
+        getDeps: () => [],
+        sideEffects: () => {
+          callback2();
+        },
+      },
+    };
+
+    const { result } = renderHook(() => useLocalStore(getInitialState, actionsImpl, {}, options));
     expect(result.current.state).toEqual({ prop1: '' });
     act(() => {
       result.current.actions.setProp1('v1');
     });
     expect(result.current.state).toEqual({ prop1: 'v1' });
+    expect(callback).toHaveBeenCalled();
+    expect(callback2).toHaveBeenCalled();
+
     // use store API
     result.current.destroy();
     expect(result.current.state).toBeNull();

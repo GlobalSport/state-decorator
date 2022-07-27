@@ -176,6 +176,12 @@ export type StoreApi<S, A extends DecoratedActions, P, DS = {}> = {
     options: StoreOptions<S, A, P, DS>;
     actions: StoreActions<S, A, P, DS>;
   };
+
+  /**
+   * Invoke onMountDeferred + onPropChange flagged onMountDeferred
+   * @internal
+   */
+  invokeOnMountDeferred: () => void;
 };
 
 export type StateListenerContext<S, DS, A extends DecoratedActions> = S &
@@ -257,7 +263,7 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
     if (!initializedRef.current) {
       init(p);
     } else {
-      onPropChange(stateRef, derivedStateRef, propsRef, oldProps, actionsRef, options, setState, false);
+      onPropChange(stateRef, derivedStateRef, propsRef, oldProps, actionsRef, options, setState, false, false);
     }
   }
 
@@ -315,8 +321,7 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
 
       computeDerivedValues(stateRef, propsRef, derivedStateRef, options);
 
-      // manage PropsChange with onMount
-      onPropChange(stateRef, derivedStateRef, propsRef, null, actionsRef, options, setState, true);
+      onPropChange(stateRef, derivedStateRef, propsRef, null, actionsRef, options, setState, true, false);
 
       if (options?.onMount) {
         options.onMount(buildOnMountInvocationContext(stateRef, derivedStateRef, propsRef, actionsRef));
@@ -332,6 +337,15 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
       delete map[promiseId];
     }
     notifyStateListeners(stateRef.current, derivedStateRef.current.state);
+  }
+
+  function invokeOnMountDeferred() {
+    // manage PropsChange with onMount
+    onPropChange(stateRef, derivedStateRef, propsRef, null, actionsRef, options, setState, true, true);
+
+    if (options?.onMountDeferred) {
+      options.onMountDeferred(buildOnMountInvocationContext(stateRef, derivedStateRef, propsRef, actionsRef));
+    }
   }
 
   function abortActionsOnDestroy() {
@@ -602,6 +616,9 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
       }
       return null;
     },
+    invokeOnMountDeferred() {
+      invokeOnMountDeferred();
+    },
   };
 }
 
@@ -805,12 +822,13 @@ export function useLocalStore<S, A extends DecoratedActions, P, DS = {}>(
     storeRef.current = createStore(getInitialState, actionImpl, options, middlewares);
   }
 
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    storeRef.current.invokeOnMountDeferred();
+
+    return () => {
       storeRef.current?.destroy();
-    },
-    []
-  );
+    };
+  }, []);
 
   return useStore(storeRef.current, props, refreshOnUpdate);
 }

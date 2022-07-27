@@ -20,6 +20,7 @@ import { makeStyles } from '@material-ui/core/styles';
 import PropsChangeOnMount from './PropsChangeOnMount';
 import Typography from '@material-ui/core/Typography';
 import ErrorMap from './ErrorMap';
+import DeferOnMount from './DeferOnMount';
 
 type TabPanelProps = {
   children?: React.ReactNode;
@@ -82,6 +83,7 @@ export default function App() {
           <Tab label="Props change onmount" />
           <Tab label="Error" />
           <Tab label="Recipes" />
+          <Tab label="Defer onMount" />
         </Tabs>
         <Box flex={1} className={classes.content}>
           <TabPanel tabId={tabId} index={0} classes={classes}>
@@ -126,6 +128,9 @@ export default function App() {
           </TabPanel>
           <TabPanel tabId={tabId} index={10} classes={classes}>
             <Recipes />
+          </TabPanel>
+          <TabPanel tabId={tabId} index={11} classes={classes}>
+            <DeferOnMount />
           </TabPanel>
         </Box>
       </Paper>
