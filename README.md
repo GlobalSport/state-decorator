@@ -19,10 +19,13 @@ The StateDecorator is a set of Reacts hook that manages a complex component stat
 
 # V7: Partial state and new hooks
 
+- React 17 (upcoming V8 for React 18)
 - All effects can now return a partial state that will be merged with current state.
 - More documentation on global and local store use cases.
 - **useLocalStore** and **useStore** now have a parameter to specify if the React component must re-rerender after a state change.
 - New **useStoreContextSlice** hook was added to get a slice of a store in a context.
+- New **onMountDeferred** to execute initialization code after initial render
+- New effect helpers
 - Removed useBindStore hook.
 
 # 🏎️ V6: The Store
@@ -623,7 +626,21 @@ import { createStore } from 'state-decorator';
 
 const store = createStore(getInitialState, actionsImpl, {
   onMount: ({ a }) => {
-    a.loadList;
+    a.loadList();
+  },
+});
+```
+
+After React component is mounted using _useLocalStore_, the **onMountDeferred** option is called (in a _useEffect_).
+The **onMount** is called _during_ the render of the hooks. If the onMount code is containing a function that is changing parent state,
+React will not update the parent state and will issue a warning.
+
+```typescript
+import { createStore } from 'state-decorator';
+
+const store = createStore(getInitialState, actionsImpl, {
+  onMountDeferred: ({ p }) => {
+    p.loadParentList();
   },
 });
 ```
