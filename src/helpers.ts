@@ -48,7 +48,7 @@ export function toggleProp<S, K extends keyof S>(propName: K): (ctx: { s: S }) =
  * Effect function that sets the update the specifed prop as an array using first action argument as index
  * and second as value to set.
  */
-export function setMapItem<S, K extends keyof S, T>(propName: K): (ctx: { s: S; args: [string, T] }) => Partial<S> {
+export function setArgsInMap<S, K extends keyof S, T>(propName: K): (ctx: { s: S; args: [string, T] }) => Partial<S> {
   return ({ s, args: [id, v] }) =>
     (({
       [propName]: {
@@ -62,7 +62,7 @@ export function setMapItem<S, K extends keyof S, T>(propName: K): (ctx: { s: S; 
  * Effect function that sets the update the specifed prop as an array using first action argument as index
  * and second as value to set.
  */
-export function setArrayItem<S, K extends keyof S, T>(propName: K): (ctx: { s: S; args: [number, T] }) => Partial<S> {
+export function setArgsInArray<S, K extends keyof S, T>(propName: K): (ctx: { s: S; args: [number, T] }) => Partial<S> {
   return ({ s, args: [idx, v] }) => {
     const arr = (s[propName] as any) as T[];
 
@@ -81,5 +81,39 @@ export function setResIn<S, K extends keyof S>(propName: K): (ctx: { s: S; res: 
   return ({ res }) =>
     (({
       [propName]: res,
+    } as unknown) as Partial<S>);
+}
+
+/**
+ * Effect function that sets the update the specifed prop as an array using first action argument as index
+ * and second as value to set.
+ */
+export function setResInArray<S, K extends keyof S, T>(
+  propName: K
+): (ctx: { s: S; args: [number]; res: T }) => Partial<S> {
+  return ({ s, args: [idx], res }) => {
+    const arr = (s[propName] as any) as T[];
+
+    const newArr = [...arr];
+    newArr[idx] = res;
+    return ({
+      [propName]: newArr,
+    } as unknown) as Partial<S>;
+  };
+}
+
+/**
+ * Effect function that sets the update the specifed prop as an array using first action argument as index
+ * and second as value to set.
+ */
+export function setResInMap<S, K extends keyof S, T>(
+  propName: K
+): (ctx: { s: S; args: [string]; res: T }) => Partial<S> {
+  return ({ s, args: [id], res }) =>
+    (({
+      [propName]: {
+        ...s[propName],
+        [id]: res,
+      },
     } as unknown) as Partial<S>);
 }

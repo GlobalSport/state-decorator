@@ -607,15 +607,17 @@ const actions: StoreActions<State, Actions> = {
 };
 ```
 
-| Name         | Purpose                                                                                                                     | Action signature             |
-| ------------ | --------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
-| setArgIn     | Effect function to update a state property from action first argument                                                       | (v:T) => void                |
-| setTrueIn    | Effect function to update a boolean state property to true                                                                  | () => void                   |
-| setFalseIn   | Effect function to update a boolean state property to false                                                                 | () => void                   |
-| toggleProp   | Effect function to toggle a boolean state property                                                                          | () => void                   |
-| setMapProp   | Effect function to update a state property of type Record<string, T> using first action argument as key and second as value | (id: string, v:T) => void    |
-| setArrayItem | Effect function to update a state property of type T[] using first action argument as index and second as value             | (index: number, v:T) => void |
-| setResIn     | Effect function of asynchronous action to update a state property with the result of the promise                            | () => Promise<T>             |
+| Name           | Purpose                                                                                                                                                   | Action signatue                |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ |
+| setArgIn       | Effect function to update a state property from action first argument                                                                                     | (v:T) => void                  |
+| setTrueIn      | Effect function to update a boolean state property to true                                                                                                | () => void                     |
+| setFalseIn     | Effect function to update a boolean state property to false                                                                                               | () => void                     |
+| toggleProp     | Effect function to toggle a boolean state property                                                                                                        | () => void                     |
+| setArgsInMap   | Effect function to update a state property of type Record<string, T> using first action argument as key and second as value                               | (id: string, v:T) => void      |
+| setArgsInArray | Effect function to update a state property of type T[] using first action argument as index and second as value                                           | (index: number, v:T) => void   |
+| setResIn       | Effect function of asynchronous action to update a state property with the result of the promise                                                          | () => Promise<T>               |
+| setResInArray  | Effect function to update a state property of type T[] using index from first action argument as index and as value the result of the promise             | (index: number) => Promise <T> |
+| setResInMap    | Effect function to update a state property of type Record<string, T> using key from first action argument as index and as value the result of the promise | (id: string) => Promise <T>    |
 
 ## Call actions on mount
 

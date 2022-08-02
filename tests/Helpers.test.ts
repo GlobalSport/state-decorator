@@ -1,4 +1,14 @@
-import { setArgIn, setArrayItem, setFalseIn, setMapItem, setResIn, setTrueIn, toggleProp } from '../src/helpers';
+import {
+  setArgIn,
+  setArgsInArray,
+  setFalseIn,
+  setArgsInMap,
+  setResIn,
+  setTrueIn,
+  toggleProp,
+  setResInArray,
+  setResInMap,
+} from '../src/helpers';
 
 type State = {
   myProp: string;
@@ -80,8 +90,8 @@ describe('Helper effect functions', () => {
     expect(newState.myBool).toBeTruthy();
   });
 
-  it('setMapItem', () => {
-    const f = setMapItem<State, 'myMap', string>('myMap');
+  it('setArgsInMap', () => {
+    const f = setArgsInMap<State, 'myMap', string>('myMap');
     const state: State = {
       ...defaultState,
     };
@@ -93,8 +103,8 @@ describe('Helper effect functions', () => {
     });
   });
 
-  it('setArrayItem', () => {
-    const f = setArrayItem<State, 'myArr', string>('myArr');
+  it('setArgsInArray', () => {
+    const f = setArgsInArray<State, 'myArr', string>('myArr');
     const state: State = {
       ...defaultState,
     };
@@ -111,5 +121,28 @@ describe('Helper effect functions', () => {
 
     const newState = invoke(f, state, [], 'newValue');
     expect(newState.myProp).toEqual('newValue');
+  });
+
+  it('setResInArray', () => {
+    const f = setResInArray<State, 'myArr', string>('myArr');
+    const state: State = {
+      ...defaultState,
+    };
+    const newState = invoke(f, state, [0], 'value');
+
+    expect(newState.myArr).toEqual(['value']);
+  });
+
+  it('setResInMap', () => {
+    const f = setResInMap<State, 'myMap', string>('myMap');
+    const state: State = {
+      ...defaultState,
+    };
+
+    const newState = invoke(f, state, ['id'], 'value');
+
+    expect(newState.myMap).toEqual({
+      id: 'value',
+    });
   });
 });
