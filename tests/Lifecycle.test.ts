@@ -17,16 +17,22 @@ describe('Lifecycle', () => {
     };
 
     it('Call store if not initialized ', () => {
-      const store = createStore<State, Action, any>(() => ({ prop: '' }), {
-        setProp: ({ args: [p] }) => ({ prop: p }),
+      const store = createStore<State, Action, any>({
+        getInitialState: () => ({ prop: '' }),
+        actions: {
+          setProp: ({ args: [p] }) => ({ prop: p }),
+        },
       });
 
       store.actions.setProp('test');
     });
 
     it('Call store if destroyed ', () => {
-      const store = createStore<State, Action, any>(() => ({ prop: '' }), {
-        setProp: ({ args: [p] }) => ({ prop: p }),
+      const store = createStore<State, Action, any>({
+        getInitialState: () => ({ prop: '' }),
+        actions: {
+          setProp: ({ args: [p] }) => ({ prop: p }),
+        },
       });
 
       store.init({});
@@ -46,9 +52,12 @@ describe('Lifecycle', () => {
       setProp: (p: string) => void;
     };
     it('Call store if not initialized', () => {
-      const store = createStore<State, Action, any>(() => ({ prop: '' }), {
-        setProp: {
-          effects: ({ args: [p] }) => ({ prop: p }),
+      const store = createStore<State, Action, any>({
+        getInitialState: () => ({ prop: '' }),
+        actions: {
+          setProp: {
+            effects: ({ args: [p] }) => ({ prop: p }),
+          },
         },
       });
 
@@ -56,9 +65,12 @@ describe('Lifecycle', () => {
     });
 
     it('Call store if destroyed', () => {
-      const store = createStore<State, Action, any>(() => ({ prop: '' }), {
-        setProp: {
-          effects: ({ args: [p] }) => ({ prop: p }),
+      const store = createStore<State, Action, any>({
+        getInitialState: () => ({ prop: '' }),
+        actions: {
+          setProp: {
+            effects: ({ args: [p] }) => ({ prop: p }),
+          },
         },
       });
 
@@ -86,7 +98,7 @@ describe('Lifecycle', () => {
       setPropAsync: (p: string) => void;
     };
 
-    const actionsImpl: StoreActions<State, Action> = {
+    const actions: StoreActions<State, Action> = {
       setPropSync: { effects: ({ s, args: [p] }) => ({ prop: p + s.prop }) },
       setPropSimpleSync: ({ s, args: [p] }) => ({ prop: p + s.prop }),
       setPropAsync: {
@@ -96,25 +108,25 @@ describe('Lifecycle', () => {
     };
 
     it('Call store if not initialized (async)', () => {
-      const store = createStore<State, Action, any>(() => ({ prop: '' }), actionsImpl);
+      const store = createStore<State, Action, any>({ getInitialState: () => ({ prop: '' }), actions });
 
       store.actions.setPropAsync('test');
     });
 
     it('Call store if not initialized (sync)', () => {
-      const store = createStore<State, Action, any>(() => ({ prop: '' }), actionsImpl);
+      const store = createStore<State, Action, any>({ getInitialState: () => ({ prop: '' }), actions });
 
       store.actions.setPropSync('test');
     });
 
     it('Call store if not initialized (simple sync)', () => {
-      const store = createStore<State, Action, any>(() => ({ prop: '' }), actionsImpl);
+      const store = createStore<State, Action, any>({ getInitialState: () => ({ prop: '' }), actions });
 
       store.actions.setPropSimpleSync('test');
     });
 
     it('Call store if destroyed (asynchronous)', () => {
-      const store = createStore<State, Action, any>(() => ({ prop: '' }), actionsImpl);
+      const store = createStore<State, Action, any>({ getInitialState: () => ({ prop: '' }), actions });
 
       store.init({});
 
@@ -123,7 +135,7 @@ describe('Lifecycle', () => {
       store.actions.setPropAsync('test');
     });
     it('Call store if destroyed (sync)', () => {
-      const store = createStore<State, Action, any>(() => ({ prop: '' }), actionsImpl);
+      const store = createStore<State, Action, any>({ getInitialState: () => ({ prop: '' }), actions });
 
       store.init({});
 
@@ -132,7 +144,7 @@ describe('Lifecycle', () => {
       store.actions.setPropSync('test');
     });
     it('Call store if destroyed (simple sync)', () => {
-      const store = createStore<State, Action, any>(() => ({ prop: '' }), actionsImpl);
+      const store = createStore<State, Action, any>({ getInitialState: () => ({ prop: '' }), actions });
 
       store.init({});
 
@@ -142,7 +154,7 @@ describe('Lifecycle', () => {
     });
 
     it('Call store if not destroyed after call', () => {
-      const store = createStore<State, Action, any>(() => ({ prop: '' }), actionsImpl);
+      const store = createStore<State, Action, any>({ getInitialState: () => ({ prop: '' }), actions });
 
       store.init({});
 
@@ -219,7 +231,7 @@ describe('Lifecycle', () => {
         },
       };
 
-      const store = createStore(getInitialState, storeActions, storeOptions);
+      const store = createStore({ getInitialState, actions: storeActions, ...storeOptions });
 
       store.init({});
 
@@ -241,8 +253,11 @@ describe('Lifecycle', () => {
     };
 
     it('listeners are registered before init', () => {
-      const store = createStore<State, Action, any>(() => ({ prop: '' }), {
-        setProp: ({ args: [p] }) => ({ prop: p }),
+      const store = createStore<State, Action, any>({
+        getInitialState: () => ({ prop: '' }),
+        actions: {
+          setProp: ({ args: [p] }) => ({ prop: p }),
+        },
       });
 
       const callback = jest.fn();
@@ -261,8 +276,11 @@ describe('Lifecycle', () => {
     });
 
     it('listeners are unregistered on destroy', () => {
-      const store = createStore<State, Action, any>(() => ({ prop: '' }), {
-        setProp: ({ args: [p] }) => ({ prop: p }),
+      const store = createStore<State, Action, any>({
+        getInitialState: () => ({ prop: '' }),
+        actions: {
+          setProp: ({ args: [p] }) => ({ prop: p }),
+        },
       });
 
       const callback = jest.fn(() => {});
@@ -282,15 +300,13 @@ describe('Lifecycle', () => {
 
     it('onMount is called on init', () => {
       const onMount = jest.fn();
-      const store = createStore<State, Action, any>(
-        () => ({ prop: '' }),
-        {
+      const store = createStore<State, Action, any>({
+        getInitialState: () => ({ prop: '' }),
+        actions: {
           setProp: ({ args: [p] }) => ({ prop: p }),
         },
-        {
-          onMount,
-        }
-      );
+        onMount,
+      });
 
       store.init({});
 
@@ -317,7 +333,7 @@ describe('Lifecycle', () => {
       return {};
     }
 
-    const store = createStore(getInitialState, {}, options);
+    const store = createStore({ getInitialState, actions: {}, ...options });
 
     const callback = jest.fn();
 
@@ -343,7 +359,7 @@ describe('Lifecycle', () => {
       return {};
     }
 
-    const store = createStore(getInitialState, {}, options);
+    const store = createStore({ getInitialState, actions: {}, ...options });
 
     const callback = jest.fn();
 
@@ -372,32 +388,30 @@ describe('Lifecycle', () => {
     };
 
     it('simple effect', () => {
-      const store = createStore<State, Actions, Props>(
-        () => ({ prop1: '', prop2: '' }),
-        {
+      const store = createStore<State, Actions, Props>({
+        getInitialState: () => ({ prop1: '', prop2: '' }),
+        actions: {
           setProp1: ({ args: [p] }) => ({ prop1: p }),
           setProp2: ({ args: [p] }) => ({ prop2: p }),
         },
-        {
-          onPropsChange: [
-            {
-              getDeps: (p) => [p.propIn],
-              effects: ({ p, isInit }) => {
-                expect(isInit).toBeTruthy();
-                return { prop1: p.propIn };
-              },
-              onMount: true,
+        onPropsChange: [
+          {
+            getDeps: (p) => [p.propIn],
+            effects: ({ p, isInit }) => {
+              expect(isInit).toBeTruthy();
+              return { prop1: p.propIn };
             },
-            {
-              getDeps: (p) => [p.propIn],
-              effects: ({ p, isInit }) => {
-                expect(isInit).toBeTruthy();
-                return { prop2: p.propIn };
-              },
+            onMount: true,
+          },
+          {
+            getDeps: (p) => [p.propIn],
+            effects: ({ p, isInit }) => {
+              expect(isInit).toBeTruthy();
+              return { prop2: p.propIn };
             },
-          ],
-        }
-      );
+          },
+        ],
+      });
 
       const callback = jest.fn(() => {});
 
@@ -419,31 +433,29 @@ describe('Lifecycle', () => {
     });
 
     it('simple side effect', () => {
-      const store = createStore<State, Actions, Props>(
-        () => ({ prop1: '', prop2: '' }),
-        {
+      const store = createStore<State, Actions, Props>({
+        getInitialState: () => ({ prop1: '', prop2: '' }),
+        actions: {
           setProp1: ({ args: [p] }) => ({ prop1: p }),
           setProp2: ({ args: [p] }) => ({ prop2: p }),
         },
-        {
-          onPropsChange: [
-            {
-              getDeps: (p) => [p.propIn],
-              sideEffects: ({ a, isInit }) => {
-                expect(isInit).toBeTruthy();
-                a.setProp1('effect');
-              },
-              onMount: true,
+        onPropsChange: [
+          {
+            getDeps: (p) => [p.propIn],
+            sideEffects: ({ a, isInit }) => {
+              expect(isInit).toBeTruthy();
+              a.setProp1('effect');
             },
-            {
-              getDeps: (p) => [p.propIn],
-              sideEffects: ({ a, isInit }) => {
-                a.setProp1('effect');
-              },
+            onMount: true,
+          },
+          {
+            getDeps: (p) => [p.propIn],
+            sideEffects: ({ a, isInit }) => {
+              a.setProp1('effect');
             },
-          ],
-        }
-      );
+          },
+        ],
+      });
 
       const callback = jest.fn(() => {});
 
@@ -475,21 +487,19 @@ describe('Lifecycle', () => {
         return {};
       }
 
-      const store = createStore<State, Actions, Props>(
+      const store = createStore<State, Actions, Props>({
         getInitialState,
-        {},
-        {
-          onPropsChange: [
-            {
-              getDeps: (p) => [],
-              sideEffects: ({ p }) => {
-                p.callback();
-              },
-              onMountDeferred: true,
+        actions: {},
+        onPropsChange: [
+          {
+            getDeps: (p) => [],
+            sideEffects: ({ p }) => {
+              p.callback();
             },
-          ],
-        }
-      );
+            onMountDeferred: true,
+          },
+        ],
+      });
 
       const callback = jest.fn(() => {});
 
@@ -520,39 +530,37 @@ describe('Lifecycle', () => {
         setProp4: (v: string) => void;
       };
 
-      const store = createStore<State, Actions, Props>(
-        () => ({
+      const store = createStore<State, Actions, Props>({
+        getInitialState: () => ({
           prop1: '',
           prop2: '',
           prop3: '',
           prop4: '',
         }),
-        {
+        actions: {
           setProp1: ({ args: [p] }) => ({ prop1: p }),
           setProp2: ({ args: [p] }) => ({ prop2: p }),
           setProp3: ({ args: [p] }) => ({ prop3: p }),
           setProp4: ({ args: [p] }) => ({ prop4: p }),
         },
-        {
-          onPropsChange: [
-            {
-              getDeps: (p) => [p.propIn],
-              effects: ({ p }) => ({ prop1: p.propIn }),
-              sideEffects: ({ a }) => {
-                a.setProp2('effect');
-              },
-              onMount: true,
+        onPropsChange: [
+          {
+            getDeps: (p) => [p.propIn],
+            effects: ({ p }) => ({ prop1: p.propIn }),
+            sideEffects: ({ a }) => {
+              a.setProp2('effect');
             },
-            {
-              getDeps: (p) => [p.propIn],
-              effects: ({ p }) => ({ prop3: p.propIn }),
-              sideEffects: ({ a }) => {
-                a.setProp4('effect2');
-              },
+            onMount: true,
+          },
+          {
+            getDeps: (p) => [p.propIn],
+            effects: ({ p }) => ({ prop3: p.propIn }),
+            sideEffects: ({ a }) => {
+              a.setProp4('effect2');
             },
-          ],
-        }
-      );
+          },
+        ],
+      });
 
       const callback = jest.fn(() => {});
 

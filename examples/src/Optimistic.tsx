@@ -1,6 +1,7 @@
 import React from 'react';
 import { createStore, IsLoadingFunc, StoreActions, useStore } from '../../src';
-import { optimisticActions as optimisticActionsMiddleware } from '../../src/middlewares';
+import { optimisticActions as optimisticActionsMiddleware } from '../../lib/es/middlewares';
+import { StoreConfig } from '../../src/types';
 
 import OptimisticView from './OptimisticView';
 import { Status } from './types';
@@ -23,31 +24,32 @@ export type OptimisticViewProps = State & Actions & { isLoading: IsLoadingFunc<A
 
 // Initial state
 
-export const getInitialState = (): State => ({
-  value: 'Initial value',
-  // for the request state widget
-  status: 'paused',
-});
+const storeConfig: StoreConfig<State, Actions> = {
+  getInitialState: () => ({
+    value: 'Initial value',
+    // for the request state widget
+    status: 'paused',
+  }),
+  actions: {
+    sendAction: {
+      preEffects: ({ s }) => ({ status: 'running' }),
+      getPromise: ({ args: [willFail] }) => new Promise((res, rej) => setTimeout(willFail ? rej : res, 5000)),
+      optimisticEffects: ({ s }) => ({ value: 'Optimistic value' }),
+      errorEffects: ({ s }) => ({ status: 'errored' }),
+      effects: ({ s }) => ({
+        value: 'Success value',
+        status: 'succeeded',
+      }),
+    },
+    resetValue: (s) => ({ value: 'Initial value', status: 'paused' }),
+  },
+  notifyError: () => {},
+  middlewares: [optimisticActionsMiddleware()],
+};
 
 // Actions implementation
 
-export const optimisticActions: StoreActions<State, Actions> = {
-  sendAction: {
-    preEffects: ({ s }) => ({ status: 'running' }),
-    getPromise: ({ args: [willFail] }) => new Promise((res, rej) => setTimeout(willFail ? rej : res, 5000)),
-    optimisticEffects: ({ s }) => ({ value: 'Optimistic value' }),
-    errorEffects: ({ s }) => ({ status: 'errored' }),
-    effects: ({ s }) => ({
-      value: 'Success value',
-      status: 'succeeded',
-    }),
-  },
-  resetValue: (s) => ({ value: 'Initial value', status: 'paused' }),
-};
-
-const store = createStore(getInitialState, optimisticActions, { notifyError: () => {} }, [
-  optimisticActionsMiddleware(),
-]);
+const store = createStore(storeConfig);
 
 // Container that is managing the state using usetateDecorator hook
 const CounterContainer = () => {

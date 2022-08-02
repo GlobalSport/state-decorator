@@ -1,6 +1,7 @@
 import { Button, Box, CircularProgress } from '@material-ui/core';
 import React, { useState } from 'react';
-import useLocalStore, { StoreActions, StoreOptions } from '../../src/index';
+import useLocalStore, { StoreActions, StoreConfig, StoreOptions } from '../../src';
+import { setResIn } from '../../src/helpers';
 
 // TYPES ===============================
 
@@ -15,34 +16,24 @@ type Actions = {
   getUser: () => Promise<User>;
 };
 
-// INITIAL STATE =======================
-
-export function getInitialState(p: Props): State {
-  return {
+const config: StoreConfig<State, Actions, Props> = {
+  getInitialState: () => ({
     user: null,
-  };
-}
-
-// ACTIONS =============================
-
-export const actions: StoreActions<State, Actions, Props> = {
-  getUser: {
-    getPromise: ({ p }) =>
-      p.userId
-        ? new Promise((resolve) => {
-            window.setTimeout(resolve, 3000, {
-              firstName: 'John',
-              lastName: `Doe_${p.userId}`,
-            });
-          })
-        : null,
-    effects: ({ s, res: user }) => ({ user }),
+  }),
+  actions: {
+    getUser: {
+      getPromise: ({ p }) =>
+        p.userId
+          ? new Promise((resolve) => {
+              window.setTimeout(resolve, 3000, {
+                firstName: 'John',
+                lastName: `Doe_${p.userId}`,
+              });
+            })
+          : null,
+      effects: setResIn('user'),
+    },
   },
-};
-
-// CONTAINER ===========================
-
-const options: StoreOptions<State, Actions, Props> = {
   onPropsChange: [
     {
       getDeps: (p) => [p.userId],
@@ -54,24 +45,10 @@ const options: StoreOptions<State, Actions, Props> = {
   ],
 };
 
-// BEFORE
-// const options: StoreOptions<State, Actions, Props> = {
-//   onMount: ({ a }) => {
-//     a.getUser();
-//   },
-
-//   onPropsChange: [
-//     {
-//       getDeps: (p) => [p.userId],
-//       sideEffects: ({ a }) => {
-//         a.getUser();
-//       },
-//     },
-//   ],
-// };
+// CONTAINER ===========================
 
 function UserViewer(p: Props) {
-  const { state: s, loading } = useLocalStore(getInitialState, actions, p, options);
+  const { state: s, loading } = useLocalStore(config, p);
 
   if (loading) {
     return <CircularProgress />;

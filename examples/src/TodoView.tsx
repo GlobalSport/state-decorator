@@ -101,33 +101,22 @@ const Todo = React.memo(function Todo(props: { todo: TodoItem } & Pick<TodoViewP
 });
 
 const Todos = React.memo(function Todos(
-  props: Pick<TodoViewProps, 'todoIds' | 'todoMap' | 'filter' | 'onSetFilter' | 'onToggle' | 'onEdit'>
+  props: Pick<TodoViewProps, 'filteredTodoIds' | 'todoMap' | 'onToggle' | 'onEdit'>
 ) {
-  const { filter, todoIds, todoMap } = props;
-
-  const filteredTodos = useMemo(
-    () =>
-      filter === Filter.ALL
-        ? todoIds
-        : todoIds.filter((todoId: string) => {
-            const todo = todoMap[todoId];
-            return filter === Filter.COMPLETED ? todo.completed : !todo.completed;
-          }),
-    [todoMap, todoIds, filter]
-  );
+  const { filteredTodoIds, todoMap } = props;
 
   return (
     <Paper>
       <Box>
-        {filteredTodos.length === 0 && (
+        {filteredTodoIds.length === 0 && (
           <Box p={2}>
             <Typography>Nothing!</Typography>
           </Box>
         )}
 
-        {filteredTodos.length > 0 && (
+        {filteredTodoIds.length > 0 && (
           <List>
-            {filteredTodos.map((todoId) => (
+            {filteredTodoIds.map((todoId) => (
               <Todo key={todoId} todo={todoMap[todoId]} onEdit={props.onEdit} onToggle={props.onToggle} />
             ))}
           </List>

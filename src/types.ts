@@ -124,7 +124,7 @@ export type AbortActionCallback<A> = (actionName: keyof A, promiseId?: string) =
 
 export type GetErrorMessage<S, DS, F extends (...args: any[]) => any, P> = (
   ctx: ErrorMessageInvocationContext<S, DS, F, P>
-) => string;
+) => string | null;
 
 export type ContextState<S> = {
   state: S;
@@ -501,3 +501,9 @@ export type StoreOptions<S, A, P = {}, DS = {}> = {
    */
   derivedState?: DerivedStateOption<S, P, DS>;
 };
+
+export type StoreConfig<S, A extends DecoratedActions, P = {}, DS = {}> = {
+  getInitialState: (p: P) => S;
+  actions: StoreActions<S, A, P, DS>;
+  middlewares?: MiddlewareFactory<S, A, P>[];
+} & StoreOptions<S, A, P, DS>;

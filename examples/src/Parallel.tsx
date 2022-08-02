@@ -1,5 +1,11 @@
 import React from 'react';
-import useLocalStore, { StoreActions, ConflictPolicy, AbortActionCallback, IsLoadingFunc } from '../../src/index';
+import useLocalStore, {
+  StoreConfig,
+  StoreActions,
+  ConflictPolicy,
+  AbortActionCallback,
+  IsLoadingFunc,
+} from '../../src';
 import ParallelView from './ParallelView';
 
 export type Item = {
@@ -23,17 +29,28 @@ export type ParallelViewProps = State &
     abortAction: AbortActionCallback<Actions>;
   };
 
-// Initial state
-
-export const getInitialState = (): State => ({
-  items: ['item1', 'item2', 'item3', 'item4'].reduce((acc, id) => {
-    acc[id] = {
-      id,
-      value: '',
-    };
-    return acc;
-  }, {} as State['items']),
-});
+const storeConfig: StoreConfig<State, Actions> = {
+  getInitialState: () => ({
+    items: ['item1', 'item2', 'item3', 'item4'].reduce((acc, id) => {
+      acc[id] = {
+        id,
+        value: '',
+      };
+      return acc;
+    }, {} as State['items']),
+  }),
+  actions: {
+    onSaveItem: {
+      conflictPolicy: ConflictPolicy.PARALLEL,
+      getPromiseId: (id) => id,
+      getPromise: ({ args: [, value] }) =>
+        new Promise((resolve) => {
+          window.setTimeout(resolve, 3000, value);
+        }),
+      effects: ({ s, result, promiseId }) => updateState(s, promiseId, result),
+    },
+  },
+};
 
 function updateState(state: State, id: string, value: string | undefined): State {
   const item = state.items[id];
@@ -51,19 +68,7 @@ function updateState(state: State, id: string, value: string | undefined): State
   };
 }
 
-const parallelAbortActions: StoreActions<State, Actions> = {
-  onSaveItem: {
-    conflictPolicy: ConflictPolicy.PARALLEL,
-    getPromiseId: (id) => id,
-    getPromise: ({ args: [, value] }) =>
-      new Promise((resolve) => {
-        window.setTimeout(resolve, 3000, value);
-      }),
-    effects: ({ s, result, promiseId }) => updateState(s, promiseId, result),
-  },
-};
-
 export default function Parallel() {
-  const { state, actions, isLoading, abortAction } = useLocalStore(getInitialState, parallelAbortActions);
+  const { state, actions, isLoading, abortAction } = useLocalStore(storeConfig);
   return <ParallelView {...state} {...actions} isLoading={isLoading} abortAction={abortAction} />;
 }

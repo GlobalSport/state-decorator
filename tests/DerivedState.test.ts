@@ -29,7 +29,7 @@ describe('Derived state', () => {
     setOther: (p: number) => void;
   };
 
-  const actionsImpl: StoreActions<State, Actions, any, DerivedState> = {
+  const actionsImpl: StoreActions<State, Actions, Props, DerivedState> = {
     setList: ({ args: [list], ds }) => {
       expect(ds).toBeDefined();
       return { list };
@@ -104,7 +104,11 @@ describe('Derived state', () => {
   };
 
   it('computes derived state correctly from state', () => {
-    const store = createStore(getInitialState, actionsImpl, options);
+    const store = createStore<State, Actions, Props, DerivedState>({
+      getInitialState,
+      actions: actionsImpl,
+      ...options,
+    });
     const listener = jest.fn();
     store.addStateListener(listener);
     store.init({
@@ -172,7 +176,11 @@ describe('Derived state', () => {
   });
 
   it('computes derived state correctly from props', () => {
-    const store = createStore(getInitialState, actionsImpl, options);
+    const store = createStore<State, Actions, Props, DerivedState>({
+      getInitialState,
+      actions: actionsImpl,
+      ...options,
+    });
     const listener = jest.fn();
     store.addStateListener(listener);
     store.init({
@@ -250,7 +258,11 @@ describe('Derived state', () => {
   });
 
   it('provides correct derived state in derived state', () => {
-    const store = createStore(getInitialState, actionsImpl, options);
+    const store = createStore<State, Actions, Props, DerivedState>({
+      getInitialState,
+      actions: actionsImpl,
+      ...options,
+    });
     const listener = jest.fn();
     store.addStateListener(listener);
     store.init({
@@ -275,7 +287,11 @@ describe('Derived state', () => {
   });
 
   it('provides correct derived state in derived state', (done) => {
-    const store = createStore(getInitialState, actionsImpl, options);
+    const store = createStore<State, Actions, Props, DerivedState>({
+      getInitialState,
+      actions: actionsImpl,
+      ...options,
+    });
     const listener = jest.fn();
     store.addStateListener(listener);
     store.init({
@@ -304,7 +320,11 @@ describe('Derived state', () => {
   });
 
   it('provides correct derived state in derived state (async)', async () => {
-    const store = createStore(getInitialState, actionsImpl, options);
+    const store = createStore<State, Actions, Props, DerivedState>({
+      getInitialState,
+      actions: actionsImpl,
+      ...options,
+    });
     const listener = jest.fn();
     store.addStateListener(listener);
     store.init({
@@ -329,7 +349,11 @@ describe('Derived state', () => {
   });
 
   it('provides correct derived state in derived state (async, error)', async () => {
-    const store = createStore(getInitialState, actionsImpl, options);
+    const store = createStore<State, Actions, Props, DerivedState>({
+      getInitialState,
+      actions: actionsImpl,
+      ...options,
+    });
     const listener = jest.fn();
     store.addStateListener(listener);
     store.init({
@@ -354,15 +378,15 @@ describe('Derived state', () => {
   });
 
   it('computes derived state correctly from props (with onPropsChange)', () => {
-    const options2: StoreOptions<State, Actions, Props, DerivedState> = {
+    const store = createStore<State, Actions, Props, DerivedState>({
+      getInitialState,
+      actions: actionsImpl,
       ...options,
       onPropsChange: {
         getDeps: (p) => [p.filterIn, p.effectProp],
         effects: ({ p }) => ({ filter: p.filterIn, other: p.effectProp }),
       },
-    };
-
-    const store = createStore(getInitialState, actionsImpl, options2);
+    });
     const listener = jest.fn();
     store.addStateListener(listener);
     store.init({

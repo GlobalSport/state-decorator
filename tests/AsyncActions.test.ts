@@ -179,14 +179,16 @@ describe('Async action', () => {
       callbackError: null,
     };
 
-    const store = createStore(getInitialState, actions, {
+    const store = createStore({
+      getInitialState,
+      actions,
       initialActionsMarkedLoading: ['successAction'],
     });
     store.init(props);
 
     expect(store.loadingMap.successAction).toBeTruthy();
 
-    const store2 = createStore(getInitialState, actions);
+    const store2 = createStore({ getInitialState, actions });
     store2.init(props);
 
     expect(store2.loadingMap.successAction).toBeFalsy();
@@ -210,7 +212,9 @@ describe('Async action', () => {
       },
     };
 
-    const store = createStore(getInitialState, actions, {
+    const store = createStore({
+      getInitialState,
+      actions,
       notifySuccess,
       notifyError,
     });
@@ -281,7 +285,9 @@ describe('Async action', () => {
     const notifySuccess = jest.fn();
     const notifyError = jest.fn();
 
-    const store = createStore(getInitialState, actionsImpl, {
+    const store = createStore({
+      getInitialState,
+      actions: actionsImpl,
       notifySuccess,
       notifyError,
     });
@@ -324,7 +330,9 @@ describe('Async action', () => {
     const notifySuccess = jest.fn();
     const notifyError = jest.fn();
 
-    const store = createStore(getInitialState, actionsImpl, {
+    const store = createStore({
+      getInitialState,
+      actions: actionsImpl,
       notifySuccess,
       notifyError,
     });
@@ -367,10 +375,7 @@ describe('Async action', () => {
     const notifySuccess = jest.fn();
     const notifyError = jest.fn();
 
-    const store = createStore(getInitialState, actionsImpl, {
-      notifySuccess,
-      notifyError,
-    });
+    const store = createStore({ getInitialState, actions: actionsImpl, notifySuccess, notifyError });
     store.addStateListener(listener);
     store.setProps({
       callback,
@@ -430,7 +435,7 @@ describe('Async action', () => {
   });
 
   it('error & reject action', (done) => {
-    const store = createStore(getInitialState, actionsImpl);
+    const store = createStore<State, Actions, Props>({ getInitialState, actions: actionsImpl });
     store.init({
       callback: null,
       callbackCancel: null,
@@ -456,7 +461,7 @@ describe('Async action', () => {
   });
 
   it('error not managed', (done) => {
-    const store = createStore(getInitialState, actionsImpl);
+    const store = createStore({ getInitialState, actions: actionsImpl });
     store.init({
       callback: null,
       callbackCancel: null,
@@ -535,7 +540,7 @@ describe('Async action', () => {
   });
 
   it('error not managed (skip error management, in options)', (done) => {
-    const store = createStore(getInitialState, actionsImpl, { isErrorManaged: true });
+    const store = createStore({ getInitialState, actions: actionsImpl, isErrorManaged: true });
     store.init({
       callback: null,
       callbackCancel: null,
@@ -564,7 +569,7 @@ describe('Async action', () => {
   });
 
   it('error not managed (skip error management, NOT in options)', (done) => {
-    const store = createStore(getInitialState, actionsImpl);
+    const store = createStore({ getInitialState, actions: actionsImpl });
     store.init({
       callback: null,
       callbackCancel: null,
@@ -588,7 +593,7 @@ describe('Async action', () => {
   });
 
   it('error not managed (skip error management + reject)', (done) => {
-    const store = createStore(getInitialState, actionsImpl);
+    const store = createStore({ getInitialState, actions: actionsImpl });
     store.init({
       callback: null,
       callbackCancel: null,
@@ -625,10 +630,7 @@ describe('Async action', () => {
     const notifySuccess = jest.fn();
     const notifyError = jest.fn();
 
-    const store = createStore(getInitialState, actionsImpl, {
-      notifySuccess,
-      notifyError,
-    });
+    const store = createStore({ getInitialState, actions: actionsImpl, notifySuccess, notifyError });
     store.addStateListener(listener);
     store.setProps({
       callback,
@@ -660,10 +662,7 @@ describe('Async action', () => {
     const notifySuccess = jest.fn();
     const notifyError = jest.fn();
 
-    const store = createStore(getInitialState, actionsImpl, {
-      notifySuccess,
-      notifyError,
-    });
+    const store = createStore({ getInitialState, actions: actionsImpl, notifySuccess, notifyError });
 
     store.addStateListener(listener);
     store.setProps({
@@ -690,10 +689,7 @@ describe('Async action', () => {
     const notifySuccess = jest.fn();
     const notifyError = jest.fn();
 
-    const store = createStore(getInitialState, actionsImpl, {
-      notifySuccess,
-      notifyError,
-    });
+    const store = createStore({ getInitialState, actions: actionsImpl, notifySuccess, notifyError });
     store.addStateListener(listener);
     store.setProps({
       callback,
@@ -749,10 +745,7 @@ describe('Async action', () => {
       },
     };
 
-    const store = createStore(getInitialState, retryActionsImpl, {
-      notifySuccess,
-      notifyError,
-    });
+    const store = createStore({ getInitialState, actions: retryActionsImpl, notifySuccess, notifyError });
 
     store.addStateListener(listener);
     store.setProps({
@@ -831,10 +824,7 @@ describe('Async action', () => {
       },
     };
 
-    const store = createStore(getInitialState, retryActionsImpl, {
-      notifySuccess,
-      notifyError,
-    });
+    const store = createStore({ getInitialState, actions: retryActionsImpl, notifySuccess, notifyError });
 
     store.addStateListener(listener);
     store.setProps({
@@ -910,10 +900,7 @@ describe('Async action', () => {
       },
     };
 
-    const store = createStore(getInitialState, patchedActionsImpl, {
-      notifySuccess,
-      notifyError,
-    });
+    const store = createStore({ getInitialState, actions: patchedActionsImpl, notifySuccess, notifyError });
 
     store.addStateListener(listener);
     store.setProps({
@@ -1000,7 +987,7 @@ describe('Async action', () => {
       },
     };
 
-    const store = createStore(() => ({ value: '' }), actionsImpl);
+    const store = createStore({ getInitialState: () => ({ value: '' }), actions: actionsImpl });
     store.init(null);
 
     const stateListener = jest.fn();

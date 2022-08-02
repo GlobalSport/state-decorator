@@ -97,7 +97,7 @@ describe('middlewares', () => {
 
   it('logEffects', async () => {
     let logger = jest.fn();
-    const store = createStore(getInitialState, actions, options, [logEffects(logger)]);
+    const store = createStore({ getInitialState, actions, ...options, middlewares: [logEffects(logger)] });
 
     store.init({ propIn: '' });
 
@@ -115,7 +115,7 @@ describe('middlewares', () => {
       groupEnd: jest.fn(),
       groupCollapsed: jest.fn(),
     };
-    const store = createStore(getInitialState, actions, options, [logDetailedEffects(logger)]);
+    const store = createStore({ getInitialState, actions, ...options, middlewares: [logDetailedEffects(logger)] });
 
     store.init({ propIn: '' });
 
@@ -164,7 +164,7 @@ describe('middlewares', () => {
 
       (window as any).__REDUX_DEVTOOLS_EXTENSION__ = reduxDevTools;
 
-      const store = createStore(getInitialState, actions, { name: 'store' }, [devtools()]);
+      const store = createStore({ getInitialState, actions, name: 'store', middlewares: [devtools()] });
 
       // INIT
       store.init({
@@ -316,7 +316,7 @@ describe('middlewares', () => {
     });
 
     it('extension not present', () => {
-      const store = createStore(getInitialState, actions, { name: 'store' }, [devtools()]);
+      const store = createStore({ getInitialState, actions, name: 'store', middlewares: [devtools()] });
       store.init({
         propIn: '',
       });

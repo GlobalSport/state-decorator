@@ -1,7 +1,8 @@
 import React from 'react';
-import useLocalStore, { StoreActions, ConflictPolicy, AbortActionCallback } from '../../src';
+import useLocalStore, { ConflictPolicy, AbortActionCallback } from '../../src';
 import { Status } from './types';
 import AbortView from './AbortView';
+import { StoreConfig } from '../../src/types';
 export type AbortProps = {};
 
 export type AbortState = {
@@ -22,39 +23,40 @@ export type AbortViewProps = Props &
     abortAction: AbortActionCallback<Actions>;
   };
 
-export function getInitialState(): State {
-  return {
-    status: 'paused',
-  };
-}
-
-export const actionsAbort: StoreActions<State, Actions, Props> = {
-  onAction: {
-    conflictPolicy: ConflictPolicy.IGNORE,
-    abortable: true,
-    preEffects: () => ({ status: 'running' }),
-    getPromise: ({ args: [willCrash], abortSignal }) =>
-      new Promise<string>((resolve, reject) => {
-        const timeout = window.setTimeout(willCrash ? reject : resolve, 5000, willCrash ? new Error('boom') : 'result');
-        abortSignal.addEventListener('abort', () => {
-          window.clearTimeout(timeout);
-          reject(new DOMException('Aborted', 'AbortError'));
-        });
-      }),
-    errorEffects: ({ err }) => (err.name === 'AbortError' ? { status: 'aborted' } : { status: 'errored' }),
-    effects: ({ s }) => ({ status: 'succeeded' }),
-    errorSideEffects: ({ err }) => {
-      if (err.name === 'AbortError') {
-        console.log('AbortError side effect');
-      } else {
-        console.log('Other error side effect');
-      }
+const storeConfig: StoreConfig<State, Actions, Props> = {
+  getInitialState: () => ({ status: 'paused' }),
+  actions: {
+    onAction: {
+      conflictPolicy: ConflictPolicy.IGNORE,
+      abortable: true,
+      preEffects: () => ({ status: 'running' }),
+      getPromise: ({ args: [willCrash], abortSignal }) =>
+        new Promise<string>((resolve, reject) => {
+          const timeout = window.setTimeout(
+            willCrash ? reject : resolve,
+            5000,
+            willCrash ? new Error('boom') : 'result'
+          );
+          abortSignal.addEventListener('abort', () => {
+            window.clearTimeout(timeout);
+            reject(new DOMException('Aborted', 'AbortError'));
+          });
+        }),
+      errorEffects: ({ err }) => (err.name === 'AbortError' ? { status: 'aborted' } : { status: 'errored' }),
+      effects: ({ s }) => ({ status: 'succeeded' }),
+      errorSideEffects: ({ err }) => {
+        if (err.name === 'AbortError') {
+          console.log('AbortError side effect');
+        } else {
+          console.log('Other error side effect');
+        }
+      },
     },
   },
 };
 
 export default React.memo(function Abort() {
-  const { state: s, actions: a, abortAction } = useLocalStore(getInitialState, actionsAbort);
+  const { state: s, actions: a, abortAction } = useLocalStore(storeConfig);
 
   return <AbortView status={s.status} onAction={a.onAction} abortAction={abortAction} />;
 });

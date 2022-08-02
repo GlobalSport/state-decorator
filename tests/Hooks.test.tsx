@@ -42,13 +42,13 @@ type StoreContextProps = StoreApi<State, Actions, any>;
 const StoreContext = createContext<StoreContextProps>(null);
 
 function StoreContextProvider(p: { children: any }) {
-  const store = useLocalStore(getInitialState, actionsImpl, {}, {}, [], false);
+  const store = useLocalStore({ getInitialState, actions: actionsImpl }, false);
   return <StoreContext.Provider value={store}>{p.children}</StoreContext.Provider>;
 }
 
 describe('react hooks', () => {
   it('useLocalStore works as expected', () => {
-    const { result } = renderHook(() => useLocalStore(getInitialState, actionsImpl));
+    const { result } = renderHook(() => useLocalStore({ getInitialState, actions: actionsImpl }));
     expect(result.current.state).toEqual({ prop1: '' });
     act(() => {
       result.current.actions.setProp1('v1');
@@ -73,7 +73,7 @@ describe('react hooks', () => {
       },
     };
 
-    const { result } = renderHook(() => useLocalStore(getInitialState, actionsImpl, {}, options));
+    const { result } = renderHook(() => useLocalStore({ getInitialState, actions: actionsImpl, ...options }));
     expect(result.current.state).toEqual({ prop1: '' });
     act(() => {
       result.current.actions.setProp1('v1');
@@ -88,7 +88,7 @@ describe('react hooks', () => {
   });
 
   it('useStore works as expected', () => {
-    const store = createStore(getInitialState, actionsImpl);
+    const store = createStore({ getInitialState, actions: actionsImpl });
     const { result } = renderHook(() => useStore(store));
     expect(result.current.state).toEqual({ prop1: '' });
     act(() => {
@@ -98,7 +98,7 @@ describe('react hooks', () => {
   });
 
   it('useStoreSlice works as expected (props)', () => {
-    const store = createStore(getInitialState, actionsImpl);
+    const store = createStore({ getInitialState, actions: actionsImpl });
     // parent hook will init the store
     store.init({});
 
@@ -114,7 +114,7 @@ describe('react hooks', () => {
   });
 
   it('useStoreSlice works as expected (props, loadingMap) ', () => {
-    const store = createStore(getInitialState, actionsImpl);
+    const store = createStore({ getInitialState, actions: actionsImpl });
     // parent hook will init the store
     store.init({});
 
@@ -130,7 +130,7 @@ describe('react hooks', () => {
   });
 
   it('useStoreSlice works as expected (func)', () => {
-    const store = createStore(getInitialState, actionsImpl);
+    const store = createStore({ getInitialState, actions: actionsImpl });
     // parent hook will init the store
     store.init({});
 

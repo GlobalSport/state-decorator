@@ -16,7 +16,7 @@ describe('onPropsChange', () => {
     input2: string;
   };
 
-  const actionsImpl: StoreActions<State, Actions, Props> = {
+  const actions: StoreActions<State, Actions, Props> = {
     setProp1: () => ({ prop1: 'test' }),
   };
 
@@ -38,7 +38,9 @@ describe('onPropsChange', () => {
     const listener = jest.fn();
     const callback = jest.fn();
 
-    const store = createStore(getInitialState, actionsImpl, {
+    const store = createStore<State, Actions, Props>({
+      getInitialState,
+      actions: actions,
       onPropsChange: {
         ...options.onPropsChange,
         sideEffects: ({ s }) => {
@@ -75,7 +77,9 @@ describe('onPropsChange', () => {
     const listener = jest.fn();
     const callback = jest.fn();
 
-    const store = createStore(getInitialState, actionsImpl, {
+    const store = createStore({
+      getInitialState,
+      actions,
       onPropsChange: {
         ...options.onPropsChange,
         sideEffects: ({ s }) => {
@@ -115,7 +119,9 @@ describe('onPropsChange', () => {
     const listener = jest.fn();
     const callback = jest.fn();
 
-    const store = createStore(getInitialState, actionsImpl, {
+    const store = createStore({
+      getInitialState,
+      actions: actions,
       onPropsChange: {
         getDeps: options.onPropsChange.getDeps,
         sideEffects: callback,
@@ -149,7 +155,9 @@ describe('onPropsChange', () => {
   it('values changing, no side effects', () => {
     const listener = jest.fn();
 
-    const store = createStore(getInitialState, actionsImpl, {
+    const store = createStore({
+      getInitialState,
+      actions: actions,
       onPropsChange: {
         ...options.onPropsChange,
       },
@@ -189,7 +197,9 @@ describe('onPropsChange', () => {
       },
     };
 
-    const store = createStore(getInitialState, actionsImpl, {
+    const store = createStore({
+      getInitialState,
+      actions: actions,
       onPropsChange: {
         ...options.onPropsChange,
       },
@@ -268,7 +278,7 @@ describe('onPropsChange', () => {
         ],
       };
 
-      const store = createStore(getInitialState, actionsImpl, options);
+      const store = createStore({ getInitialState, actions: actions, ...options });
 
       store.init({
         input: '',
@@ -330,7 +340,7 @@ describe('onPropsChange', () => {
         ],
       };
 
-      const store = createStore(getInitialState, actionsImpl, options);
+      const store = createStore({ getInitialState, actions, ...options });
 
       store.init({
         input: '',

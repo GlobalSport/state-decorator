@@ -43,7 +43,7 @@ describe('createMockStore', () => {
     concat: string;
   };
 
-  const actionsImpl: StoreActions<State, Actions, Props> = {
+  const actions: StoreActions<State, Actions, Props> = {
     setProp1: ({ args: [v] }) => ({ prop1: v }),
     setProp4: ({ args: [v] }) => ({ prop4: v }),
     setProp2: {
@@ -124,9 +124,9 @@ describe('createMockStore', () => {
     };
   }
 
-  const mockStore = createMockStore(getInitialState, actionsImpl, { prop: '', prop2: '', onMount: null }, options);
+  const mockStore = createMockStore(getInitialState, actions, { prop: '', prop2: '', onMount: null }, options);
 
-  const store = createStore(getInitialState, actionsImpl, options);
+  const store = createStore({ getInitialState, actions, ...options });
   const mockStore2 = createMockFromStore(store, { prop: '', prop2: '', onMount: null });
 
   it('allows to set state correctly', () => {
@@ -296,7 +296,7 @@ describe('createMockStore', () => {
 
     const mockStore2 = createMockStore(
       getInitialState,
-      actionsImpl,
+      actions,
       { prop: '', prop2: '', onMount: null },
       optionsPropsChange
     );
@@ -835,7 +835,7 @@ describe('createMockStore', () => {
     it('fails if no onMount is set on options', () => {
       const store = createMockStore(
         getInitialState,
-        actionsImpl,
+        actions,
         {
           prop: '',
           prop2: '',

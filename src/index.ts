@@ -75,6 +75,7 @@ import {
   AbortedActions,
   ErrorProps,
   LoadingMapProps,
+  StoreConfig,
   ClearErrorFunc,
 } from './types';
 
@@ -110,6 +111,7 @@ export {
   AbortActionCallback,
   ErrorProps,
   LoadingMapProps,
+  StoreConfig,
 };
 
 export type IsLoadingFunc<A> = (...props: (keyof A | [keyof A, string])[]) => boolean;
@@ -199,16 +201,11 @@ export type StateListener<S, DS, A extends DecoratedActions> = (ctx: StateListen
 
 /**
  * Create a new store.
- * @param getInitialState The state initialization function (using props)
- * @param actionsImpl  The actions implementation (pure functions only).
- * @param options Options to configure the store
+ * @param config Store configuration
  * @returns a store.
  */
 export function createStore<S, A extends DecoratedActions, P, DS = {}>(
-  getInitialState: (p: P) => S,
-  actionsImpl: StoreActions<S, A, P, DS>,
-  options: StoreOptions<S, A, P, DS> = {},
-  storeMiddlewares: MiddlewareFactory<S, A, P>[] = null
+  config: StoreConfig<S, A, P, DS>
 ): StoreApi<S, A, P, DS> {
   const stateRef = createRef<S>();
   const derivedStateRef = createRef<DerivedState<DS>>();
@@ -222,6 +219,8 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
   const initializedRef = createRef(false);
 
   const middlewaresRef = createRef<Middleware<S, A, P>[]>([]);
+
+  const { getInitialState, actions: actionsImpl, middlewares = [], ...options } = config;
 
   let stateListeners: Record<string, StateListener<S, DS, A>> = {};
   let stateListenerCount = 0;
@@ -316,7 +315,7 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
         middleware.init?.(ctx);
       };
       globalConfig.defaultMiddlewares?.forEach(mapper);
-      storeMiddlewares?.forEach(mapper);
+      middlewares?.forEach(mapper);
       // end init
 
       computeDerivedValues(stateRef, propsRef, derivedStateRef, options);
@@ -809,7 +808,7 @@ export function useStore<S, A extends DecoratedActions, P, DS = {}>(
  * @param refreshOnUpdate Whether refresh the component if store state changes.
  * @returns The state, actions and isLoading function.
  */
-export function useLocalStore<S, A extends DecoratedActions, P, DS = {}>(
+export function useLocalStoreV6<S, A extends DecoratedActions, P, DS = {}>(
   getInitialState: (p: P) => S,
   actionImpl: StoreActions<S, A, P, DS>,
   props?: P,
@@ -817,9 +816,29 @@ export function useLocalStore<S, A extends DecoratedActions, P, DS = {}>(
   middlewares?: MiddlewareFactory<S, A, P>[],
   refreshOnUpdate: boolean = true
 ) {
+  return useLocalStore({ getInitialState, actions: actionImpl, ...options, middlewares }, props, refreshOnUpdate);
+}
+
+/**
+ * Creates and manages a local store.
+ * The component will be refreshed for every change in the store.
+ * Store will NOT be destroyed when component is unmouted.
+ *
+ * @param getInitialState Function to compute initial state from props.
+ * @param actionImpl Actions implementation.
+ * @param props Owner component props to update state or react on prop changes
+ * @param options The store options.
+ * @param refreshOnUpdate Whether refresh the component if store state changes.
+ * @returns The state, actions and isLoading function.
+ */
+export function useLocalStore<S, A extends DecoratedActions, P, DS = {}>(
+  config: StoreConfig<S, A, P, DS>,
+  props?: P,
+  refreshOnUpdate: boolean = true
+) {
   const storeRef = useRef<StoreApi<S, A, P, DS>>();
   if (storeRef.current == null) {
-    storeRef.current = createStore(getInitialState, actionImpl, options, middlewares);
+    storeRef.current = createStore(config);
   }
 
   useEffect(() => {

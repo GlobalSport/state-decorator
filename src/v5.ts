@@ -312,7 +312,12 @@ function useStateDecorator<S, A extends DecoratedActions, P>(
       middlewareFactories.push(logDetailedEffects());
     }
 
-    storeRef.current = createStore(getInitialState, actionsRef.current, optionsRef.current, middlewareFactories);
+    storeRef.current = createStore({
+      getInitialState,
+      actions: actionsRef.current,
+      ...optionsRef.current,
+      middlewares: middlewareFactories,
+    });
   }
 
   storeRef.current.setProps(props);

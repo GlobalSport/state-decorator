@@ -1,6 +1,7 @@
 import React, { createContext } from 'react';
 import useLocalStore, { StoreActions, LoadingProps } from '../../src';
 import { setResIn } from '../../src/helpers';
+import { StoreConfig } from '../../src/types';
 
 // TYPES ===============================
 
@@ -19,20 +20,18 @@ export type Actions = {
 type Props = {};
 
 // INITIAL STATE =======================
-
-export function getInitialState(p: Props): State {
-  return {
+const storeConfig: StoreConfig<State, Actions, Props> = {
+  getInitialState: () => ({
     myProp: 'initial',
-  };
-}
-
-export const actions: StoreActions<State, Actions, Props> = {
-  onLoad: {
-    getPromise: () =>
-      new Promise((resolve) => {
-        setTimeout(() => resolve('value'), 3000);
-      }),
-    effects: setResIn('myProp'),
+  }),
+  actions: {
+    onLoad: {
+      getPromise: () =>
+        new Promise((resolve) => {
+          setTimeout(() => resolve('value'), 3000);
+        }),
+      effects: setResIn('myProp'),
+    },
   },
 };
 
@@ -47,7 +46,7 @@ export const Context = createContext<ContextProps>(null);
 // CONTAINER ===========================
 
 export function Provider(p: PropsIn) {
-  const { state: s, actions: a, loadingMap } = useLocalStore(getInitialState, actions, p);
+  const { state: s, actions: a, loadingMap } = useLocalStore(storeConfig);
 
   console.log(loadingMap);
 

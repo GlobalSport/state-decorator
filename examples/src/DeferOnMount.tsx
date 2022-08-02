@@ -1,6 +1,7 @@
 import React, { memo, useContext } from 'react';
 import useLocalStore, { StoreActions, LoadingProps, StoreOptions } from '../../src';
 import { setResIn } from '../../src/helpers';
+import { StoreConfig } from '../../src/types';
 import { Context, ContextProps, Provider } from './DeferOnMountContext';
 
 // TYPES ===============================
@@ -15,23 +16,19 @@ type Actions = {
 
 // INITIAL STATE =======================
 
-export function getInitialState(p: Props): State {
-  return { childProp: 'initial' };
-}
-
-// ACTIONS =============================
-
-export const actions: StoreActions<State, Actions, Props> = {
-  onLoadChild: {
-    getPromise: () =>
-      new Promise((resolve) => {
-        setTimeout(() => resolve('valueChild'), 2000);
-      }),
-    effects: setResIn('childProp'),
+const storeConfig: StoreConfig<State, Actions, Props> = {
+  getInitialState: () => ({
+    childProp: 'initial',
+  }),
+  actions: {
+    onLoadChild: {
+      getPromise: () =>
+        new Promise((resolve) => {
+          setTimeout(() => resolve('valueChild'), 2000);
+        }),
+      effects: setResIn('childProp'),
+    },
   },
-};
-
-export const options: StoreOptions<State, Actions, Props> = {
   onMount: ({ a }) => {
     a.onLoadChild();
   },
@@ -58,7 +55,7 @@ function DeferOnMount() {
   const ctx = useContext(Context);
   const props: Props = ctx;
 
-  const { state, loadingMap } = useLocalStore(getInitialState, actions, props, options);
+  const { state, loadingMap } = useLocalStore(storeConfig, props);
 
   console.log(loadingMap);
 

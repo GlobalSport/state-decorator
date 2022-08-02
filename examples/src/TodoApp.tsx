@@ -1,7 +1,8 @@
 import React from 'react';
-import { createStore, StoreActions, useStore } from '../../src/';
+import useLocalStore, { StoreConfig } from '../../src';
 import produce from 'immer';
 import TodoView from './TodoView';
+import { setArgIn } from '../../src/helpers';
 
 // Types
 
@@ -24,6 +25,10 @@ export type State = {
   filter: Filter;
 };
 
+export type DerivedState = {
+  filteredTodoIds: string[];
+};
+
 export type Actions = {
   onCreate: (title: string) => void;
   onEdit: (id: string, title: string) => void;
@@ -33,77 +38,83 @@ export type Actions = {
   onSetFilter: (filter: Filter) => void;
 };
 
-export type TodoViewProps = State & Actions;
+export type TodoViewProps = State & DerivedState & Actions;
 
-// Initial state
-const getInitialState = (): State => ({
-  todoMap: {
-    first: {
-      id: 'first',
-      title: 'Initial todo',
-      completed: false,
+const storeConfig: StoreConfig<State, Actions, {}, DerivedState> = {
+  getInitialState: () => ({
+    todoMap: {
+      first: {
+        id: 'first',
+        title: 'Initial todo',
+        completed: false,
+      },
+    },
+    todoIds: ['first'],
+    idCount: 0,
+    filter: Filter.ALL,
+  }),
+  actions: {
+    onCreate: ({ s, args: [title] }) =>
+      produce(s, (s) => {
+        const newTodo: TodoItem = {
+          title,
+          id: `id${s.idCount}`,
+          completed: false,
+        };
+        s.idCount++;
+        s.todoMap[newTodo.id] = newTodo;
+        s.todoIds.push(newTodo.id);
+      }),
+
+    onEdit: ({ s, args: [id, title] }) =>
+      produce(s, (s) => {
+        s.todoMap[id].title = title;
+      }),
+
+    onDelete: ({ s, args: [id] }) =>
+      produce(s, (s) => {
+        delete s.todoMap[id];
+        s.todoIds = s.todoIds.filter((todoId) => todoId !== id);
+      }),
+
+    onToggle: ({ s, args: [id] }) =>
+      produce(s, (s) => {
+        const todo = s.todoMap[id];
+        todo.completed = !todo.completed;
+      }),
+
+    onClearCompleted: ({ s }) =>
+      produce(s, (s) => {
+        s.todoIds = s.todoIds.filter((id) => {
+          const todo = s.todoMap[id];
+          if (todo.completed) {
+            delete s.todoMap[todo.id];
+          }
+          return !todo.completed;
+        });
+      }),
+
+    onSetFilter: setArgIn('filter'),
+  },
+  derivedState: {
+    filteredTodoIds: {
+      getDeps: ({ s }) => [s.todoIds, s.todoMap, s.filter],
+      get: ({ s: { todoIds, todoMap, filter } }) =>
+        filter === Filter.ALL
+          ? todoIds
+          : todoIds.filter((todoId: string) => {
+              const todo = todoMap[todoId];
+              return filter === Filter.COMPLETED ? todo.completed : !todo.completed;
+            }),
     },
   },
-  todoIds: ['first'],
-  idCount: 0,
-  filter: Filter.ALL,
-});
-
-// Actions implementation
-
-const todoActions: StoreActions<State, Actions> = {
-  onCreate: ({ state, args: [title] }) =>
-    produce(state, (draftState) => {
-      const newTodo: TodoItem = {
-        title,
-        id: `id${draftState.idCount}`,
-        completed: false,
-      };
-      draftState.idCount++;
-      draftState.todoMap[newTodo.id] = newTodo;
-      draftState.todoIds.push(newTodo.id);
-    }),
-
-  onEdit: ({ state, args: [id, title] }) =>
-    produce(state, (draftState) => {
-      draftState.todoMap[id].title = title;
-    }),
-
-  onDelete: ({ state, args: [id] }) =>
-    produce(state, (draftState) => {
-      delete draftState.todoMap[id];
-      draftState.todoIds = draftState.todoIds.filter((todoId) => todoId !== id);
-    }),
-
-  onToggle: ({ state, args: [id] }) =>
-    produce(state, (draftState) => {
-      const todo = draftState.todoMap[id];
-      todo.completed = !todo.completed;
-    }),
-
-  onClearCompleted: ({ state }) =>
-    produce(state, (draftState) => {
-      draftState.todoIds = draftState.todoIds.filter((id) => {
-        const todo = draftState.todoMap[id];
-        if (todo.completed) {
-          delete draftState.todoMap[todo.id];
-        }
-        return !todo.completed;
-      });
-    }),
-
-  onSetFilter: ({ s, args: [filter] }) => ({
-    filter,
-  }),
 };
-
-export const todoStore = createStore(getInitialState, todoActions);
 
 export default function () {
   // Store is bound to this React component
   // If store changes, component is refreshed
   // When this component is destroyed, the store will be destroyed too.
-  const { state, actions } = useStore(todoStore, {});
+  const { state, actions } = useLocalStore(storeConfig);
 
   return <TodoView {...state} {...actions} />;
 }

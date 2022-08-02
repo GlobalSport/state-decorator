@@ -1,6 +1,8 @@
 import React, { createContext } from 'react';
 
-import { StoreActions, useLocalStore, StoreApi } from '../../lib/es';
+import { useLocalStore, StoreApi } from '../../src';
+import { setResIn } from '../../src/helpers';
+import { StoreConfig } from '../../src/types';
 import FlashingBox from './FlashingBox';
 import SliceView from './LocalStateSliceView';
 
@@ -17,12 +19,24 @@ export type Actions = {
 
 export type ConflictPolicyViewProps = State & Actions;
 
-// Initial state
+const storeConfig: StoreConfig<State, Actions> = {
+  name: 'Slice store',
+  getInitialState: () => ({
+    value1: '',
+    value2: '',
+  }),
 
-export const getInitialState = (): State => ({
-  value1: '',
-  value2: '',
-});
+  actions: {
+    setValue1: {
+      getPromise: ({ args: [v] }) => getTimeoutPromise(500, v),
+      effects: setResIn('value1'),
+    },
+    setValue2: {
+      getPromise: ({ args: [v] }) => getTimeoutPromise(1000, v),
+      effects: setResIn('value2'),
+    },
+  },
+};
 
 function getTimeoutPromise<C>(timeout: number, result: C = null): Promise<C> {
   return new Promise((res) => {
@@ -30,23 +44,13 @@ function getTimeoutPromise<C>(timeout: number, result: C = null): Promise<C> {
   });
 }
 
-const actionsImpl: StoreActions<State, Actions, {}> = {
-  setValue1: {
-    getPromise: ({ args: [v] }) => getTimeoutPromise(500, v),
-    effects: ({ s, res }) => ({ ...s, value1: res }),
-  },
-  setValue2: {
-    getPromise: ({ args: [v] }) => getTimeoutPromise(1000, v),
-    effects: ({ s, res }) => ({ ...s, value2: res }),
-  },
-};
-
 type StoreContextProps = StoreApi<State, Actions, any>;
 
 export const StoreContext = createContext<StoreContextProps>(null);
 
 export function StoreContextProvider(p: { children: any }) {
-  const store = useLocalStore(getInitialState, actionsImpl, null, {}, [], false);
+  // second parameter prevents refresh of component if state is changing
+  const store = useLocalStore(storeConfig, false);
   return <StoreContext.Provider value={store}>{p.children}</StoreContext.Provider>;
 }
 

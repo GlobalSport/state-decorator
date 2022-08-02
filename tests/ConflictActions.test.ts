@@ -55,13 +55,13 @@ describe('Conflicting actions', () => {
     const callback = jest.fn();
     const callbackError = jest.fn();
 
-    const store = createStore(
-      () => ({
+    const store = createStore({
+      getInitialState: () => ({
         values: [],
         errors: [],
       }),
-      actionsImpl
-    );
+      actions: actionsImpl,
+    });
 
     store.setProps({
       callback,
@@ -88,34 +88,32 @@ describe('Conflicting actions', () => {
     const callback = jest.fn();
     const callbackError = jest.fn();
 
-    const actionsImpl: StoreActions<State, Actions, Props> = {
-      setValue: {
-        getPromise: ({ args: [value] }) => {
-          if (value === 'v2') {
-            return null;
-          } else if (value === 'v3') {
-            return (getFailedTimeoutPromise(50, new Error('v3')) as any) as Promise<string>;
-          }
-          return getTimeoutPromise(50, value) as Promise<string>;
-        },
-        effects: ({ s, args: [res] }) => ({ values: s.values.concat(res) }),
-        errorEffects: ({ s, args: [value] }) => ({ errors: s.errors.concat(value) }),
-        sideEffects: ({ s, p }) => {
-          p.callback('onDone', s);
-        },
-        errorSideEffects: ({ p, s }) => {
-          p.callbackError('onFail', s);
-        },
-      },
-    };
-
-    const store = createStore(
-      () => ({
+    const store = createStore<State, Actions, Props>({
+      getInitialState: () => ({
         values: [],
         errors: [],
       }),
-      actionsImpl
-    );
+      actions: {
+        setValue: {
+          getPromise: ({ args: [value] }) => {
+            if (value === 'v2') {
+              return null;
+            } else if (value === 'v3') {
+              return (getFailedTimeoutPromise(50, new Error('v3')) as any) as Promise<string>;
+            }
+            return getTimeoutPromise(50, value) as Promise<string>;
+          },
+          effects: ({ s, args: [res] }) => ({ values: s.values.concat(res) }),
+          errorEffects: ({ s, args: [value] }) => ({ errors: s.errors.concat(value) }),
+          sideEffects: ({ s, p }) => {
+            p.callback('onDone', s);
+          },
+          errorSideEffects: ({ p, s }) => {
+            p.callbackError('onFail', s);
+          },
+        },
+      },
+    });
 
     store.setProps({
       callback,
@@ -142,18 +140,18 @@ describe('Conflicting actions', () => {
     const callback = jest.fn();
     const callbackError = jest.fn();
 
-    const store = createStore<State, Actions, Props>(
-      () => ({
+    const store = createStore<State, Actions, Props>({
+      getInitialState: () => ({
         values: [],
         errors: [],
       }),
-      {
+      actions: {
         setValue: {
           ...setValueAction,
           conflictPolicy: ConflictPolicy.KEEP_LAST,
         },
-      }
-    );
+      },
+    });
 
     store.setProps({
       callback,
@@ -182,18 +180,18 @@ describe('Conflicting actions', () => {
     const callback = jest.fn();
     const callbackError = jest.fn();
 
-    const store = createStore<State, Actions, Props>(
-      () => ({
+    const store = createStore<State, Actions, Props>({
+      getInitialState: () => ({
         values: [],
         errors: [],
       }),
-      {
+      actions: {
         setValue: {
           ...setValueAction,
           conflictPolicy: ConflictPolicy.REUSE,
         },
-      }
-    );
+      },
+    });
 
     store.setProps({
       callback,
@@ -222,18 +220,18 @@ describe('Conflicting actions', () => {
     const callback = jest.fn();
     const callbackError = jest.fn();
 
-    const store = createStore<State, Actions, Props>(
-      () => ({
+    const store = createStore<State, Actions, Props>({
+      getInitialState: () => ({
         values: [],
         errors: [],
       }),
-      {
+      actions: {
         setValue: {
           ...setValueAction,
           conflictPolicy: ConflictPolicy.REUSE,
         },
-      }
-    );
+      },
+    });
 
     store.setProps({
       callback,
@@ -262,18 +260,18 @@ describe('Conflicting actions', () => {
     const callback = jest.fn();
     const callbackError = jest.fn();
 
-    const store = createStore<State, Actions, Props>(
-      () => ({
+    const store = createStore<State, Actions, Props>({
+      getInitialState: () => ({
         values: [],
         errors: [],
       }),
-      {
+      actions: {
         setValue: {
           ...setValueAction,
           conflictPolicy: ConflictPolicy.REUSE,
         },
-      }
-    );
+      },
+    });
 
     store.setProps({
       callback,
@@ -303,12 +301,12 @@ describe('Conflicting actions', () => {
     // BAD !! for testing only
     let count = 0;
 
-    const store = createStore<State, Actions, Props>(
-      () => ({
+    const store = createStore<State, Actions, Props>({
+      getInitialState: () => ({
         values: [],
         errors: [],
       }),
-      {
+      actions: {
         setValue: {
           ...setValueAction,
           getPromise: ({ args: [value] }) => {
@@ -326,8 +324,8 @@ describe('Conflicting actions', () => {
           retryCount: 5,
           retryDelaySeed: 1,
         },
-      }
-    );
+      },
+    });
 
     store.setProps({
       callback,
@@ -356,12 +354,12 @@ describe('Conflicting actions', () => {
 
     let count = 0;
 
-    const store = createStore<State, Actions, Props>(
-      () => ({
+    const store = createStore<State, Actions, Props>({
+      getInitialState: () => ({
         values: [],
         errors: [],
       }),
-      {
+      actions: {
         setValue: {
           ...setValueAction,
           getPromise: ({ args: [value] }) => {
@@ -371,8 +369,8 @@ describe('Conflicting actions', () => {
           retryCount: 3,
           retryDelaySeed: 1,
         },
-      }
-    );
+      },
+    });
 
     store.setProps({
       callback,
@@ -400,18 +398,18 @@ describe('Conflicting actions', () => {
     const callback = jest.fn();
     const callbackError = jest.fn();
 
-    const store = createStore<State, Actions, Props>(
-      () => ({
+    const store = createStore<State, Actions, Props>({
+      getInitialState: () => ({
         values: [],
         errors: [],
       }),
-      {
+      actions: {
         setValue: {
           ...setValueAction,
           conflictPolicy: ConflictPolicy.IGNORE,
         },
-      }
-    );
+      },
+    });
 
     store.setProps({
       callback,
@@ -441,18 +439,18 @@ describe('Conflicting actions', () => {
     const callback = jest.fn();
     const callbackError = jest.fn();
 
-    const store = createStore<State, Actions, Props>(
-      () => ({
+    const store = createStore<State, Actions, Props>({
+      getInitialState: () => ({
         values: [],
         errors: [],
       }),
-      {
+      actions: {
         setValue: {
           ...setValueAction,
           conflictPolicy: ConflictPolicy.REJECT,
         },
-      }
-    );
+      },
+    });
 
     store.setProps({
       callback,
@@ -487,19 +485,19 @@ describe('Conflicting actions', () => {
     const callback = jest.fn();
     const callbackError = jest.fn();
 
-    const store = createStore<State, Actions, Props>(
-      () => ({
+    const store = createStore<State, Actions, Props>({
+      getInitialState: () => ({
         values: [],
         errors: [],
       }),
-      {
+      actions: {
         setValue: {
           ...setValueAction,
           conflictPolicy: ConflictPolicy.PARALLEL,
           getPromiseId: (value: string) => value,
         },
-      }
-    );
+      },
+    });
 
     store.setProps({
       callback,
@@ -536,12 +534,12 @@ describe('Conflicting actions', () => {
 
     let reqCount = 0;
 
-    const store = createStore<State, Actions, Props>(
-      () => ({
+    const store = createStore<State, Actions, Props>({
+      getInitialState: () => ({
         values: [],
         errors: [],
       }),
-      {
+      actions: {
         setValue: {
           ...setValueAction,
           conflictPolicy: ConflictPolicy.PARALLEL,
@@ -549,8 +547,8 @@ describe('Conflicting actions', () => {
           getPromise: ({ args: [v] }) =>
             reqCount++ === 1 ? getFailedTimeoutPromise(50, new Error('failed')) : getTimeoutPromise(50, v),
         },
-      }
-    );
+      },
+    });
 
     store.setProps({
       callback,
@@ -590,12 +588,12 @@ describe('Conflicting actions', () => {
 
     let reqCount = 0;
 
-    const store = createStore<State, Actions, Props>(
-      () => ({
+    const store = createStore<State, Actions, Props>({
+      getInitialState: () => ({
         values: [],
         errors: [],
       }),
-      {
+      actions: {
         setValue: {
           ...setValueAction,
           conflictPolicy: ConflictPolicy.PARALLEL,
@@ -603,8 +601,8 @@ describe('Conflicting actions', () => {
           getPromise: ({ args: [v] }) =>
             reqCount++ === 1 ? getFailedTimeoutPromise(50, new Error('failed')) : getTimeoutPromise(50, v),
         },
-      }
-    );
+      },
+    });
 
     store.setProps({
       callback,

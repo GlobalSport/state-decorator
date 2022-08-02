@@ -13,7 +13,7 @@ describe('Sync action', () => {
     setCancelled: (p: number) => void;
   };
 
-  const actionsImpl: StoreActions<State, Actions, any> = {
+  const actions: StoreActions<State, Actions, any> = {
     setProp1: ({ args: [p] }) => ({ prop1: p }),
     setProp2: ({ args: [p] }) => ({ prop2: p }),
     setCancelled: () => null,
@@ -25,7 +25,7 @@ describe('Sync action', () => {
   });
 
   it('can execute a regular sync action', () => {
-    const store = createStore(getInitialState, actionsImpl);
+    const store = createStore({ getInitialState, actions });
     const listener = jest.fn();
     store.addStateListener(listener);
     store.init(null);

@@ -8,28 +8,28 @@
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import React, { useState } from 'react';
-import { StoreActions } from '../../src/types';
+import React, { useState, createContext, memo } from 'react';
+import { StoreActions } from '../../lib/es/types';
 import { logDetailedEffects, devtools, logEffects } from '../../src/middlewares';
-import { createStore, useStoreSlice, useBindStore, slice, pick } from '../../src';
+import { useStoreContextSlice, useStoreSlice, useLocalStore, StoreApi, StoreOptions, StoreConfig } from '../../src';
 import { useRef } from 'react';
 import FlashingBox from './FlashingBox';
 
 import Typography from '@material-ui/core/Typography';
 import Box from '@material-ui/core/Box';
 
-type MyState = {
+type State = {
   list: string[];
   prop1: string;
   prop2: string;
   prop3: string;
 };
 
-type MyDerivedState = {
+type DerivedState = {
   listFiltered: string[];
 };
 
-type MyActions = {
+type Actions = {
   addItem: (param: string) => void;
   setProp1: (item: string) => void;
   setProp2: (item: string) => void;
@@ -41,80 +41,76 @@ type MyActions = {
   loadCancel: () => Promise<any>;
 };
 
-type MyProps = {
+type Props = {
   init: number;
 };
 
-const myActions: StoreActions<MyState, MyActions, MyProps> = {
-  addItem: ({ s, args: [param] }) => ({
-    list: [...s.list, param],
-  }),
-  setProp1: ({ args: [v] }) => ({
-    prop1: v,
-  }),
-  setProp2: ({ args: [v] }) => ({
-    prop2: v,
-  }),
-  resetProp3: () => ({
-    prop3: '',
-  }),
-  setProp3: {
-    effects: ({ args: [v] }) => ({
-      prop3: v,
+const storeConfig: StoreConfig<State, Actions, Props, DerivedState> = {
+  getInitialState: (p) => ({ list: [p.init.toString()], prop1: '', prop2: '', prop3: '' }),
+  actions: {
+    addItem: ({ s, args: [param] }) => ({
+      list: [...s.list, param],
     }),
-    sideEffects: ({ a }) => {
-      a.loadList();
-    },
-    debounceSideEffectsTimeout: 1000,
-  },
-  setProp3Debounced: {
-    effects: ({ s, args: [v] }) => ({
-      prop3: v,
+    setProp1: ({ args: [v] }) => ({
+      prop1: v,
     }),
-    sideEffects: ({ a }) => {
-      a.loadList();
-    },
-    debounceTimeout: 500,
-  },
-  loadList: {
-    getPromise: () => {
-      const res = new Array(10).fill(null);
-      res.forEach((_, index) => {
-        res[index] = `${Math.floor(Math.random() * 100)}`;
-      });
-
-      return new Promise((resolve) => {
-        setTimeout(resolve, 1000, res);
-      });
-    },
-    effects: ({ res: list }) => ({ list }),
-    sideEffects: ({ s, a }) => {
-      a.setProp1(s.list[0]);
-    },
-  },
-  loadAndFail: {
-    getPromise: ({ args: [fail] }) =>
-      new Promise((res, reject) => {
-        fail ? setTimeout(reject, 1000, new Error('boom')) : setTimeout(res, 1000, {});
+    setProp2: ({ args: [v] }) => ({
+      prop2: v,
+    }),
+    resetProp3: () => ({
+      prop3: '',
+    }),
+    setProp3: {
+      effects: ({ args: [v] }) => ({
+        prop3: v,
       }),
-    sideEffects: ({ a }) => {
-      a.setProp2('');
+      sideEffects: ({ a }) => {
+        a.loadList();
+      },
+      debounceSideEffectsTimeout: 1000,
     },
-    errorSideEffects: ({ a }) => {
-      a.setProp2('Error');
+    setProp3Debounced: {
+      effects: ({ s, args: [v] }) => ({
+        prop3: v,
+      }),
+      sideEffects: ({ a }) => {
+        a.loadList();
+      },
+      debounceTimeout: 500,
+    },
+    loadList: {
+      getPromise: () => {
+        const res = new Array(10).fill(null);
+        res.forEach((_, index) => {
+          res[index] = `${Math.floor(Math.random() * 100)}`;
+        });
+
+        return new Promise((resolve) => {
+          setTimeout(resolve, 1000, res);
+        });
+      },
+      effects: ({ res: list }) => ({ list }),
+      sideEffects: ({ s, a }) => {
+        a.setProp1(s.list[0]);
+      },
+    },
+    loadAndFail: {
+      getPromise: ({ args: [fail] }) =>
+        new Promise((res, reject) => {
+          fail ? setTimeout(reject, 1000, new Error('boom')) : setTimeout(res, 1000, {});
+        }),
+      sideEffects: ({ a }) => {
+        a.setProp2('');
+      },
+      errorSideEffects: ({ a }) => {
+        a.setProp2('Error');
+      },
+    },
+    loadCancel: {
+      getPromise: () => null,
+      effects: () => ({ prop2: 'test' }),
     },
   },
-  loadCancel: {
-    getPromise: () => null,
-    effects: () => ({ prop2: 'test' }),
-  },
-};
-
-function getInitialState(p: MyProps): MyState {
-  return { list: [p.init.toString()], prop1: '', prop2: '', prop3: '' };
-}
-
-const myOptions: StoreOptions<MyState, MyActions, MyProps, MyDerivedState> = {
   name: 'StateDecorator sample',
   onMount: ({ a }) => {
     a.loadList();
@@ -127,11 +123,11 @@ const myOptions: StoreOptions<MyState, MyActions, MyProps, MyDerivedState> = {
   },
 };
 
-export const StoreContext = createContext<StoreApi<MyState, MyActions, MyProps, MyDerivedState>>(null);
+export const StoreContext = createContext<StoreApi<State, Actions, Props, DerivedState>>(null);
 
-export function StoreContextProvider(p: MyProps & { children: any }) {
+export function StoreContextProvider(p: Props & { children: any }) {
   const { children, ...props } = p;
-  const store = useLocalStore(getInitialState, myActions, props, myOptions, null, false);
+  const store = useLocalStore(storeConfig, props, false);
   return <StoreContext.Provider value={store}>{p.children}</StoreContext.Provider>;
 }
 
@@ -157,7 +153,7 @@ export default function MyContainer() {
   );
 }
 
-export function StateContainer(props: MyProps) {
+export function StateContainer(props: Props) {
   return (
     <StoreContextProvider {...props}>
       <StateView />

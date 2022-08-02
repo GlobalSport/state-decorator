@@ -1,8 +1,16 @@
 import React, { createContext, memo } from 'react';
 
 import { Box, TextField, Typography } from '@material-ui/core';
-import useLocalStore, { createStore, StoreActions, StoreApi, useStoreSlice, useStoreContextSlice } from '../../lib/es';
+import useLocalStore, {
+  createStore,
+  StoreActions,
+  StoreApi,
+  useStoreSlice,
+  useStoreContextSlice,
+  StoreConfig,
+} from '../../src';
 import FlashingBox from './FlashingBox';
+import { setArgIn } from '../../src/helpers';
 
 // === Type
 
@@ -15,10 +23,11 @@ type Actions = {
   setItem: (item: string) => void;
 };
 
-const getInitialState = () => ({ item: 'initialValue', item2: 'another state value' });
-
-const actionsImpl: StoreActions<State, Actions> = {
-  setItem: ({ s, args: [item] }) => ({ ...s, item }),
+const storeConfig: StoreConfig<State, Actions> = {
+  getInitialState: () => ({ item: 'initialValue', item2: 'another state value' }),
+  actions: {
+    setItem: setArgIn('item'),
+  },
 };
 
 // === Components
@@ -26,7 +35,7 @@ const actionsImpl: StoreActions<State, Actions> = {
 // Case 1: useLocalStore
 
 function StateContainer1() {
-  const { state, actions } = useLocalStore(getInitialState, actionsImpl);
+  const { state, actions } = useLocalStore(storeConfig);
 
   return (
     <>
@@ -66,7 +75,7 @@ const ItemInput1 = memo(function ItemInput1(p: Pick<State, 'item'> & Pick<Action
 
 // Case 2: global store
 
-const store = createStore(getInitialState, actionsImpl);
+const store = createStore(storeConfig);
 store.init(null);
 
 function StateContainer2() {
@@ -116,7 +125,7 @@ function ItemInput2(p: {}) {
 type Store = StoreApi<State, Actions, any>;
 
 function StateContainer3() {
-  const store = useLocalStore(getInitialState, actionsImpl, null, { name: 'StateContainer3' }, [], false);
+  const store = useLocalStore(storeConfig, null, false);
 
   return (
     <>
@@ -165,7 +174,7 @@ export const StoreContext = createContext<StoreApi<State, Actions, any>>(null);
 
 function StoreContextProvider(p: { children: any }) {
   // last parameter prevents a refresh of the StoreContextProvider component
-  const store = useLocalStore(getInitialState, actionsImpl, p, {}, null, false);
+  const store = useLocalStore(storeConfig, null, false);
   return (
     <FlashingBox title="state container">
       <StoreContext.Provider value={store}>{p.children}</StoreContext.Provider>

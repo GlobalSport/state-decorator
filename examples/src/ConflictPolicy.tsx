@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
-import useStateDecorator, { StoreActions, ConflictPolicy } from '../../src';
+import useLocalStore from '../../src';
+import { ConflictPolicy, StoreConfig } from '../../src/types';
 import ConflictPolicyView from './ConflictPolicyView';
 import { Status } from './types';
 
@@ -27,24 +28,21 @@ export type ConflictPolicyViewProps = State & Actions & Props;
 
 // Initial state
 
-export const getInitialState = (): State => ({
-  calls: 0,
-  executions: 0,
-  text: '',
-  status: 'paused',
-});
-
-function ConflictingPolicy(props: Props) {
-  const { title } = props;
-
-  const actionsImpl = useMemo(() => {
-    const actionsImpl: StoreActions<State, Actions> = {
+function getStoreConfig(conflictPolicy: ConflictPolicy): StoreConfig<State, Actions, Props> {
+  return {
+    getInitialState: () => ({
+      calls: 0,
+      executions: 0,
+      text: '',
+      status: 'paused',
+    }),
+    actions: {
       onTextChange: {
         effects: ({ s }) => ({ calls: s.calls + 1 }),
         sideEffects: ({ args: [text], a }) => a.onSaveText(text),
       },
       onSaveText: {
-        conflictPolicy: props.conflictPolicy,
+        conflictPolicy,
         preEffects: ({ s }) => ({ status: 'running' }),
         getPromise: ({ args: [text] }) =>
           new Promise((resolve) => {
@@ -56,13 +54,16 @@ function ConflictingPolicy(props: Props) {
           status: 'succeeded',
         }),
       },
-    };
-    return actionsImpl;
-  }, [props.conflictPolicy]);
+    },
+  };
+}
 
-  const { state, actions } = useStateDecorator(getInitialState, actionsImpl, props, {
-    name: `conflict ${title}`,
-  });
+function ConflictingPolicy(props: Props) {
+  const { title } = props;
+
+  const config = useMemo(() => getStoreConfig(props.conflictPolicy), [props.conflictPolicy]);
+
+  const { state, actions } = useLocalStore(config);
 
   return <ConflictPolicyView {...state} {...actions} {...props} />;
 }
