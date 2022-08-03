@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { ConflictPolicy as Policy } from '../../dist/';
+import { ConflictPolicy as Policy } from '../../src/';
 import ConflictPolicy from './ConflictPolicy';
 import Parallel from './Parallel';
 

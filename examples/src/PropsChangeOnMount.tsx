@@ -1,6 +1,6 @@
 import { Button, Box, CircularProgress } from '@material-ui/core';
 import React, { useState } from 'react';
-import useLocalStore, { StoreActions, StoreOptions } from '../../dist/index';
+import useLocalStore, { StoreActions, StoreOptions } from '../../src/index';
 
 // TYPES ===============================
 

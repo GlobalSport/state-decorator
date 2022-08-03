@@ -1,7 +1,7 @@
 import React from 'react';
 
-import { useBindStore, StoreActions, createStore, useStoreSlice } from '../../dist/';
-import { devtools } from '../../dist/middlewares';
+import { useBindStore, StoreActions, createStore, useStoreSlice } from '../../src/';
+import { devtools } from '../../src/middlewares';
 import SliceView from './SliceView';
 
 // Types

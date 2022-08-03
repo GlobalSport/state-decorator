@@ -41,6 +41,7 @@ describe('Async action', () => {
     cancelAction: (p: string) => Promise<any>;
     cancelActionNoPre: (p: string) => Promise<any>;
     retryAction: (p: string) => Promise<any>;
+    resetError: (action: keyof Actions) => void;
   };
 
   type Props = {
@@ -77,6 +78,11 @@ describe('Async action', () => {
       getErrorMessage: () => null,
       errorEffects: null,
       errorSideEffects: null,
+    },
+    resetError: {
+      sideEffects: ({ args: [name], clearError }) => {
+        clearError(name);
+      },
     },
     errorActionDefaultErrorMsg: {
       ...baseAction,
@@ -451,7 +457,7 @@ describe('Async action', () => {
       });
   });
 
-  it('error not managed (skip error management)', (done) => {
+  it('error not managed (skip error management)', async () => {
     const store = createStore(getInitialState, actionsImpl);
     store.init({
       callback: null,
@@ -470,14 +476,39 @@ describe('Async action', () => {
       getErrorMessage,
     });
 
-    store.actions
+    // using store
+    await store.actions
       .errorisErrorManaged('test')
       .then(() => {
         expect(asyncErrorHandler).toHaveBeenCalled();
         expect(asyncErrorHandler.mock.calls[0][1]).toBeTruthy();
-        done();
       })
-      .catch(done.fail);
+      .catch(() => {
+        throw new Error();
+      });
+
+    expect(store.errorMap.errorisErrorManaged).not.toBeUndefined();
+
+    store.clearError('errorisErrorManaged');
+
+    expect(store.errorMap.errorisErrorManaged).toBeUndefined();
+
+    // using side effect
+    await store.actions
+      .errorisErrorManaged('test')
+      .then(() => {
+        expect(asyncErrorHandler).toHaveBeenCalled();
+        expect(asyncErrorHandler.mock.calls[0][1]).toBeTruthy();
+      })
+      .catch(() => {
+        throw new Error();
+      });
+
+    expect(store.errorMap.errorisErrorManaged).not.toBeUndefined();
+
+    store.actions.resetError('errorisErrorManaged');
+
+    expect(store.errorMap.errorisErrorManaged).toBeUndefined();
   });
 
   it('error not managed (skip error management, in options)', (done) => {

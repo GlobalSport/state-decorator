@@ -8,7 +8,7 @@ import MTableRow from '@material-ui/core/TableRow';
 import DeleteIcon from '@material-ui/icons/Delete';
 import ArrowUpIcon from '@material-ui/icons/ArrowUpward';
 import ArrowDownIcon from '@material-ui/icons/ArrowDownward';
-import { createStore, StoreActions, useBindStore, useStoreSlice } from '../../dist';
+import { createStore, StoreActions, useBindStore, useStoreSlice } from '../../src';
 import produce from 'immer';
 import FlashingBox, { useFlashingNode } from './FlashingBox';
 import Box from '@material-ui/core/Box';

@@ -46,6 +46,8 @@ import {
   ErrorParallelMap,
   OnUnMountInvocationContext,
   AbortedActions,
+  ClearErrorFunc,
+  ClearError,
 } from './types';
 
 export type SetStateFunc<S, A> = (
@@ -98,6 +100,7 @@ export type AsyncActionExecContext<S, DS, F extends (...args: any[]) => any, A e
   initializedRef: Ref<boolean>;
   options: StoreOptions<S, A, P, any>;
   setState: SetStateFunc<S, A>;
+  clearError: ClearErrorFunc<A>;
 };
 
 /** @internal */
@@ -598,17 +601,20 @@ function addSideEffectsContext<S, DS, T extends { s: S; state: S }, A>(
   stateRef: Ref<S>,
   derivedStateRef: Ref<DerivedState<DS>>,
   actionsRef: Ref<A>,
-  notifyWarning: NotifyFunc
-): T & InvocationContextActions<A> & WarningNotifyFunc & ContextDerivedStateState<DS> {
+  notifyWarning: NotifyFunc,
+  clearError: ClearErrorFunc<A>
+): T & InvocationContextActions<A> & WarningNotifyFunc & ClearError<A> & ContextDerivedStateState<DS> {
   const res = addContextActions(ctx, actionsRef) as T &
     InvocationContextActions<A> &
     WarningNotifyFunc &
+    ClearError<A> &
     ContextDerivedStateState<DS>;
   addStateToContext(ctx, stateRef);
   const ds = derivedStateRef?.current?.state;
   res.derived = ds;
   res.ds = ds;
   res.notifyWarning = notifyWarning;
+  res.clearError = clearError;
   return res;
 }
 
@@ -654,6 +660,7 @@ function executeSyncActionImpl<S, DS, F extends (...args: any[]) => any, A exten
   timeoutMap: Ref<TimeoutMap<A>>,
   options: StoreOptions<S, A, P, any>,
   setState: SetStateFunc<S, A>,
+  clearError: ClearErrorFunc<A>,
   args: Parameters<F>
 ) {
   const ctx = buildEffectsInvocationContext(stateRef, derivedStateRef, propsRef, args, undefined);
@@ -677,11 +684,15 @@ function executeSyncActionImpl<S, DS, F extends (...args: any[]) => any, A exten
       }
 
       timeoutMap.current[actionName] = setTimeout(() => {
-        action.sideEffects?.(addSideEffectsContext(ctx, stateRef, derivedStateRef, actionsRef, options.notifyWarning));
+        action.sideEffects?.(
+          addSideEffectsContext(ctx, stateRef, derivedStateRef, actionsRef, options.notifyWarning, clearError)
+        );
         delete timeoutMap.current[actionName];
       }, action.debounceSideEffectsTimeout);
     } else {
-      action.sideEffects?.(addSideEffectsContext(ctx, stateRef, derivedStateRef, actionsRef, options.notifyWarning));
+      action.sideEffects?.(
+        addSideEffectsContext(ctx, stateRef, derivedStateRef, actionsRef, options.notifyWarning, clearError)
+      );
     }
   }
 }
@@ -697,7 +708,8 @@ export function decorateSyncAction<S, DS, F extends (...args: any[]) => any, A e
   initializedRef: Ref<boolean>,
   timeoutMap: Ref<TimeoutMap<A>>,
   options: StoreOptions<S, A, P, any>,
-  setState: SetStateFunc<S, A>
+  setState: SetStateFunc<S, A>,
+  clearError: ClearErrorFunc<A>
 ) {
   return (...args: Parameters<F>) => {
     // store was destroyed
@@ -725,6 +737,7 @@ export function decorateSyncAction<S, DS, F extends (...args: any[]) => any, A e
           timeoutMap,
           options,
           setState,
+          clearError,
           args
         );
       }, action.debounceTimeout);
@@ -739,6 +752,7 @@ export function decorateSyncAction<S, DS, F extends (...args: any[]) => any, A e
         timeoutMap,
         options,
         setState,
+        clearError,
         args
       );
     }
@@ -763,6 +777,7 @@ function processPromiseSuccess<S, DS, F extends (...args: any[]) => any, A exten
     actionName,
     options,
     setState,
+    clearError,
   } = context;
 
   // store was destroyed
@@ -805,7 +820,9 @@ function processPromiseSuccess<S, DS, F extends (...args: any[]) => any, A exten
   delete promisesRef.current[actionName][promiseId];
 
   if (action.sideEffects) {
-    action.sideEffects(addSideEffectsContext(ctx, stateRef, derivedStateRef, actionsRef, globalConfig.notifyWarning));
+    action.sideEffects(
+      addSideEffectsContext(ctx, stateRef, derivedStateRef, actionsRef, globalConfig.notifyWarning, clearError)
+    );
   }
 
   processNextConflictAction(actionName, actionsRef.current, conflictActionsRef.current);
@@ -831,6 +848,7 @@ function processPromiseFailed<S, DS, F extends (...args: any[]) => any, A extend
     conflictActionsRef,
     actionName,
     options,
+    clearError,
     setState,
   } = context;
 
@@ -899,7 +917,7 @@ function processPromiseFailed<S, DS, F extends (...args: any[]) => any, A extend
 
   if (action.errorSideEffects) {
     action.errorSideEffects(
-      addSideEffectsContext(ctx, stateRef, derivedStateRef, actionsRef, globalConfig.notifyWarning)
+      addSideEffectsContext(ctx, stateRef, derivedStateRef, actionsRef, globalConfig.notifyWarning, clearError)
     );
   }
 

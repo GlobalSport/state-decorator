@@ -176,6 +176,7 @@ The action context contain all the data needed to implement the actions. It cont
 | derived       | ds    | everywhere                     | The derived state (from props/state)                    |
 | promiseId     |       | asynchronous actions callbacks | Parallel asynchronous actions promise identifier        |
 | notifyWarning |       | side effects                   | Injected function if set at store or global level       |
+| clearError    |       | side effects                   | Clear an error from ErrorMap                            |
 | indices       |       | onPropsChange                  | Indices in the getDeps array of changed props           |
 | isInit        |       | onPropsChange                  | Whether the onPropsCHange is executed during init phase |
 
@@ -438,6 +439,8 @@ if (errorMap.action1 instanceof MyCustomError){
 ```
 
 Recipe: When only using the **errorMap** to manage errors (ie. there's no effects nor message and so on), the error is considered _not managed_ resulting in a rejected promise and global **asyncErrorHandler** called with _managed_ flag set to false. In that case, set **isErrorManaged** to `true` to specify that the error is _managed_ externally.
+
+The error map is updated when the action is called again, or call **clearError** in a side effect.
 
 ## <a name="ConflictingActions"></a>Conflicting actions
 

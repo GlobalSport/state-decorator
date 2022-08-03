@@ -190,6 +190,12 @@ export type ErrorMessageInvocationContext<S, DS, F extends (...args: any[]) => a
   P
 >;
 
+export type ClearErrorFunc<A> = (actionName: keyof A, promiseId?: string) => void;
+
+export type ClearError<A> = {
+  clearError: ClearErrorFunc<A>;
+};
+
 export type SideEffectsInvocationContext<S, DS, F extends (...args: any[]) => any, P, A> = EffectsInvocationContext<
   S,
   DS,
@@ -197,7 +203,8 @@ export type SideEffectsInvocationContext<S, DS, F extends (...args: any[]) => an
   P
 > &
   InvocationContextActions<A> &
-  WarningNotifyFunc;
+  WarningNotifyFunc &
+  ClearError<A>;
 
 export type ErrorSideEffectsInvocationContext<
   S,

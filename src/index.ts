@@ -74,6 +74,7 @@ import {
   AbortedActions,
   ErrorProps,
   LoadingMapProps,
+  ClearErrorFunc,
 } from './types';
 
 export {
@@ -165,6 +166,8 @@ export type StoreApi<S, A extends DecoratedActions, P, DS = {}> = {
    * A function that takes a list of action names or a tuple of [action name, promiseId] and returns <code>true</code> if any action is loading.
    */
   isLoading: IsLoadingFunc<A>;
+
+  clearError: ClearErrorFunc<A>;
 
   getConfig: () => {
     getInitialState: (p: P) => S;
@@ -321,6 +324,14 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
     }
   }
 
+  function clearError(actionName: keyof A, promiseId: string = DEFAULT_PROMISE_ID) {
+    const map = errorMapRef.current[actionName];
+    if (map?.[promiseId]) {
+      delete map[promiseId];
+    }
+    notifyStateListeners(stateRef.current, derivedStateRef.current.state);
+  }
+
   function abortActionsOnDestroy() {
     const abortedActions: AbortedActions<A> = Object.keys(actionsImpl).reduce((acc, actionName) => {
       const action = actionsImpl[actionName];
@@ -468,6 +479,7 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
         initializedRef,
         options,
         setState,
+        clearError,
         action: computeAsyncActionInput(action),
       }) as any;
     } else if (isSyncAction(action)) {
@@ -481,7 +493,8 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
         initializedRef,
         timeoutRef,
         options,
-        setState
+        setState,
+        clearError
       ) as any;
     }
 
@@ -553,6 +566,7 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
     destroy,
     isLoading,
     abortAction,
+    clearError,
     get actions() {
       return actionsRef.current;
     },

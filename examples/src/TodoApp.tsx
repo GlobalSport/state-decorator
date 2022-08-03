@@ -1,5 +1,5 @@
 import React from 'react';
-import { createStore, StoreActions, useStore } from '../../dist/';
+import { createStore, StoreActions, useStore } from '../../src/';
 import produce from 'immer';
 import TodoView from './TodoView';
 
