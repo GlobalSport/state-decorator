@@ -486,7 +486,7 @@ describe('Async action', () => {
   });
 
   it('error not managed (skip error management)', async () => {
-    const store = createStore(getInitialState, actionsImpl);
+    const store = createStore({ getInitialState, actions: actionsImpl });
     store.init({
       callback: null,
       callbackCancel: null,

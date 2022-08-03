@@ -77,6 +77,6 @@ const parallelAbortActions: StoreActions<State, Actions> = {
 };
 
 export default function ParallelActions() {
-  const { state, actions, abortAction } = useLocalStore(getInitialState, parallelAbortActions);
+  const { state, actions, abortAction } = useLocalStore({ getInitialState, actions: parallelAbortActions });
   return <ParallelAbortView {...state} {...actions} abortAction={abortAction} />;
 }

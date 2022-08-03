@@ -27,7 +27,7 @@ const actions: StoreActions<State, Actions> = {
 };
 
 export default function ErrorMap() {
-  const { state, actions: a, errorMap, loading } = useLocalStore(getInitialState, actions);
+  const { actions: a, errorMap, loading } = useLocalStore({ getInitialState, actions });
   return (
     <div>
       <div>{loading && 'loading…'}</div>
