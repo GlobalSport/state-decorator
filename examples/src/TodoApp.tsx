@@ -41,6 +41,7 @@ export type Actions = {
 export type TodoViewProps = State & DerivedState & Actions;
 
 const storeConfig: StoreConfig<State, Actions, {}, DerivedState> = {
+  name: 'Todo',
   getInitialState: () => ({
     todoMap: {
       first: {
