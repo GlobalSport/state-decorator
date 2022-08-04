@@ -1247,7 +1247,8 @@ describe('Todo', () => {
   // this store can be shared accross tests because it is immutable
   const store = createMockFromStore(todoStore)
     // or
-    //   const store = createMockStore(getInitialState, actions, props, options)
+    //   const store = createMockStore(storeConfig, props)
+
     // initial state / props can be set in full form or partial form
     .setPartialState({
       idCount: 3,

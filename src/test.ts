@@ -31,7 +31,7 @@ import {
   buildOnMountInvocationContext,
   buildErrorMap,
 } from './impl';
-import { AsyncAction, DecoratedActions, InternalLoadingMap } from './types';
+import { AsyncAction, DecoratedActions, InternalLoadingMap, StoreConfig } from './types';
 
 type MockActions<A, MockAction> = {
   [k in keyof A]: MockAction;
@@ -169,10 +169,18 @@ export function createMockFromStore<S, A extends DecoratedActions, P, DS>(
   props: P = {} as P
 ): MockStore<S, A, P, DS> {
   const cfg = store.getConfig();
-  return createMockStore(cfg.getInitialState, cfg.actions, props, cfg.options);
+  return createMockStore(cfg, props);
 }
 
-export function createMockStore<S, A extends DecoratedActions, P = {}, DS = {}>(
+export function createMockStore<S, A extends DecoratedActions, P, DS>(
+  config: StoreConfig<S, A, P, DS>,
+  props: P = {} as P
+): MockStore<S, A, P, DS> {
+  const { getInitialState, actions, ...options } = config;
+  return createMockStoreV6(getInitialState, actions, props, options);
+}
+
+export function createMockStoreV6<S, A extends DecoratedActions, P = {}, DS = {}>(
   initialState: S | ((p: P) => S),
   actions: StoreActions<S, A, P, DS>,
   props: P = {} as P,
@@ -189,7 +197,7 @@ export function createMockStore<S, A extends DecoratedActions, P = {}, DS = {}>(
   }
 
   function cloneStore(newState: S, newProps: P, newMockActions?: MockActionImpl<A>) {
-    return createMockStore(
+    return createMockStoreV6(
       newState ?? stateRef.current,
       actions,
       newProps ?? propsRef.current,

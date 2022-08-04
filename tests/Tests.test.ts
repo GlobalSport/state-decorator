@@ -124,7 +124,7 @@ describe('createMockStore', () => {
     };
   }
 
-  const mockStore = createMockStore(getInitialState, actions, { prop: '', prop2: '', onMount: null }, options);
+  const mockStore = createMockStore({ getInitialState, actions, ...options }, { prop: '', prop2: '', onMount: null });
 
   const store = createStore({ getInitialState, actions, ...options });
   const mockStore2 = createMockFromStore(store, { prop: '', prop2: '', onMount: null });
@@ -295,10 +295,8 @@ describe('createMockStore', () => {
     };
 
     const mockStore2 = createMockStore(
-      getInitialState,
-      actions,
-      { prop: '', prop2: '', onMount: null },
-      optionsPropsChange
+      { getInitialState, actions, ...optionsPropsChange },
+      { prop: '', prop2: '', onMount: null }
     );
 
     it('allows to test initial props changes + onMount', () => {
@@ -834,14 +832,12 @@ describe('createMockStore', () => {
 
     it('fails if no onMount is set on options', () => {
       const store = createMockStore(
-        getInitialState,
-        actions,
+        { getInitialState, actions },
         {
           prop: '',
           prop2: '',
           onMount: jest.fn(),
-        },
-        null
+        }
       );
 
       try {

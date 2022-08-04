@@ -174,10 +174,9 @@ export type StoreApi<S, A extends DecoratedActions, P, DS = {}> = {
   clearError: ClearErrorFunc<A>;
 
   getConfig: () => {
-    getInitialState: (p: P) => S;
-    options: StoreOptions<S, A, P, DS>;
+    getInitialState: S | ((p: P) => S);
     actions: StoreActions<S, A, P, DS>;
-  };
+  } & StoreOptions<S, A, P, DS>;
 
   /**
    * Invoke onMountDeferred + onPropChange flagged onMountDeferred
@@ -277,7 +276,7 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
     if (!initializedRef.current) {
       propsRef.current = p;
       initializedRef.current = true;
-      stateRef.current = getInitialState(p);
+      stateRef.current = typeof getInitialState === 'function' ? (getInitialState as (p: P) => S)(p) : getInitialState;
 
       const initialActionSet = new Set(options?.initialActionsMarkedLoading);
 
@@ -566,11 +565,7 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
   }
 
   function getConfig() {
-    return {
-      getInitialState,
-      options,
-      actions: actionsImpl,
-    };
+    return { ...config };
   }
 
   return {

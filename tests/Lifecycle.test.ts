@@ -1,4 +1,5 @@
 import { ConflictPolicy, createStore, StoreActions, StoreOptions } from '../src';
+import { setArgIn } from '../src/helpers';
 
 function getTimeoutPromise<C>(timeout: number, result: C | null = null): Promise<C> {
   return new Promise((res) => {
@@ -7,6 +8,42 @@ function getTimeoutPromise<C>(timeout: number, result: C | null = null): Promise
 }
 
 describe('Lifecycle', () => {
+  type State = {
+    prop: string;
+  };
+
+  type Actions = {
+    setProp: (p: string) => void;
+  };
+
+  describe('getInitialState', () => {
+    it('singleton state', () => {
+      const store = createStore<State, Actions, {}>({
+        getInitialState: { prop: 'init' },
+        actions: {
+          setProp: setArgIn('prop'),
+        },
+      });
+
+      store.init({});
+
+      expect(store.state).toEqual({ prop: 'init' });
+    });
+
+    it('singleton state', () => {
+      const store = createStore<State, Actions, {}>({
+        getInitialState: () => ({ prop: 'init' }),
+        actions: {
+          setProp: setArgIn('prop'),
+        },
+      });
+
+      store.init({});
+
+      expect(store.state).toEqual({ prop: 'init' });
+    });
+  });
+
   describe('simple sync action', () => {
     type State = {
       prop: string;

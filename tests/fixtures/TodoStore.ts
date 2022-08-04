@@ -54,7 +54,7 @@ const splitList = (items: TodoItem[]) => ({
   }, {}),
 });
 
-const storeConfig: StoreConfig<State, Actions, Props> = {
+const storeConfig: StoreConfig<State, Actions, Props, DerivedState> = {
   getInitialState: () => ({
     error: false,
     newTitle: '',

@@ -503,7 +503,7 @@ export type StoreOptions<S, A, P = {}, DS = {}> = {
 };
 
 export type StoreConfig<S, A extends DecoratedActions, P = {}, DS = {}> = {
-  getInitialState: (p: P) => S;
+  getInitialState: S | ((p: P) => S);
   actions: StoreActions<S, A, P, DS>;
   middlewares?: MiddlewareFactory<S, A, P>[];
 } & StoreOptions<S, A, P, DS>;
