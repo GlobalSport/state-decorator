@@ -12,8 +12,10 @@
  * @jest-environment jsdom
  */
 
+import { EffectError, globalConfig } from '../src/impl';
 import { createStore, setGlobalConfig } from '../src/index';
 import { StoreAction, StoreActions } from '../src/types';
+import { getFailedTimeoutPromise, getTimeoutPromise } from './utils';
 
 describe('Async action', () => {
   beforeAll(() => {
@@ -42,6 +44,9 @@ describe('Async action', () => {
     cancelActionNoPre: (p: string) => Promise<any>;
     retryAction: (p: string) => Promise<any>;
     resetError: (action: keyof Actions) => void;
+    effectError: () => Promise<string>;
+    errorEffectError: () => Promise<string>;
+    preEffectError: () => Promise<string>;
   };
 
   type Props = {
@@ -136,6 +141,24 @@ describe('Async action', () => {
     },
     retryAction: {
       ...baseAction,
+    },
+    effectError: {
+      getPromise: () => getTimeoutPromise(100, 'value'),
+      effects: () => {
+        throw new Error('boom in effect');
+      },
+    },
+    errorEffectError: {
+      getPromise: () => getFailedTimeoutPromise(100, new Error('failed promised'), 'id'),
+      errorEffects: () => {
+        throw new Error('boom in error effect');
+      },
+    },
+    preEffectError: {
+      preEffects: () => {
+        throw new Error('boom in pre effects');
+      },
+      getPromise: () => getTimeoutPromise(100, 'value'),
     },
   };
 
@@ -994,5 +1017,107 @@ describe('Async action', () => {
     expect(stateListener.mock.calls[1][0].value).toEqual('preChild');
 
     return p;
+  });
+
+  it('error in effects', async () => {
+    const save = { ...globalConfig };
+
+    const asyncErrorHandler = jest.fn((err: any, isHandled, state, props, actionName, args) => {
+      try {
+        expect(err).toBeInstanceOf(EffectError);
+        const effectErr = err as EffectError;
+        expect(effectErr.message).toBe('boom in effect');
+        expect(actionName).toBe('effectError');
+        expect(isHandled).toBeFalsy();
+      } catch (e) {
+        throw new Error('test failed');
+      }
+    });
+
+    setGlobalConfig({
+      asyncErrorHandler,
+    });
+
+    const store = createStore(getInitialState, actionsImpl, {});
+    store.init(null);
+
+    try {
+      await store.actions.effectError().then(() => {
+        throw new Error('test failed');
+      });
+    } catch (e) {
+      expect(asyncErrorHandler).toHaveBeenCalled();
+      setGlobalConfig(save);
+      if (e.message === 'test failed') {
+        return Promise.reject(e);
+      }
+    }
+  });
+
+  it('error in errorEffects', async () => {
+    const save = { ...globalConfig };
+
+    const asyncErrorHandler = jest.fn((err: any, isHandled, state, props, actionName, args) => {
+      try {
+        expect(err).toBeInstanceOf(EffectError);
+        const effectErr = err as EffectError;
+        expect(effectErr.message).toBe('boom in error effect');
+        expect(effectErr.initialError.message).toBe('failed promised');
+        expect(actionName).toBe('errorEffectError');
+        expect(isHandled).toBeFalsy;
+      } catch (e) {
+        throw new Error('test failed');
+      }
+    });
+
+    setGlobalConfig({
+      asyncErrorHandler,
+    });
+
+    const store = createStore(getInitialState, actionsImpl, {});
+    store.init(null);
+
+    try {
+      await store.actions.errorEffectError();
+    } catch (e) {
+      expect(asyncErrorHandler).toHaveBeenCalled();
+      setGlobalConfig(save);
+      if (e.message === 'test failed') {
+        return Promise.reject(e);
+      }
+    }
+  });
+
+  it('error in preEffects', async () => {
+    const save = { ...globalConfig };
+
+    const asyncErrorHandler = jest.fn((err: any, isHandled, state, props, actionName, args) => {
+      try {
+        expect(err).toBeInstanceOf(EffectError);
+        const effectErr = err as EffectError;
+        expect(effectErr.message).toBe('boom in pre effects');
+        expect(actionName).toBe('preEffectError');
+        expect(isHandled).toBeFalsy;
+      } catch (e) {
+        throw new Error('test failed');
+      }
+    });
+
+    setGlobalConfig({
+      asyncErrorHandler,
+    });
+
+    const store = createStore(getInitialState, actionsImpl, {});
+    store.init(null);
+
+    try {
+      await store.actions.preEffectError();
+    } catch (e) {
+      expect(asyncErrorHandler).toHaveBeenCalled();
+      setGlobalConfig(save);
+      if (e.message === 'test failed') {
+        return Promise.reject(e);
+      }
+    }
   });
 });

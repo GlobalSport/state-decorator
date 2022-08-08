@@ -131,6 +131,24 @@ export type DerivedState<DS> = {
   deps: DerivedStateMap<DS>;
 };
 
+export class EffectError extends Error {
+  /**
+   * The wrapped error
+   */
+  source: any;
+
+  /**
+   * If effects error occurred while processed an error, the initial error.
+   */
+  initialError: Error;
+  constructor(source: any, initialError?: Error) {
+    super(source.message);
+    this.source = source;
+    this.initialError = initialError;
+    Object.setPrototypeOf(this, EffectError.prototype);
+  }
+}
+
 // =============================
 //
 // GLOBAL CONFIG
@@ -235,7 +253,7 @@ function clone(obj: any) {
     return globalConfig.clone(obj);
   } catch (e) {
     const msg =
-      'StateDecorator: Cannot clone object. Call setCloneFunction with another implementation like lodash/cloneDeep.';
+      'StateDecorator: Cannot clone object. Set setCloneFunction on global global with another implementation like lodash/cloneDeep.';
     if (process.env.NODE_ENV === 'development') {
       console.error(msg);
       console.error(e.toString());
@@ -621,7 +639,7 @@ function addSideEffectsContext<S, DS, T extends { s: S; state: S }, A>(
 function notInitWarning<A>(actionName: keyof A) {
   if (process.env.NODE_ENV === 'development') {
     console.warn(
-      `[state-decorator] ${actionName} action was called while store is not initialized or destroyed, this is probably a leak`
+      `[state-decorator] ${actionName.toString()} action was called while store is not initialized or destroyed, this is probably a leak`
     );
   }
 }
@@ -790,7 +808,11 @@ function processPromiseSuccess<S, DS, F extends (...args: any[]) => any, A exten
   const ctx = buildEffectsInvocationContext(stateRef, derivedStateRef, propsRef, args, promiseResult, promiseId);
 
   if (action.effects) {
-    newState = action.effects(ctx);
+    try {
+      newState = action.effects(ctx);
+    } catch (e) {
+      return Promise.reject(new EffectError(e));
+    }
   }
 
   setState(
@@ -833,7 +855,7 @@ function processPromiseSuccess<S, DS, F extends (...args: any[]) => any, A exten
 function processPromiseFailed<S, DS, F extends (...args: any[]) => any, A extends DecoratedActions, P>(
   context: AsyncActionExecContext<S, DS, F, A, P>,
   promiseId: string,
-  error: Error,
+  err: Error,
   args: Parameters<F>
 ) {
   const {
@@ -858,11 +880,16 @@ function processPromiseFailed<S, DS, F extends (...args: any[]) => any, A extend
   }
 
   let newState = null;
+  let error = err;
 
   const ctx = buildErrorEffectsInvocationContext(stateRef, derivedStateRef, propsRef, args, error, promiseId);
 
   if (action.errorEffects) {
-    newState = action.errorEffects(ctx);
+    try {
+      newState = action.errorEffects(ctx);
+    } catch (e) {
+      error = new EffectError(e, err);
+    }
   }
 
   // do not trigger a setState by itself because loading state will trigger a set anyway...
@@ -979,7 +1006,19 @@ export function decorateAsyncAction<S, DS, F extends (...args: any[]) => any, A 
 
     const ctx = buildInvocationContext(stateRef, derivedStateRef, propsRef, args, promiseId);
     if (action.preEffects) {
-      newState = action.preEffects(ctx);
+      try {
+        newState = action.preEffects(ctx);
+      } catch (error) {
+        globalConfig.asyncErrorHandler(
+          new EffectError(error),
+          false,
+          stateRef.current,
+          propsRef.current,
+          actionName as string,
+          args
+        );
+        return Promise.reject(new EffectError(error));
+      }
 
       // apply internal state change for calls to other actions in the getPromise
       if (newState) {
