@@ -480,7 +480,8 @@ export function createMockStoreAction<S, A extends DecoratedActions, F extends (
           createRef(true),
           null,
           options,
-          setState
+          setState,
+          (_: keyof A) => {}
         )(...((args as any) as Parameters<A[keyof A]>));
 
         promise = Promise.resolve();
@@ -515,6 +516,7 @@ export function createMockStoreAction<S, A extends DecoratedActions, F extends (
           stateRef: newStateRef,
           actionsRef: actionsRef as any,
           action: impl,
+          clearError: (_: keyof A) => {},
         }) as any)(...((args as any) as Parameters<A[keyof A]>));
       }
 
