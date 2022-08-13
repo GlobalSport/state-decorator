@@ -419,6 +419,7 @@ export type OnPropsChangeEffectsContext<S, DS, P> = ContextWithDerived<S, DS, P>
   indices: number[];
   index: number;
   isInit: boolean;
+  getInitialState: (p: P) => S;
 };
 
 export type OnPropsChangeSideEffectsContext<S, P, A, DS = {}> = OnPropsChangeEffectsContext<S, DS, P> & {

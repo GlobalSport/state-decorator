@@ -261,7 +261,18 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
     if (!initializedRef.current) {
       init(p);
     } else {
-      onPropChange(stateRef, derivedStateRef, propsRef, oldProps, actionsRef, options, setState, false, false);
+      onPropChange(
+        stateRef,
+        derivedStateRef,
+        propsRef,
+        oldProps,
+        actionsRef,
+        options,
+        getInitialState,
+        setState,
+        false,
+        false
+      );
     }
   }
 
@@ -319,7 +330,19 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
 
       computeDerivedValues(stateRef, propsRef, derivedStateRef, options);
 
-      onPropChange(stateRef, derivedStateRef, propsRef, null, actionsRef, options, setState, true, false);
+      // manage PropsChange with onMount
+      onPropChange(
+        stateRef,
+        derivedStateRef,
+        propsRef,
+        null,
+        actionsRef,
+        options,
+        getInitialState,
+        setState,
+        true,
+        false
+      );
 
       if (options?.onMount) {
         options.onMount(buildOnMountInvocationContext(stateRef, derivedStateRef, propsRef, actionsRef));
@@ -339,7 +362,7 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
 
   function invokeOnMountDeferred() {
     // manage PropsChange with onMount
-    onPropChange(stateRef, derivedStateRef, propsRef, null, actionsRef, options, setState, true, true);
+    onPropChange(stateRef, derivedStateRef, propsRef, null, actionsRef, options, getInitialState, setState, true, true);
 
     if (options?.onMountDeferred) {
       options.onMountDeferred(buildOnMountInvocationContext(stateRef, derivedStateRef, propsRef, actionsRef));

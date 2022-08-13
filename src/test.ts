@@ -103,6 +103,8 @@ type MockStoreAction<S, A extends DecoratedActions, F extends (...args: any[]) =
 };
 
 type MockStore<S, A extends DecoratedActions, P, DS> = {
+  getInitialState: (p: P) => S;
+
   /**
    * Creates a new store with specified state.
    */
@@ -216,6 +218,12 @@ export function createMockStoreV6<S, A extends DecoratedActions, P = {}, DS = {}
   }
 
   return {
+    getInitialState: (p: P) => {
+      if (typeof initialState === 'function') {
+        return (initialState as (props: P) => S)(p);
+      }
+      return initialState;
+    },
     test(f) {
       f(getState(), propsRef.current);
       return this;
@@ -284,6 +292,7 @@ export function createMockStoreV6<S, A extends DecoratedActions, P = {}, DS = {}
         propsRef.current,
         actionsRef as any,
         options,
+        typeof initialState === 'function' ? (initialState as (p: P) => S) : () => initialState,
         setState,
         init,
         isDeferred

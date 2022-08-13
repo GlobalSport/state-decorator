@@ -510,12 +510,15 @@ export function buildOnPropChangeEffects<S, DS, P>(
   propsRef: Ref<P>,
   indices: number[],
   index: number,
-  isInit: boolean
+  isInit: boolean,
+  getInitialState: S | ((p: P) => S)
 ): OnPropsChangeEffectsContext<S, DS, P> {
   const res = buildInvocationContextBase(stateRef, derivedStateRef, propsRef) as OnPropsChangeEffectsContext<S, DS, P>;
   res.indices = indices;
   res.index = index;
   res.isInit = isInit;
+  res.getInitialState =
+    typeof getInitialState === 'function' ? (getInitialState as (p: P) => S) : () => getInitialState;
   return res;
 }
 
@@ -639,7 +642,9 @@ function addSideEffectsContext<S, DS, T extends { s: S; state: S }, A>(
 function notInitWarning<A>(actionName: keyof A) {
   if (process.env.NODE_ENV === 'development') {
     console.warn(
-      `[state-decorator] ${actionName.toString()} action was called while store is not initialized or destroyed, this is probably a leak`
+      `[state-decorator] ${
+        actionName as string
+      } action was called while store is not initialized or destroyed, this is probably a leak`
     );
   }
 }
@@ -1150,7 +1155,7 @@ function handleConflictingAction<A>(
         resolve(void 0);
         break;
       case ConflictPolicy.REJECT:
-        reject(new Error(`An asynchronous action ${actionName.toString()} is already ongoing.`));
+        reject(new Error(`An asynchronous action ${actionName as string} is already ongoing.`));
         break;
       case ConflictPolicy.KEEP_LAST: {
         conflictActions[actionName] = [futureAction];
@@ -1266,6 +1271,7 @@ export function onPropChange<S, P, A, DS>(
   oldProps: P,
   actionsRef: Ref<A>,
   options: StoreOptions<S, A, P, DS>,
+  getInitialState: S | ((p: P) => S),
   setState: SetStateFunc<S, A>,
   isInit: boolean,
   isDeferred: boolean
@@ -1327,7 +1333,15 @@ export function onPropChange<S, P, A, DS>(
       }
 
       if (propChanged) {
-        const ctx = buildOnPropChangeEffects(newStateRef, derivedStateRef, propsRef, indices, index, isInit);
+        const ctx = buildOnPropChangeEffects(
+          newStateRef,
+          derivedStateRef,
+          propsRef,
+          indices,
+          index,
+          isInit,
+          getInitialState
+        );
         const newState = mergeState(stateRef, propsChange.effects?.(ctx));
 
         if (newState != null) {
