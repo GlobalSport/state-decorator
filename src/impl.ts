@@ -1146,7 +1146,7 @@ function handleConflictingAction<A>(
         resolve(void 0);
         break;
       case ConflictPolicy.REJECT:
-        reject(new Error(`An asynchronous action ${actionName} is already ongoing.`));
+        reject(new Error(`An asynchronous action ${actionName.toString()} is already ongoing.`));
         break;
       case ConflictPolicy.KEEP_LAST: {
         conflictActions[actionName] = [futureAction];
