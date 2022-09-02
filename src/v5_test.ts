@@ -220,6 +220,7 @@ export function testV6AdvancedSyncAction<S, F extends (...args: any[]) => any, A
           res: null,
           result: null,
           promiseId: null,
+          clearError: () => {},
         });
       },
     };
@@ -374,6 +375,7 @@ export function testV6AsyncAction<S, F extends (...args: any[]) => any, A, P>(
           actions: a,
           result: res,
           promiseId: actionIn.getPromiseId?.(...args),
+          clearError: () => {},
         });
       },
 

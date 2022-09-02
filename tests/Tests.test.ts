@@ -1,6 +1,6 @@
 import { StoreActions, StoreOptions } from '../src/types';
 import { createMockStore, setMockFactory, createMockFromStore, ActionError } from '../src/test';
-import { createStore } from '../src';
+import { createStore, EffectError } from '../src';
 
 export class MyError extends Error {
   constructor() {
@@ -512,17 +512,20 @@ describe('createMockStore', () => {
   //     return s;
   //   },
   // },
+
   // it.only('asyncThatCrashes works as expected', async () => {
   //   return mockStore.getAction('asyncThatCrashes').call();
   // });
 
   // REAL WORLD TEST
-  // it.only('asyncThatCrashes works as expected', async () => {
-  //   return mockStore
-  //     .getAction('asyncThatCrashes')
-  //     .call()
-  //     .catch((e) => Promise.reject(e.sourceError));
-  // });
+  it('asyncThatCrashes works as expected', async () => {
+    return mockStore
+      .getAction('asyncThatCrashes')
+      .call()
+      .catch((e) => {
+        expect(e.sourceError).toBeInstanceOf(EffectError);
+      });
+  });
 
   // REAL WORLD TEST
   // asyncManagedError: {

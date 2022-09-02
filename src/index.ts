@@ -40,6 +40,7 @@ import {
   ParallelActionError,
   buildErrorMap,
   buildOnUnMountInvocationContext,
+  EffectError,
 } from './impl';
 
 import {
@@ -78,6 +79,7 @@ import {
 } from './types';
 
 export {
+  EffectError,
   DecoratedActions,
   StoreActions,
   LoadingMap,
