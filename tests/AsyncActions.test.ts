@@ -1025,7 +1025,7 @@ describe('Async action', () => {
       asyncErrorHandler,
     });
 
-    const store = createStore(getInitialState, actionsImpl, {});
+    const store = createStore({ getInitialState, actions: actionsImpl });
     store.init(null);
 
     try {
@@ -1061,7 +1061,7 @@ describe('Async action', () => {
       asyncErrorHandler,
     });
 
-    const store = createStore(getInitialState, actionsImpl, {});
+    const store = createStore({ getInitialState, actions: actionsImpl });
     store.init(null);
 
     try {
@@ -1094,7 +1094,7 @@ describe('Async action', () => {
       asyncErrorHandler,
     });
 
-    const store = createStore(getInitialState, actionsImpl, {});
+    const store = createStore({ getInitialState, actions: actionsImpl });
     store.init(null);
 
     try {
