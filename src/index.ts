@@ -12,7 +12,7 @@ LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
 OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 PERFORMANCE OF THIS SOFTWARE.
 ***************************************************************************** */
-
+import useSyncExternalStoreExports from 'use-sync-external-store/shim/with-selector';
 import { Context, useContext, useEffect, useLayoutEffect, useMemo, useReducer, useRef } from 'react';
 import {
   computeAsyncActionInput,
@@ -114,6 +114,8 @@ export {
   StoreConfig,
 };
 
+const { useSyncExternalStoreWithSelector } = useSyncExternalStoreExports;
+
 export type IsLoadingFunc<A> = (...props: (keyof A | [keyof A, string])[]) => boolean;
 type StateListenerUnregister = () => void;
 
@@ -146,33 +148,45 @@ export type StoreApi<S, A extends DecoratedActions, P, DS = {}> = {
    * A map of parallel actions error map (computed on property access)
    */
   readonly errorParallelMap: ErrorParallelMap<A>;
+
   /**
    * Initializes the store with the specified props
    */
-  init: (p: P) => void;
+  readonly init: (p: P) => void;
+
   /**
    * Update the store with the specified props
    */
-  setProps: (p: P) => void;
+  readonly setProps: (p: P) => void;
+
   /**
    * Destroy the store
    */
-  destroy: () => void;
+  readonly destroy: () => void;
+
   /**
    * Abort an asynchronous action marked as abortable.
    */
-  abortAction: (actionName: keyof A, promiseId?: string) => boolean;
+  readonly abortAction: (actionName: keyof A, promiseId?: string) => boolean;
+
   /**
    * Add a store state change listener
    */
-  addStateListener: (listener: StateListener<S, DS, A>) => StateListenerUnregister;
+  readonly addStateListener: (listener: StateListener) => StateListenerUnregister;
+
   /**
    * A function that takes a list of action names or a tuple of [action name, promiseId] and returns <code>true</code> if any action is loading.
    */
-  isLoading: IsLoadingFunc<A>;
+  readonly isLoading: IsLoadingFunc<A>;
 
-  clearError: ClearErrorFunc<A>;
+  /**
+   * A function to clear error on an action marked as <code>isErrorManaged: true</code>.
+   */
+  readonly clearError: ClearErrorFunc<A>;
 
+  /**
+   * @returns The store configuration
+   */
   getConfig: () => {
     getInitialState: S | ((p: P) => S);
     actions: StoreActions<S, A, P, DS>;
@@ -183,14 +197,22 @@ export type StoreApi<S, A extends DecoratedActions, P, DS = {}> = {
    * @internal
    */
   invokeOnMountDeferred: () => void;
+
+  /**
+   * Returns a snapshot of the current state of the store.
+   */
+  getSnapshot(): StateListenerContext<S, DS, A>;
 };
 
 export type StateListenerContext<S, DS, A extends DecoratedActions> = S &
   DS &
   A &
-  Pick<StoreApi<S, A, any, DS>, 'loading' | 'loadingMap' | 'errorMap' | 'isLoading' | 'abortAction'>;
+  Pick<
+    StoreApi<S, A, any, DS>,
+    'loading' | 'loadingMap' | 'errorParallelMap' | 'errorMap' | 'isLoading' | 'abortAction'
+  >;
 
-export type StateListener<S, DS, A extends DecoratedActions> = (ctx: StateListenerContext<S, DS, A>) => void;
+export type StateListener = () => void;
 
 // =============================
 //
@@ -211,20 +233,23 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
   const propsRef = createRef<P>();
   const actionsRef = createRef<A>();
   const timeoutRef = createRef<TimeoutMap<A>>();
-  const loadingMapRef = createRef<InternalLoadingMap<A>>();
+  const loadingParallelMapRef = createRef<InternalLoadingMap<A>>();
+  const loadingMapRef = createRef<LoadingMap<A>>();
+  const loadingRef = createRef<boolean>();
   const errorMapRef = createRef<ErrorParallelMap<A>>();
   const promisesRef = createRef<PromiseMap<A>>();
   const conflictActionsRef = createRef<ConflictActionsMap<A>>();
   const initializedRef = createRef(false);
+  const snapshotRef = createRef<StateListenerContext<S, DS, A>>();
 
   const middlewaresRef = createRef<Middleware<S, A, P>[]>([]);
 
   const { getInitialState, actions: actionsImpl, middlewares = [], ...options } = config;
 
-  let stateListeners: Record<string, StateListener<S, DS, A>> = {};
+  let stateListeners: Record<string, StateListener> = {};
   let stateListenerCount = 0;
 
-  function addStateListener(listener: StateListener<S, DS, A>): () => void {
+  function addStateListener(listener: StateListener): () => void {
     const id = `${stateListenerCount++}`;
     stateListeners[id] = listener;
     return () => {
@@ -232,24 +257,11 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
     };
   }
 
-  function notifyStateListeners(newState: S, derivedState: DS) {
-    const s = {
-      ...newState,
-      ...derivedState,
-    };
-
-    const ctx: StateListenerContext<S, DS, A> = {
-      ...s,
-      ...actionsRef.current,
-      isLoading,
-      abortAction,
-      loading: isAnyLoading(),
-      loadingMap: getLoadingMap(),
-      errorMap: getErrorMap(),
-    };
+  function notifyStateListeners() {
+    updateSnapshot();
 
     Object.keys(stateListeners).forEach((listenerId) => {
-      stateListeners[listenerId](ctx);
+      stateListeners[listenerId]();
     });
   }
 
@@ -280,7 +292,13 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
   function setInternalState(s: S) {
     stateRef.current = s;
     computeDerivedValues(stateRef, propsRef, derivedStateRef, options);
-    notifyStateListeners(stateRef.current, derivedStateRef.current.state);
+    notifyStateListeners();
+  }
+
+  function setInternalLoadingMap(map: InternalLoadingMap<A>) {
+    loadingParallelMapRef.current = map;
+    loadingMapRef.current = getLoadingMap();
+    loadingRef.current = isAnyLoading();
   }
 
   function init(p: P) {
@@ -291,10 +309,12 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
 
       const initialActionSet = new Set(options?.initialActionsMarkedLoading);
 
-      loadingMapRef.current = (Object.keys(actionsImpl) as (keyof A)[]).reduce<InternalLoadingMap<A>>((acc, name) => {
+      const loadingMap = (Object.keys(actionsImpl) as (keyof A)[]).reduce<InternalLoadingMap<A>>((acc, name) => {
         acc[name] = initialActionSet.has(name) ? { [DEFAULT_PROMISE_ID]: true } : {};
         return acc;
       }, {});
+
+      setInternalLoadingMap(loadingMap);
 
       errorMapRef.current = (Object.keys(actionsImpl) as (keyof A)[]).reduce<ErrorParallelMap<A>>((acc, name) => {
         acc[name] = {};
@@ -348,7 +368,7 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
         options.onMount(buildOnMountInvocationContext(stateRef, derivedStateRef, propsRef, actionsRef));
       }
 
-      notifyStateListeners(stateRef.current, derivedStateRef.current.state);
+      notifyStateListeners();
     }
   }
 
@@ -357,7 +377,7 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
     if (map?.[promiseId]) {
       delete map[promiseId];
     }
-    notifyStateListeners(stateRef.current, derivedStateRef.current.state);
+    notifyStateListeners();
   }
 
   function invokeOnMountDeferred() {
@@ -373,7 +393,7 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
     const abortedActions: AbortedActions<A> = Object.keys(actionsImpl).reduce((acc, actionName) => {
       const action = actionsImpl[actionName];
       if (isAsyncAction(action) && action.abortable) {
-        const map = loadingMapRef.current[actionName];
+        const map = loadingParallelMapRef.current[actionName];
         const aborted = Object.keys(map).reduce((acc, promiseId) => {
           if (map[promiseId]) {
             // ongoing action
@@ -399,7 +419,9 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
 
       propsRef.current = null;
       stateRef.current = null;
+      loadingParallelMapRef.current = null;
       loadingMapRef.current = null;
+      loadingRef.current = null;
       errorMapRef.current = null;
       promisesRef.current = null;
       conflictActionsRef.current = null;
@@ -440,7 +462,7 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
     let newLoadingMap = newLoadingMapIn;
 
     const oldLoading = isAsync
-      ? isLoadingImpl(newLoadingMap || loadingMapRef.current, [actionName, actionCtx?.promiseId])
+      ? isLoadingImpl(newLoadingMap || loadingParallelMapRef.current, [actionName, actionCtx?.promiseId])
       : false;
 
     const { newState, newLoading } = runMiddlewares(
@@ -466,6 +488,7 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
         actionCtx?.promiseId || DEFAULT_PROMISE_ID,
         newLoading
       );
+
       if (Object.keys(newLoadingMap).length === 0) {
         newLoadingMap = undefined;
       }
@@ -473,18 +496,19 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
 
     if (newLoadingMap != null) {
       hasChanged = true;
-      loadingMapRef.current = newLoadingMap;
+      setInternalLoadingMap(newLoadingMap);
     }
 
     if (hasChanged) {
       computeDerivedValues(stateRef, propsRef, derivedStateRef, options);
       if (!init) {
-        notifyStateListeners(newState || stateRef.current, derivedStateRef.current.state);
+        stateRef.current = newState || stateRef.current;
+        notifyStateListeners();
       }
     } else if (propsChanged) {
       const derivedChanged = computeDerivedValues(stateRef, propsRef, derivedStateRef, options);
       if (derivedChanged && !init) {
-        notifyStateListeners(newState || stateRef.current, derivedStateRef.current.state);
+        notifyStateListeners();
       }
     }
   }
@@ -508,7 +532,7 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
         stateRef,
         derivedStateRef,
         propsRef,
-        loadingMapRef,
+        loadingParallelMapRef,
         errorMapRef,
         actionsRef,
         promisesRef,
@@ -539,7 +563,7 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
   }, {} as A);
 
   function isLoading<K extends keyof A>(...props: (K | [K, string])[]) {
-    return isLoadingImpl(loadingMapRef.current, ...props);
+    return isLoadingImpl(loadingParallelMapRef.current, ...props);
   }
 
   function abortAction(actionName: keyof A, promiseId: string = DEFAULT_PROMISE_ID) {
@@ -556,7 +580,7 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
 
   function isAnyLoading() {
     if (initializedRef.current) {
-      const loadingMap = loadingMapRef.current;
+      const loadingMap = loadingParallelMapRef.current;
       return (
         Object.keys(loadingMap).find((actionName) => {
           const promises = loadingMap[actionName];
@@ -569,7 +593,7 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
 
   function getLoadingMap() {
     if (initializedRef.current) {
-      const map = loadingMapRef.current;
+      const map = loadingParallelMapRef.current;
       const keys = Object.keys(map) as (keyof A)[];
       return keys.reduce<LoadingMap<A>>((acc, actionName) => {
         const subMap = map[actionName];
@@ -591,6 +615,25 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
     return { ...config };
   }
 
+  function updateSnapshot() {
+    snapshotRef.current = {
+      ...actionsRef.current,
+      ...stateRef.current,
+      ...derivedStateRef.current.state,
+      isLoading,
+      abortAction,
+      loading: loadingRef.current,
+      loadingMap: loadingMapRef.current,
+      loadingParallelMap: loadingParallelMapRef.current,
+      errorMap: getErrorMap(),
+      errorParallelMap: errorMapRef.current,
+    };
+  }
+
+  function getSnapshot() {
+    return snapshotRef.current;
+  }
+
   return {
     getConfig,
     setProps,
@@ -600,6 +643,8 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
     isLoading,
     abortAction,
     clearError,
+    getSnapshot,
+    invokeOnMountDeferred,
     get actions() {
       return actionsRef.current;
     },
@@ -613,17 +658,17 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
       return null;
     },
     get loading() {
-      return isAnyLoading();
+      return loadingRef.current;
     },
     get loadingMap() {
-      return getLoadingMap();
+      return loadingMapRef.current;
     },
     get errorMap() {
       return getErrorMap();
     },
     get loadingParallelMap() {
       if (initializedRef.current) {
-        return loadingMapRef.current;
+        return loadingParallelMapRef.current;
       }
       return null;
     },
@@ -632,9 +677,6 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
         return errorMapRef.current;
       }
       return null;
-    },
-    invokeOnMountDeferred() {
-      invokeOnMountDeferred();
     },
   };
 }
@@ -676,66 +718,22 @@ export function useStoreSlice<
   KL extends keyof A
 >(
   store: StoreApi<S, A, P, DS>,
-  properties: K[],
-  loadingProps?: KL[]
+  properties: K[]
 ): Pick<StateListenerContext<S, DS, A>, K> & { loadingMap: LoadingMap<Pick<A, KL>> };
 
-export function useStoreSlice<S, A extends DecoratedActions, P, DS>(
-  store: StoreApi<S, A, P, DS>,
-  funcOrArr: any,
-  loadingProps?: any
-) {
-  const [, forceRefresh] = useReducer((s) => (s > 100 ? 0 : s + 1), 0);
-
+export function useStoreSlice<S, A extends DecoratedActions, P, DS>(store: StoreApi<S, A, P, DS>, funcOrArr: any) {
   const slicerFunc = useMemo(
     () => (funcOrArr instanceof Function ? funcOrArr : (ctx: StateListenerContext<S, DS, A>) => pick(ctx, funcOrArr)),
     [funcOrArr]
   );
 
-  const loadingMapSlicer = useMemo(() => {
-    return (ctx: StateListenerContext<S, DS, A>) =>
-      loadingProps != null && loadingProps.length > 0 ? pick(ctx.loadingMap, loadingProps) : null;
-  }, [loadingProps]);
-
-  const sliceRef = useRef<any>(null);
-  const loadingMapRef = useRef<LoadingMap<A>>(null);
-
-  if (sliceRef.current === null) {
-    const ctx = {
-      ...store.state,
-      ...store.actions,
-      ...pick(store, ['actions', 'loading', 'isLoading', 'abortAction', 'loadingMap', 'errorMap']),
-    };
-    sliceRef.current = slicerFunc(ctx);
-    loadingMapRef.current = loadingMapSlicer(ctx);
-  }
-
-  useLayoutEffect(() => {
-    const unregister = store.addStateListener((ctx) => {
-      let hasChanged = false;
-
-      const slice = slicerFunc(ctx);
-      const loadingSlice = loadingMapSlicer(ctx);
-      const prevSlice = sliceRef.current;
-      const compare = globalConfig.comparator;
-
-      hasChanged = prevSlice == null || !compare(slice, prevSlice) || !compare(loadingSlice, loadingMapRef.current);
-
-      sliceRef.current = slice;
-      loadingMapRef.current = loadingSlice;
-
-      if (hasChanged) {
-        forceRefresh();
-      }
-    });
-
-    return unregister;
-  }, []);
-
-  const slice = sliceRef.current;
-  const loadingSlice = loadingMapRef.current;
-
-  return loadingSlice == null ? slice : { ...slice, loadingMap: loadingSlice };
+  return useSyncExternalStoreWithSelector(
+    store.addStateListener,
+    store.getSnapshot,
+    store.getSnapshot,
+    slicerFunc,
+    globalConfig.comparator
+  );
 }
 
 /**
@@ -755,7 +753,6 @@ export function useStoreContextSlice<S, A extends DecoratedActions, P, DS, SLICE
  * The component will be refreshed if, and only if, one property of the slice has changed.
  * @param store The store to listen to.
  * @param properties list of properties to extract from store
- * @param loadingFlags list of action names to extract their loading state from store (available in loadingMap).
  * @returns The state slice.
  */
 export function useStoreContextSlice<
@@ -767,17 +764,15 @@ export function useStoreContextSlice<
   KL extends keyof A
 >(
   storeContext: Context<StoreApi<S, A, P, DS>>,
-  properties: K[],
-  loadingProps?: KL[]
+  properties: K[]
 ): Pick<StateListenerContext<S, DS, A>, K> & { loadingMap: LoadingMap<Pick<A, KL>> };
 
 export function useStoreContextSlice<S, A extends DecoratedActions, P, DS>(
   storeContext: Context<StoreApi<S, A, P, DS>>,
-  funcOrArr: any,
-  loadingProps?: any
+  funcOrArr: any
 ) {
   const store = useContext(storeContext);
-  return useStoreSlice(store, funcOrArr, loadingProps);
+  return useStoreSlice(store, funcOrArr);
 }
 
 /**

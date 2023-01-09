@@ -9,9 +9,7 @@
  */
 
 import React, { useState, createContext, memo } from 'react';
-import { StoreActions } from '../../lib/es/types';
-import { logDetailedEffects, devtools, logEffects } from '../../src/middlewares';
-import { useStoreContextSlice, useStoreSlice, useLocalStore, StoreApi, StoreOptions, StoreConfig } from '../../src';
+import { useStoreContextSlice, useLocalStore, StoreApi, StoreConfig } from '../../src';
 import { useRef } from 'react';
 import FlashingBox from './FlashingBox';
 
@@ -176,8 +174,8 @@ export function StateView() {
           <div>prop2: {state.prop2}</div>
           <div>listFiltered: {state.listFiltered.join(', ')}</div>
           <div>errorMap:</div>
-          {Object.keys(state.errorMap).map((k) => (
-            <div key={k}>{`${k} -> ${state.errorMap[k]}`}</div>
+          {Object.keys(state.errorParallelMap).map((k) => (
+            <div key={k}>{`${k} -> ${state.errorParallelMap[k]}`}</div>
           ))}
         </div>
         <div ref={logNodeRef} style={{ flex: 1 }}></div>
@@ -234,7 +232,7 @@ function Prop1() {
 }
 
 function LoadList() {
-  const { loadList, loadingMap } = useStoreContextSlice(StoreContext, ['loadList'], ['loadList']);
+  const { loadList, loadingMap } = useStoreContextSlice(StoreContext, ['loadList', 'loadingMap']);
 
   const loading = loadingMap.loadList;
 
@@ -249,7 +247,7 @@ function LoadList() {
 }
 
 function LoadFail() {
-  const { loadAndFail, loadingMap } = useStoreContextSlice(StoreContext, ['loadAndFail'], ['loadAndFail']);
+  const { loadAndFail, loadingMap } = useStoreContextSlice(StoreContext, ['loadAndFail', 'loadingMap']);
   const loading = loadingMap.loadAndFail;
 
   return (
@@ -266,7 +264,7 @@ function LoadFail() {
 }
 
 function LoadCancel() {
-  const { loadCancel, loadingMap } = useStoreContextSlice(StoreContext, ['loadCancel'], ['loadCancel']);
+  const { loadCancel, loadingMap } = useStoreContextSlice(StoreContext, ['loadCancel', 'loadingMap']);
 
   const loading = loadingMap.loadCancel;
 
@@ -282,7 +280,6 @@ function LoadCancel() {
 
 function Prop2() {
   // all are identical
-  // const s = useStoreSlice(myStore, ({ s, a }) => ({ item: s.prop2, setItem: a.setProp2 }));
   // const s = useStoreSlice(myStore, (s) => ({ item: s.prop2, setItem: s.setProp2 }));
   // const s = useStoreSlice(myStore, (s) => pick(s, 'prop2', 'setProp2'));
   const s = useStoreContextSlice(StoreContext, ['prop2', 'setProp2']);
@@ -293,7 +290,7 @@ function Prop2() {
         <div>prop2: {s.prop2}</div>
       </div>
       <div>
-        <InputButton buttonLabel="Set Item" onAction={(item) => s.setProp2(item)} />
+        <InputButton buttonLabel="Set Item" onAction={s.setProp2} />
       </div>
     </FlashingBox>
   );

@@ -489,7 +489,7 @@ export function createMockStoreAction<S, A extends DecoratedActions, F extends (
 
       // create mock action to test side effects
       const actionsRef = getActionsRef(actions as any, mockActions);
-      const loadingMapRef = createRef<InternalLoadingMap<A>>({});
+      const loadingParallelMapRef = createRef<InternalLoadingMap<A>>({});
       const errorMapRef = createRef<ErrorParallelMap<A>>({});
 
       const setState: SetStateFunc<S, A> = (newStateIn /* newLoadingMap, actionName, actionType, isAsync, ctx */) => {
@@ -552,7 +552,7 @@ export function createMockStoreAction<S, A extends DecoratedActions, F extends (
           actionName,
           derivedStateRef,
           propsRef,
-          loadingMapRef,
+          loadingParallelMapRef,
           errorMapRef,
           promisesRef,
           conflictActionsRef,
@@ -568,7 +568,7 @@ export function createMockStoreAction<S, A extends DecoratedActions, F extends (
 
       return (promise ?? Promise.resolve())
         .then(() => {
-          loadingMapRef.current = {};
+          loadingParallelMapRef.current = {};
           return {
             prevState: getState(stateRef),
             state: getState(newStateRef),

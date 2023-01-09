@@ -92,7 +92,7 @@ export type AsyncActionExecContext<S, DS, F extends (...args: any[]) => any, A e
   stateRef: Ref<S>;
   derivedStateRef: Ref<DerivedState<DS>>;
   propsRef: Ref<P>;
-  loadingMapRef: Ref<InternalLoadingMap<A>>;
+  loadingParallelMapRef: Ref<InternalLoadingMap<A>>;
   errorMapRef: Ref<ErrorParallelMap<A>>;
   promisesRef: Ref<PromiseMap<A>>;
   conflictActionsRef: Ref<ConflictActionsMap<A>>;
@@ -799,7 +799,7 @@ function processPromiseSuccess<S, DS, F extends (...args: any[]) => any, A exten
     propsRef,
     promisesRef,
     actionsRef,
-    loadingMapRef,
+    loadingParallelMapRef: loadingMapRef,
     conflictActionsRef,
     actionName,
     options,
@@ -873,7 +873,7 @@ function processPromiseFailed<S, DS, F extends (...args: any[]) => any, A extend
     derivedStateRef,
     propsRef,
     actionsRef,
-    loadingMapRef,
+    loadingParallelMapRef: loadingMapRef,
     errorMapRef,
     promisesRef,
     conflictActionsRef,
@@ -975,7 +975,7 @@ export function decorateAsyncAction<S, DS, F extends (...args: any[]) => any, A 
     propsRef,
     actionsRef,
     promisesRef,
-    loadingMapRef,
+    loadingParallelMapRef: loadingMapRef,
     errorMapRef,
     initializedRef,
     conflictActionsRef,

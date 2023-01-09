@@ -113,22 +113,6 @@ describe('react hooks', () => {
     expect(result.current.prop1).toEqual('v1');
   });
 
-  it('useStoreSlice works as expected (props, loadingMap) ', () => {
-    const store = createStore({ getInitialState, actions: actionsImpl });
-    // parent hook will init the store
-    store.init({});
-
-    const { result } = renderHook(() => useStoreSlice(store, ['prop1', 'setAsyncProp1'], ['setAsyncProp1']));
-
-    expect(result.current.prop1).toEqual('');
-
-    act(() => {
-      result.current.setAsyncProp1('v1');
-    });
-
-    expect(result.current.loadingMap.setAsyncProp1).toBeTruthy();
-  });
-
   it('useStoreSlice works as expected (func)', () => {
     const store = createStore({ getInitialState, actions: actionsImpl });
     // parent hook will init the store
@@ -183,22 +167,5 @@ describe('react hooks', () => {
     });
 
     expect(result.current.prop1).toEqual('v1');
-  });
-
-  it('useStoreContextSlice works as expected (props, loadingMap)', () => {
-    const wrapper = ({ children }) => <StoreContextProvider>{children}</StoreContextProvider>;
-
-    const { result } = renderHook(
-      () => useStoreContextSlice(StoreContext, ['prop1', 'setAsyncProp1'], ['setAsyncProp1']),
-      { wrapper }
-    );
-
-    expect(result.current.prop1).toEqual('');
-
-    act(() => {
-      result.current.setAsyncProp1('v1');
-    });
-
-    expect(result.current.loadingMap.setAsyncProp1).toBeTruthy();
   });
 });

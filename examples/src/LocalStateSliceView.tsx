@@ -59,7 +59,7 @@ function Value(p: ValueProps) {
 }
 
 function Value1() {
-  const { value1, loadingMap } = useStoreContextSlice(StoreContext, ['value1'], ['setValue1']);
+  const { value1, loadingMap } = useStoreContextSlice(StoreContext, ['value1', 'loadingMap']);
 
   return <Value title="Value 1" value={value1} isLoading={loadingMap.setValue1} />;
 }
