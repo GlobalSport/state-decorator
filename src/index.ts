@@ -426,6 +426,7 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
       promisesRef.current = null;
       conflictActionsRef.current = null;
       derivedStateRef.current = null;
+      snapshotRef.current = null;
 
       Object.keys(timeoutRef.current).forEach((name) => {
         clearTimeout(timeoutRef.current[name]);
@@ -799,11 +800,27 @@ export function useStore<S, A extends DecoratedActions, P, DS = {}>(
   store.setProps(props);
 
   useLayoutEffect(() => {
+    // In development mode, React is calling in order:
+    // - render
+    // - useLayoutEffect
+    // - useEffect
+    // - useLayoutEffect => delete callback
+    // - useEffect => delete callback
+    // - useLayoutEffect
+    // - useEffect
+    //
+    // Here we enforce a initialization of the store after a destroy in the useEffect delete callback
+
+    store.init(props);
+  }, []);
+
+  useLayoutEffect(() => {
     if (refreshOnUpdate) {
-      storeRef.current.addStateListener(() => {
+      return storeRef.current.addStateListener(() => {
         forceRefresh();
       });
     }
+    return null;
   }, [refreshOnUpdate]);
 
   return store;

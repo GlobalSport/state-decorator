@@ -6,7 +6,7 @@ import { terser } from 'rollup-plugin-terser';
 
 import stripBanner from 'rollup-plugin-strip-banner';
 
-const isProd = process.env.NODE_ENV === 'production';
+const isProd = false; // process.env.NODE_ENV === 'production';
 const isAnalyze = process.env.NODE_ENV === 'analyze';
 
 export default function (input, file, externals = []) {
