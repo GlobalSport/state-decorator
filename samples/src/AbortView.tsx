@@ -1,19 +1,18 @@
 import { memo } from 'react';
 
-import Button from '@mui/material/Button';
-import Box from '@mui/material/Box';
+import { Button, Box } from '@mui/material';
 
-import ErrorOutlineIcon from '@material-ui/icons/ErrorOutline';
-import CancelIcon from '@material-ui/icons/Cancel';
-import PlayIcon from '@material-ui/icons/PlayArrow';
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
+import CancelIcon from '@mui/icons-material/Cancel';
+import PlayIcon from '@mui/icons-material/PlayArrow';
 
-import { makeStyles } from '@mui/material/styles';
 import RequestStatus from './RequestStatus';
 import { AbortViewProps } from './Abort';
 import Typography from '@mui/material/Typography';
 
+import classes from './App.module.css';
+
 export const AbortView = memo(function AbortView(p: AbortViewProps) {
-  const styles = useStyles({});
   return (
     <Box>
       <Typography variant="h6">Simple action</Typography>
@@ -25,7 +24,7 @@ export const AbortView = memo(function AbortView(p: AbortViewProps) {
         <Button
           variant="outlined"
           disabled={p.status === 'running'}
-          className={styles.btn}
+          className={classes.btn}
           startIcon={<PlayIcon />}
           onClick={() => p.onAction(false)}
         >
@@ -34,7 +33,7 @@ export const AbortView = memo(function AbortView(p: AbortViewProps) {
         <Button
           variant="outlined"
           disabled={p.status === 'running'}
-          className={styles.btn}
+          className={classes.btn}
           startIcon={<ErrorOutlineIcon />}
           onClick={() => p.onAction(true)}
         >
@@ -43,7 +42,7 @@ export const AbortView = memo(function AbortView(p: AbortViewProps) {
         <Button
           variant="outlined"
           disabled={p.status !== 'running'}
-          className={styles.btn}
+          className={classes.btn}
           startIcon={<CancelIcon />}
           onClick={() => p.abortAction('onAction')}
         >
@@ -53,11 +52,5 @@ export const AbortView = memo(function AbortView(p: AbortViewProps) {
     </Box>
   );
 });
-
-const useStyles = makeStyles((theme) => ({
-  btn: {
-    marginRight: theme.spacing(2),
-  },
-}));
 
 export default AbortView;

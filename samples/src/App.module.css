@@ -26,3 +26,7 @@ html {
   flex: 1;
   padding: var(--theme-spacing-2);
 }
+
+.btn + .btn {
+  margin-left: var(--theme-spacing-2);
+}

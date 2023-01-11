@@ -25,10 +25,10 @@ const NewTodo = memo(function NewTodo(props: Pick<TodoViewProps, 'onCreate'>) {
 
   const [title, setTitle] = useState('');
 
-  const onChange = useCallback((e) => setTitle(e.target.value), [setTitle]);
+  const onChange = useCallback((e: any) => setTitle(e.target.value), [setTitle]);
 
   const onSubmit = useCallback(
-    (e) => {
+    (e: any) => {
       e.preventDefault();
       onCreate(title);
       setTitle('');
@@ -37,12 +37,16 @@ const NewTodo = memo(function NewTodo(props: Pick<TodoViewProps, 'onCreate'>) {
   );
 
   return (
-    <Card>
+    <Paper
+      sx={(theme) => ({
+        backgroundColor: theme.palette.grey[100],
+      })}
+    >
       <Box p={2}>
         <form onSubmit={onSubmit}>
           <Box display="flex">
             <Box flex={1}>
-              <TextField fullWidth value={title} placeholder="New todo" onChange={onChange} />
+              <TextField size="small" fullWidth value={title} placeholder="New todo" onChange={onChange} />
             </Box>
             <Box ml={2}>
               <Button variant="contained" color="primary" type="submit">
@@ -52,7 +56,7 @@ const NewTodo = memo(function NewTodo(props: Pick<TodoViewProps, 'onCreate'>) {
           </Box>
         </form>
       </Box>
-    </Card>
+    </Paper>
   );
 });
 
@@ -79,6 +83,7 @@ const Todo = memo(function Todo(props: { todo: TodoItem } & Pick<TodoViewProps, 
     <ListItem>
       <ListItemText>
         <TextField
+          size="small"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           onKeyDown={onKeydownHandler}
@@ -96,7 +101,11 @@ const Todos = memo(function Todos(props: Pick<TodoViewProps, 'filteredTodoIds' |
   const { filteredTodoIds, todoMap } = props;
 
   return (
-    <Paper>
+    <Paper
+      sx={(theme) => ({
+        backgroundColor: theme.palette.grey[100],
+      })}
+    >
       <Box>
         {filteredTodoIds.length === 0 && (
           <Box p={2}>
@@ -119,10 +128,14 @@ const Todos = memo(function Todos(props: Pick<TodoViewProps, 'filteredTodoIds' |
 const Filters = memo(function Filters(props: Pick<TodoViewProps, 'filter' | 'onClearCompleted' | 'onSetFilter'>) {
   const { onClearCompleted, filter, onSetFilter } = props;
 
-  const onFilterChange = useCallback((e) => onSetFilter(e.target.value), [onSetFilter]);
+  const onFilterChange = useCallback((e: any) => onSetFilter(e.target.value), [onSetFilter]);
 
   return (
-    <Paper>
+    <Paper
+      sx={(theme) => ({
+        backgroundColor: theme.palette.grey[100],
+      })}
+    >
       <Box p={2}>
         <FormControl component="fieldset">
           <FormLabel component="legend">Filter</FormLabel>

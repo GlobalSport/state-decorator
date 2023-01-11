@@ -1,10 +1,7 @@
 import { memo } from 'react';
 import { DebounceViewProps } from './Debounce';
 
-import Box from '@mui/material/Box';
-import TextField from '@mui/material/TextField';
-
-import { Typography } from '@mui/material';
+import { Typography, TextField, Box } from '@mui/material';
 
 // Stateless component
 // Separate container from view to test more easily the view.
@@ -17,6 +14,7 @@ export default memo(function DebounceView(props: DebounceViewProps) {
       </Typography>
       <Box mt={2}>
         <TextField
+          size="small"
           variant="outlined"
           placeholder="Type text here..."
           value={props.value}

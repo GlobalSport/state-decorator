@@ -1,5 +1,3 @@
-import React from 'react';
-
 import { createStore } from './sd';
 import { devtools } from './sd//middlewares';
 import FlashingBox from './FlashingBox';
@@ -14,13 +12,13 @@ export type State = {
 };
 
 export type Actions = {
-  setValue1: (text: string) => void;
-  setValue2: (text: string) => void;
+  setValue1: (text: string) => Promise<string>;
+  setValue2: (text: string) => Promise<string>;
 };
 
 export type ConflictPolicyViewProps = State & Actions;
 
-function getTimeoutPromise<C>(timeout: number, result: C = null): Promise<C> {
+function getTimeoutPromise<C>(timeout: number, result: C): Promise<C> {
   return new Promise((res) => {
     setTimeout(res, timeout, result);
   });
@@ -47,7 +45,7 @@ const storeConfig: StoreConfig<State, Actions> = {
 };
 
 export const store = createStore(storeConfig);
-store.init(null);
+store.init({});
 
 function Slice() {
   return (

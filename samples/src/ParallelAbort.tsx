@@ -26,17 +26,6 @@ export type ParallelAbortViewProps = State &
 
 // Initial state
 
-export const getInitialState = (): State => ({
-  items: ['item1', 'item2', 'item3', 'item4'].reduce((acc, id) => {
-    acc[id] = {
-      id,
-      value: '',
-      status: 'paused',
-    };
-    return acc;
-  }, {} as State['items']),
-});
-
 function updateState(state: State, id: string, value: string | undefined, status: Status | undefined): State {
   const item = state.items[id] ?? null;
   const v = value ?? item?.value ?? '';
@@ -54,6 +43,17 @@ function updateState(state: State, id: string, value: string | undefined, status
     },
   };
 }
+
+export const getInitialState = (): State => ({
+  items: ['item1', 'item2', 'item3', 'item4'].reduce((acc, id) => {
+    acc[id] = {
+      id,
+      value: '',
+      status: 'paused',
+    };
+    return acc;
+  }, {} as State['items']),
+});
 
 const parallelAbortActions: StoreActions<State, Actions> = {
   onSaveItem: {

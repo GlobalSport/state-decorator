@@ -1,27 +1,19 @@
-import React from 'react';
-
 import { useStoreSlice } from './sd';
 
-import FlashingBox from './FlashingBox';
 import { store } from './GlobalStateSlice';
+import FlashingBox from './FlashingBox';
 
-import Box from '@mui/material/Box';
-import Button from '@mui/material/Button';
-import CircularProgress from '@mui/material/CircularProgress';
-import Grid from '@mui/material/Grid';
-import Typography from '@mui/material/Typography';
+import { Typography, Box, Button, Grid, CircularProgress } from '@mui/material';
 
-import { makeStyles } from '@mui/material/styles';
+import classes from './Slice.module.css';
 
 function Buttons() {
-  const styles = useStyles();
-
   const a = useStoreSlice(store, ['setValue1', 'setValue2']);
 
   return (
     <FlashingBox>
       <Box>
-        <Button variant="outlined" className={styles.btn} onClick={() => a.setValue1('test1')}>
+        <Button variant="outlined" className={classes.btn} onClick={() => a.setValue1('test1')}>
           Set Value 1 to "test1"
         </Button>
         <Button variant="outlined" onClick={() => a.setValue2('test2')}>
@@ -109,11 +101,5 @@ function SliceView() {
     </FlashingBox>
   );
 }
-
-const useStyles = makeStyles((theme) => ({
-  btn: {
-    marginRight: theme.spacing(2),
-  },
-}));
 
 export default SliceView;

@@ -1,4 +1,4 @@
-import React, { createContext } from 'react';
+import { createContext } from 'react';
 
 import { useLocalStore, StoreApi, StoreConfig } from './sd';
 import { setResIn } from './sd/helpers';
@@ -12,13 +12,13 @@ export type State = {
 };
 
 export type Actions = {
-  setValue1: (text: string) => void;
-  setValue2: (text: string) => void;
+  setValue1: (text: string) => Promise<string>;
+  setValue2: (text: string) => Promise<string>;
 };
 
 export type ConflictPolicyViewProps = State & Actions;
 
-const storeConfig: StoreConfig<State, Actions> = {
+const storeConfig: StoreConfig<State, Actions, {}> = {
   name: 'Slice store',
   getInitialState: () => ({
     value1: '',
@@ -37,7 +37,7 @@ const storeConfig: StoreConfig<State, Actions> = {
   },
 };
 
-function getTimeoutPromise<C>(timeout: number, result: C = null): Promise<C> {
+function getTimeoutPromise<C>(timeout: number, result: C): Promise<C> {
   return new Promise((res) => {
     setTimeout(res, timeout, result);
   });

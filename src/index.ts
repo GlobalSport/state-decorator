@@ -820,7 +820,7 @@ export function useStore<S, A extends DecoratedActions, P, DS = {}>(
         forceRefresh();
       });
     }
-    return null;
+    return undefined;
   }, [refreshOnUpdate]);
 
   return store;

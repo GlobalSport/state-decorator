@@ -1,22 +1,19 @@
-import React from 'react';
 import { OptimisticViewProps } from './Optimistic';
 
-import Button from '@mui/material/Button';
-import Box from '@mui/material/Box';
-import PlayArrowIcon from '@material-ui/icons/PlayArrow';
-import RotateLeftIcon from '@material-ui/icons/RotateLeft';
-import ErrorOutlineIcon from '@material-ui/icons/ErrorOutline';
+import { Button, Box, Typography } from '@mui/material';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import RotateLeftIcon from '@mui/icons-material/RotateLeft';
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 
-import { makeStyles } from '@mui/material/styles';
 import RequestStatus from './RequestStatus';
-import { Typography } from '@mui/material';
+
+import commonClasses from './App.module.css';
+import classes from './Optimistic.module.css';
 
 // Stateless component
 // Separate container from view to test more easily the view.
-const OptimisticView = function OptimisticView(props: OptimisticViewProps) {
+function OptimisticView(props: OptimisticViewProps) {
   const { value, status } = props;
-
-  const styles = useStyles({});
 
   return (
     <Box>
@@ -28,17 +25,22 @@ const OptimisticView = function OptimisticView(props: OptimisticViewProps) {
         fails and the the effects is reverted.
       </Typography>
       <Box mt={2}>
-        <Box display="flex" alignItems="centers">
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+          }}
+        >
           <RequestStatus status={status} duration={5} />
-          <Box className={styles.valueBox} ml={2}>
+          <Box sx={{ ml: 2 }} className={classes.valueBox}>
             <Typography>{value}</Typography>
           </Box>
         </Box>
 
-        <Box mt={1}>
+        <Box sx={{ mt: 1 }}>
           <Button
             variant="outlined"
-            className={styles.btn}
+            className={commonClasses.btn}
             onClick={() => props.sendAction(false)}
             startIcon={<PlayArrowIcon />}
           >
@@ -46,7 +48,7 @@ const OptimisticView = function OptimisticView(props: OptimisticViewProps) {
           </Button>
           <Button
             variant="outlined"
-            className={styles.btn}
+            className={commonClasses.btn}
             startIcon={<ErrorOutlineIcon />}
             onClick={() => props.sendAction(true)}
           >
@@ -54,7 +56,7 @@ const OptimisticView = function OptimisticView(props: OptimisticViewProps) {
           </Button>
           <Button
             variant="outlined"
-            className={styles.btn}
+            className={commonClasses.btn}
             startIcon={<RotateLeftIcon />}
             onClick={() => props.resetValue()}
           >
@@ -64,22 +66,6 @@ const OptimisticView = function OptimisticView(props: OptimisticViewProps) {
       </Box>
     </Box>
   );
-};
-
-const useStyles = makeStyles((theme) => ({
-  btn: {
-    marginRight: theme.spacing(2),
-    marginTop: theme.spacing(1),
-  },
-
-  valueBox: {
-    display: 'flex',
-    alignItems: 'center',
-
-    border: '1px solid #ccc',
-    padding: theme.spacing(1),
-    borderRadius: 4,
-  },
-}));
+}
 
 export default OptimisticView;

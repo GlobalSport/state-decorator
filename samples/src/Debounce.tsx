@@ -1,4 +1,3 @@
-import React from 'react';
 import useLocalStore, { StoreConfig } from './sd';
 import DebounceView from './DebounceView';
 

@@ -2,7 +2,6 @@ import useLocalStore, { StoreConfig } from './sd';
 import produce from 'immer';
 import TodoView from './TodoView';
 import { setArgIn } from './sd/helpers';
-import { useEffect } from 'react';
 
 // Types
 

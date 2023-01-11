@@ -1,0 +1,20 @@
+.icon {
+  width: 50px !important;
+  height: 50px !important;
+}
+
+.paused {
+  color: lightgray;
+}
+
+.succeeded {
+  color: green;
+}
+
+.aborted {
+  color: darkorange;
+}
+
+.errored {
+  color: red;
+}

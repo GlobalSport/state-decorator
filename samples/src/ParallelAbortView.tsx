@@ -1,10 +1,7 @@
 import { useState } from 'react';
 
-import Typography from '@mui/material/Typography';
-import Box from '@mui/material/Box';
-import Button from '@mui/material/Button';
-import TextField from '@mui/material/TextField';
-import CancelIcon from '@material-ui/icons/Cancel';
+import { Typography, Box, Button, TextField } from '@mui/material';
+import CancelIcon from '@mui/icons-material/Cancel';
 
 import { Item, ParallelAbortViewProps } from './ParallelAbort';
 import RequestStatus from './RequestStatus';
@@ -21,6 +18,7 @@ function ItemView(p: ItemViewProps) {
     <Box mt={2}>
       <Box display="flex" alignItems="center">
         <TextField
+          size="small"
           label={item.id}
           value={value}
           disabled={item.status === 'running'}

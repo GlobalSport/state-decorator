@@ -61,7 +61,7 @@ const DisplayItem1_2 = memo(function DisplayItem1_2(p: Pick<State, 'item2'>) {
 const ItemInput1 = memo(function ItemInput1(p: Pick<State, 'item'> & Pick<Actions, 'setItem'>) {
   return (
     <FlashingBox>
-      <TextField label="item" value={p.item} onChange={(e) => p.setItem(e.target.value)} />
+      <TextField size="small" label="item" value={p.item} onChange={(e) => p.setItem(e.target.value)} />
     </FlashingBox>
   );
 });
@@ -108,7 +108,7 @@ function ItemInput2(p: {}) {
 
   return (
     <FlashingBox>
-      <TextField label="item" value={s.item} onChange={(e) => s.setItem(e.target.value)} />
+      <TextField size="small" label="item" value={s.item} onChange={(e) => s.setItem(e.target.value)} />
     </FlashingBox>
   );
 }
@@ -156,7 +156,7 @@ function ItemInput3(p: { store: Store }) {
 
   return (
     <FlashingBox>
-      <TextField label="item" value={s.item} onChange={(e) => s.setItem(e.target.value)} />
+      <TextField size="small" label="item" value={s.item} onChange={(e) => s.setItem(e.target.value)} />
     </FlashingBox>
   );
 }
@@ -212,7 +212,7 @@ function ItemInput4() {
 
   return (
     <FlashingBox>
-      <TextField label="item" value={s.item} onChange={(e) => s.setItem(e.target.value)} />
+      <TextField size="small" label="item" value={s.item} onChange={(e) => s.setItem(e.target.value)} />
     </FlashingBox>
   );
 }

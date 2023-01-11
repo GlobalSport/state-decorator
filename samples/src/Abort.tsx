@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import { memo } from 'react';
 import useLocalStore, { ConflictPolicy, AbortActionCallback } from './sd';
 import { Status } from './types';
 import AbortView from './AbortView';

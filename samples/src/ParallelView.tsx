@@ -3,7 +3,6 @@ import { useState } from 'react';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
 import TextField from '@mui/material/TextField';
-import { makeStyles } from '@mui/material/styles';
 
 import { Item, ParallelViewProps } from './Parallel';
 import CircularProgress from '@mui/material/CircularProgress';
@@ -13,16 +12,16 @@ type ItemViewProps = {
   isLoading: boolean;
 } & Pick<ParallelViewProps, 'onSaveItem'>;
 
-const useStyles = makeStyles((theme) => ({
-  btn: {
-    marginRight: theme.spacing(2),
-  },
+// const useStyles = makeStyles((theme) => ({
+//   btn: {
+//     marginRight: theme.spacing(2),
+//   },
 
-  box: {
-    border: '1px solid #ccc',
-    borderRadius: 5,
-  },
-}));
+//   box: {
+//     border: '1px solid #ccc',
+//     borderRadius: 5,
+//   },
+// }));
 
 function ItemView(p: ItemViewProps) {
   const [value, setValue] = useState(p.item.value);
@@ -32,6 +31,7 @@ function ItemView(p: ItemViewProps) {
     <Box mb={2} p={2}>
       <Box display="flex" alignItems="center">
         <TextField
+          size="small"
           label={item.id}
           value={value}
           disabled={isLoading}
@@ -51,7 +51,10 @@ function ItemView(p: ItemViewProps) {
 function ParallelView(props: ParallelViewProps) {
   const { items, onSaveItem, isLoading } = props;
 
-  const styles = useStyles();
+  // const styles = useStyles();
+  const styles = {
+    box: '',
+  };
 
   return (
     <Box mt={4} p={2} className={styles.box}>

@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import useLocalStore, { ConflictPolicy, StoreConfig } from './sd';
 import ConflictPolicyView from './ConflictPolicyView';
 import { Status } from './types';

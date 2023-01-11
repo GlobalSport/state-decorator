@@ -13,8 +13,7 @@ import { useStoreContextSlice, useLocalStore, StoreApi, StoreConfig } from './sd
 import { useRef } from 'react';
 import FlashingBox from './FlashingBox';
 
-import Typography from '@mui/material/Typography';
-import Box from '@mui/material/Box';
+import { Typography, Box } from '@mui/material';
 
 type State = {
   list: string[];
@@ -174,8 +173,8 @@ export function StateView() {
           <div>prop2: {state.prop2}</div>
           <div>listFiltered: {state.listFiltered.join(', ')}</div>
           <div>errorMap:</div>
-          {Object.keys(state.errorParallelMap).map((k) => (
-            <div key={k}>{`${k} -> ${state.errorParallelMap[k]}`}</div>
+          {((Object.keys(state.errorMap) as unknown) as (keyof Actions)[]).map((k) => (
+            <div key={k}>{`${k} -> ${state.errorMap[k]?.toString()}`}</div>
           ))}
         </div>
         <div ref={logNodeRef} style={{ flex: 1 }}></div>
@@ -232,9 +231,10 @@ function Prop1() {
 }
 
 function LoadList() {
-  const { loadList, loadingMap } = useStoreContextSlice(StoreContext, ['loadList', 'loadingMap']);
-
-  const loading = loadingMap.loadList;
+  const { loadList, loading } = useStoreContextSlice(StoreContext, (ctx) => ({
+    loadList: ctx.loadList,
+    loading: ctx.loadingMap.loadList,
+  }));
 
   return (
     <FlashingBox>
@@ -247,9 +247,10 @@ function LoadList() {
 }
 
 function LoadFail() {
-  const { loadAndFail, loadingMap } = useStoreContextSlice(StoreContext, ['loadAndFail', 'loadingMap']);
-  const loading = loadingMap.loadAndFail;
-
+  const { loadAndFail, loading } = useStoreContextSlice(StoreContext, (ctx) => ({
+    loadAndFail: ctx.loadAndFail,
+    loading: ctx.loadingMap.loadAndFail,
+  }));
   return (
     <FlashingBox>
       <div>Asynchronous load and fail and set "error" to prop2 as side effect</div>
@@ -264,9 +265,10 @@ function LoadFail() {
 }
 
 function LoadCancel() {
-  const { loadCancel, loadingMap } = useStoreContextSlice(StoreContext, ['loadCancel', 'loadingMap']);
-
-  const loading = loadingMap.loadCancel;
+  const { loadCancel, loading } = useStoreContextSlice(StoreContext, (ctx) => ({
+    loadCancel: ctx.loadCancel,
+    loading: ctx.loadingMap.loadCancel,
+  }));
 
   return (
     <FlashingBox>
@@ -338,7 +340,7 @@ type InputButtonProps = {
 function InputButton(p: InputButtonProps) {
   const [text, setText] = useState('');
 
-  const onSubmit = (e) => {
+  const onSubmit = (e: any) => {
     e.preventDefault();
     p.onAction(text);
     setText('');

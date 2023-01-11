@@ -45,7 +45,7 @@ export function useFlashingNode(node: MutableRefObject<any>, color: string = 're
   useEffect(() => {
     node.current.style.outline = `2px solid ${color}`;
     let id = setTimeout(() => {
-      node.current.style.outline = styles.outline.toString();
+      node.current.style.outline = styles.outline?.toString();
     }, 500);
     return () => {
       clearTimeout(id);

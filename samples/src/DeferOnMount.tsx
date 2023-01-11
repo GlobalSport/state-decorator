@@ -2,6 +2,7 @@ import { useContext } from 'react';
 import useLocalStore, { LoadingProps, StoreConfig } from './sd';
 import { setResIn } from './sd/helpers';
 import { Context, ContextProps, Provider } from './DeferOnMountContext';
+import { Typography } from '@mui/material';
 
 // TYPES ===============================
 
@@ -30,13 +31,10 @@ const storeConfig: StoreConfig<State, Actions, Props> = {
   },
   onMount: ({ a }) => {
     a.onLoadChild();
-    console.log('onMount');
   },
   onMountDeferred: ({ p }) => {
+    // call parent code that will trigger a state change (loadingMap is updated)
     p?.onLoad?.();
-  },
-  onUnmount: () => {
-    console.log('onUnmount');
   },
 };
 
@@ -60,10 +58,14 @@ function DeferOnMount() {
 
   const { state, loadingMap } = useLocalStore(storeConfig, props);
 
-  console.log(loadingMap);
-
   return (
     <div>
+      <Typography variant="h4">Defer onMount code after render</Typography>
+      <Typography variant="caption">
+        By default the onMount code is executed during the component rendering phase. But React trigger an error if a
+        component code is triggering a parent component re-render during the its own rendering phase. The solution is to
+        defer this code.
+      </Typography>
       <div>
         Context: {props.myProp} {props.loadingMap.onLoad?.toString()}
       </div>

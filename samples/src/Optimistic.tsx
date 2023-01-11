@@ -1,4 +1,3 @@
-import React from 'react';
 import { createStore, IsLoadingFunc, StoreConfig, useStore } from './sd';
 import { optimisticActions as optimisticActionsMiddleware } from './sd/middlewares';
 
@@ -51,10 +50,10 @@ const storeConfig: StoreConfig<State, Actions> = {
 const store = createStore(storeConfig);
 
 // Container that is managing the state using usetateDecorator hook
-const CounterContainer = () => {
+const OptimisticApp = () => {
   const { state, actions, isLoading } = useStore(store);
 
   return <OptimisticView {...state} {...actions} isLoading={isLoading} />;
 };
 
-export default CounterContainer;
+export default OptimisticApp;

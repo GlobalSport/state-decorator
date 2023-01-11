@@ -1,6 +1,6 @@
 import { Button, Box, CircularProgress } from '@mui/material';
 import { useState } from 'react';
-import useLocalStore, { StoreConfig } from './sd';
+import useLocalStore, { ConflictPolicy, StoreConfig } from './sd';
 import { setResIn } from './sd/helpers';
 
 // TYPES ===============================
@@ -11,7 +11,7 @@ type User = {
 };
 
 type Props = { userId: string };
-type State = { user: User };
+type State = { user: User | null };
 type Actions = {
   getUser: () => Promise<User>;
 };
@@ -22,6 +22,7 @@ const config: StoreConfig<State, Actions, Props> = {
   }),
   actions: {
     getUser: {
+      conflictPolicy: ConflictPolicy.KEEP_LAST,
       getPromise: ({ p }) =>
         p.userId
           ? new Promise((resolve) => {
@@ -36,11 +37,11 @@ const config: StoreConfig<State, Actions, Props> = {
   },
   onPropsChange: [
     {
+      onMount: true,
       getDeps: (p) => [p.userId],
       sideEffects: ({ a }) => {
         a.getUser();
       },
-      onMount: true,
     },
   ],
 };
@@ -57,9 +58,9 @@ function UserViewer(p: Props) {
   return (
     <dl>
       <dt>First name:</dt>
-      <dd>{s.user.firstName}</dd>
+      <dd>{s.user?.firstName}</dd>
       <dt>Last name:</dt>
-      <dd>{s.user.lastName}</dd>
+      <dd>{s.user?.lastName}</dd>
     </dl>
   );
 }

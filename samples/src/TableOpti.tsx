@@ -1,25 +1,30 @@
-import React, { memo } from 'react';
+import { memo } from 'react';
 
-import MTable from '@mui/material/Table';
-import MTableBody from '@mui/material/TableBody';
-import MTableCell from '@mui/material/TableCell';
-import MTableHead from '@mui/material/TableHead';
-import MTableRow from '@mui/material/TableRow';
-import DeleteIcon from '@material-ui/icons/Delete';
-import ArrowUpIcon from '@material-ui/icons/ArrowUpward';
-import ArrowDownIcon from '@material-ui/icons/ArrowDownward';
+import {
+  Table as MTable,
+  TableBody as MTableBody,
+  TableCell as MTableCell,
+  TableHead as MTableHead,
+  TableRow as MTableRow,
+  Box,
+  Button,
+  TextField,
+  IconButton,
+} from '@mui/material';
+
+import DeleteIcon from '@mui/icons-material/Delete';
+import ArrowUpIcon from '@mui/icons-material/ArrowUpward';
+import ArrowDownIcon from '@mui/icons-material/ArrowDownward';
 import { pick, slice, useStoreSlice } from './sd';
 import FlashingBox, { useFlashingNode } from './FlashingBox';
-import Box from '@mui/material/Box';
-import Button from '@mui/material/Button';
-import IconButton from '@mui/material/IconButton';
-import TextField from '@mui/material/TextField';
 import { useRef } from 'react';
 import { store } from './TableStore';
 
 type TableRowProps = {
   id: string;
 };
+
+const COLS = ['col1', 'col2'] as const;
 
 // memo for id
 const TableRow = memo(function TableRow(p: TableRowProps) {
@@ -37,9 +42,14 @@ const TableRow = memo(function TableRow(p: TableRowProps) {
   return (
     <MTableRow ref={ref}>
       <MTableCell>{row.id}</MTableCell>
-      {['col1', 'col2'].map((col) => (
+      {COLS.map((col) => (
         <MTableCell key={col}>
-          <TextField label={col} value={row[col]} onChange={(e) => s.editValue(row.id, col, e.target.value)} />
+          <TextField
+            size="small"
+            label={col}
+            value={row[col]}
+            onChange={(e) => s.editValue(row.id, col, e.target.value)}
+          />
         </MTableCell>
       ))}
       <MTableCell>

@@ -1,17 +1,18 @@
 import React, { useState, useEffect } from 'react';
 
-import { makeStyles } from '@mui/material/styles';
-
 import CircularProgress from '@mui/material/CircularProgress';
 import Box from '@mui/material/Box';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 
-import PauseCircleOutlineIcon from '@material-ui/icons/PauseCircleOutline';
-import ErrorOutlineIcon from '@material-ui/icons/ErrorOutline';
-import CancelIcon from '@material-ui/icons/Cancel';
-import CheckCircleOutlineIcon from '@material-ui/icons/CheckCircleOutline';
+import PauseCircleOutlineIcon from '@mui/icons-material/PauseCircleOutline';
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
+import CancelIcon from '@mui/icons-material/Cancel';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import { Status } from './types';
+
+import classes from './RequestStatus.module.css';
+import clsx from './clsx';
 
 export type RequestStatusProps = {
   duration: number;
@@ -54,24 +55,22 @@ export default function RequestStatus(p: RequestStatusProps) {
 
   let content: JSX.Element;
 
-  const styles = useStyles({ size, status });
-
   switch (status) {
     case 'paused':
-      content = <PauseCircleOutlineIcon className={styles.icon} />;
+      content = <PauseCircleOutlineIcon className={clsx(classes.icon, classes.paused)} />;
       break;
     case 'succeeded':
-      content = <CheckCircleOutlineIcon className={styles.icon} />;
+      content = <CheckCircleOutlineIcon className={clsx(classes.icon, classes.succeeded)} />;
       break;
     case 'aborted':
-      content = <CancelIcon className={styles.icon} />;
+      content = <CancelIcon className={clsx(classes.icon, classes.aborted)} />;
       break;
     case 'errored':
-      content = <ErrorOutlineIcon className={styles.icon} />;
+      content = <ErrorOutlineIcon className={clsx(classes.icon, classes.errored)} />;
       break;
     default:
       content = (
-        <React.Fragment>
+        <>
           <CircularProgress variant="determinate" size={size} value={((seconds / 1000) * 100) / duration} />
           <Box
             position="absolute"
@@ -85,7 +84,7 @@ export default function RequestStatus(p: RequestStatusProps) {
           >
             <Typography>{p.duration - Math.floor(seconds / 1000)}</Typography>
           </Box>
-        </React.Fragment>
+        </>
       );
   }
 
@@ -97,26 +96,3 @@ export default function RequestStatus(p: RequestStatusProps) {
     </Tooltip>
   );
 }
-
-const useStyles = makeStyles((theme) => ({
-  icon: (p: { size: number; status: Status }) => {
-    let color = theme.palette.primary.main;
-    switch (p.status) {
-      case 'succeeded':
-        color = theme.palette.success.main;
-        break;
-      case 'errored':
-        color = theme.palette.error.main;
-        break;
-      case 'aborted':
-        color = theme.palette.warning.main;
-        break;
-    }
-
-    return {
-      color,
-      width: `${p.size}px`,
-      height: `${p.size}px`,
-    };
-  },
-}));

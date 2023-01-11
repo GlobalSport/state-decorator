@@ -13,7 +13,7 @@ export type State = {
 };
 
 export type Actions = {
-  editValue: (id: string, field: string, value: string) => void;
+  editValue: (id: string, field: keyof Row, value: string) => void;
   insertRow: () => void;
   deleteRow: (id: string) => void;
   moveRow: (id: string, up: boolean) => void;

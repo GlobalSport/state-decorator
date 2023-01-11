@@ -1,18 +1,11 @@
-// import ConflictPolicies from './ConflictPolicies';
-// import Slice from './GlobalStateSlice';
-// import LocalSlice from './LocalStateSlice';
-// import TableApp from './TableApp';
+import TableApp from './TableApp';
 import TodoApp from './TodoApp';
-// import Debounce from './Debounce';
-// import Recipes from './Recipes';
-// import Optimistic from './Optimistic';
-// import Abort from './Abort';
-// import ParallelAbort from './ParallelAbort';
-// import StateSharing from './sample';
-// import Tabs from '@mui/material/Tabs';
-// import Tab from '@mui/material/Tab';
-// import Box from '@mui/material/Box';
-// import Paper from '@mui/material/Paper';
+import Debounce from './Debounce';
+import ErrorMap from './ErrorMap';
+import Recipes from './Recipes';
+import Optimistic from './Optimistic';
+import ParallelAbort from './ParallelAbort';
+import StateSharing from './StateSharing';
 import { useState, ReactNode } from 'react';
 
 import Box from '@mui/material/Box';
@@ -20,10 +13,13 @@ import Paper from '@mui/material/Paper';
 import Tabs from '@mui/material/Tabs';
 import Tab from '@mui/material/Tab';
 
-import classes from './App.css';
+import classes from './App.module.css';
+import SliceApp from './SliceApp';
+import ConflictPoliciesApp from './ConflictPolicies';
+import Abort from './Abort';
 
-// import PropsChangeOnMount from './PropsChangeOnMount';
-// import DeferOnMount from './DeferOnMount';
+import PropsChangeOnMount from './PropsChangeOnMount';
+import DeferOnMount from './DeferOnMount';
 
 type TabPanelProps = {
   children?: ReactNode;
@@ -59,7 +55,10 @@ export default function App() {
   const onTabChange = (event: React.ChangeEvent<{}>, newValue: number) => {
     setTabId(newValue);
     window.location.hash = `${newValue}`;
+    console.log('newValue', newValue);
   };
+
+  console.log('tabId', tabId);
 
   return (
     <Box className={classes.root}>
@@ -71,9 +70,10 @@ export default function App() {
           className={classes.tabs}
           onChange={onTabChange}
           aria-label="Vertical tabs example"
+          sx={{ borderRight: 1, borderColor: 'divider' }}
         >
           <Tab label="Todo" />
-          {/* <Tab label="Table" />
+          <Tab label="Table" />
           <Tab label="Slices" />
           <Tab label="Conflict Policy" />
           <Tab label="Optimistic" />
@@ -83,81 +83,48 @@ export default function App() {
           <Tab label="Props change onmount" />
           <Tab label="Error" />
           <Tab label="Recipes" />
-          <Tab label="Defer onMount" /> */}
+          <Tab label="Defer onMount" />
         </Tabs>
         <Box flex={1} className={classes.content}>
-          <TabPanel tabId={tabId} index={0} classes={classes}>
+          <TabPanel tabId={tabId} index={0}>
             <TodoApp />
           </TabPanel>
-          {/* <TabPanel tabId={tabId} index={1} classes={classes}>
+          <TabPanel tabId={tabId} index={1}>
             <TableApp />
           </TabPanel>
-          <TabPanel tabId={tabId} index={2} classes={classes}>
-            <Box>
-              <Box mb={2}>
-                <Typography variant="body1">Global State</Typography>
-                <Slice />
-              </Box>
-              <Box mb={2}>
-                <Typography variant="body1">Local State</Typography>
-                <LocalSlice />
-              </Box>
-            </Box>
+          <TabPanel tabId={tabId} index={2}>
+            <SliceApp />
           </TabPanel>
-          <TabPanel tabId={tabId} index={3} classes={classes}>
-            <ConflictPolicies />
+          <TabPanel tabId={tabId} index={3}>
+            <ConflictPoliciesApp />
           </TabPanel>
-          <TabPanel tabId={tabId} index={4} classes={classes}>
+          <TabPanel tabId={tabId} index={4}>
             <Optimistic />
           </TabPanel>
-          <TabPanel tabId={tabId} index={5} classes={classes}>
+          <TabPanel tabId={tabId} index={5}>
             <Abort />
             <ParallelAbort />
           </TabPanel>
-          <TabPanel tabId={tabId} index={6} classes={classes}>
+          <TabPanel tabId={tabId} index={6}>
             <Debounce />
           </TabPanel>
-          <TabPanel tabId={tabId} index={7} classes={classes}>
+          <TabPanel tabId={tabId} index={7}>
             <StateSharing />
           </TabPanel>
-          <TabPanel tabId={tabId} index={8} classes={classes}>
+          <TabPanel tabId={tabId} index={8}>
             <PropsChangeOnMount />
           </TabPanel>
-          <TabPanel tabId={tabId} index={9} classes={classes}>
+          <TabPanel tabId={tabId} index={9}>
             <ErrorMap />
           </TabPanel>
-          <TabPanel tabId={tabId} index={10} classes={classes}>
+          <TabPanel tabId={tabId} index={10}>
             <Recipes />
           </TabPanel>
-          <TabPanel tabId={tabId} index={11} classes={classes}>
+          <TabPanel tabId={tabId} index={11}>
             <DeferOnMount />
-          </TabPanel> */}
+          </TabPanel>
         </Box>
       </Paper>
     </Box>
   );
 }
-
-// const useStyles = makeStyles((theme) => ({
-//   root: {
-//     marginTop: theme.spacing(4),
-//   },
-//   paper: {
-//     margin: `${theme.spacing(4)}px`,
-
-//     padding: `${theme.spacing(4)}px`,
-//     paddingLeft: 0,
-
-//     display: 'flex',
-//   },
-//   tabs: {
-//     width: 200,
-//     marginRight: `${theme.spacing(2)}px`,
-//     borderRight: `1px solid #cccccc`,
-//   },
-
-//   content: {
-//     flex: 1,
-//     padding: theme.spacing(2),
-//   },
-// }));

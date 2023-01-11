@@ -11,7 +11,9 @@
   "dependencies": {
     "@emotion/react": "^11.10.5",
     "@emotion/styled": "^11.10.5",
+    "@mui/icons-material": "^5.11.0",
     "@mui/material": "^5.11.4",
+    "classnames-generics": "^1.0.9",
     "immer": "^9.0.6",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
@@ -21,6 +23,7 @@
     "@types/react-dom": "^18.0.9",
     "@vitejs/plugin-react": "^3.0.0",
     "typescript": "^4.9.3",
-    "vite": "^4.0.0"
+    "vite": "^4.0.0",
+    "vite-plugin-sass-dts": "^1.2.12"
   }
 }

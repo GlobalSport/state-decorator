@@ -47,8 +47,6 @@ export const Context = createContext<ContextProps>(null);
 export function Provider(p: PropsIn) {
   const { state: s, actions: a, loadingMap } = useLocalStore(storeConfig);
 
-  console.log(loadingMap);
-
   return (
     <Context.Provider
       value={{
