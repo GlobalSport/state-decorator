@@ -7,5 +7,6 @@ export default [
   config('./src/middlewares.ts', 'middlewares', ['./impl']),
   config('./src/test.ts', 'test', ['./impl', 'jest']),
   config('./src/v5.ts', 'v5', ['./index', './impl', './middlewares']),
+  config('./src/v6.ts', 'v6', ['./index', './impl', './middlewares']),
   config('./src/v5_test.ts', 'v5_test', ['./index', './impl']),
 ];
