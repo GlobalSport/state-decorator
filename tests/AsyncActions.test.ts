@@ -876,6 +876,9 @@ describe('Async action', () => {
     return promise;
   });
 
+  /**
+   * @jest-environment jsdom
+   */
   it('aborted action during promise execution (fails)', () => {
     const listener = jest.fn();
     const callback = jest.fn();
