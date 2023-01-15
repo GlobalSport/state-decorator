@@ -178,29 +178,24 @@ export function createMockStore<S, A extends DecoratedActions, P, DS>(
   config: StoreConfig<S, A, P, DS>,
   props: P = {} as P
 ): MockStore<S, A, P, DS> {
-  const { getInitialState, actions, ...options } = config;
+  const { actions, ...options } = config;
+  const getInitialState: (p: P) => S = config['getInitialState'] || (() => config['initialState']);
   return createMockStoreV6(getInitialState, actions, props, options);
 }
 
 export function createMockStoreV6<S, A extends DecoratedActions, P = {}, DS = {}>(
-  initialState: S | ((p: P) => S),
+  getInitialState: (p: P) => S,
   actions: StoreActions<S, A, P, DS>,
   props: P = {} as P,
   options: StoreOptions<S, A, P, DS> = {},
   mockActions?: MockActionImpl<A>
 ): MockStore<S, A, P, DS> {
-  const stateRef = createRef<S>();
+  const stateRef = createRef<S>(getInitialState(props));
   const propsRef = createRef<P>(props);
-
-  if (typeof initialState === 'function') {
-    stateRef.current = (initialState as (props: P) => S)(props);
-  } else {
-    stateRef.current = initialState;
-  }
 
   function cloneStore(newState: S, newProps: P, newMockActions?: MockActionImpl<A>) {
     return createMockStoreV6(
-      newState ?? stateRef.current,
+      () => newState ?? stateRef.current,
       actions,
       newProps ?? propsRef.current,
       options,
@@ -218,12 +213,7 @@ export function createMockStoreV6<S, A extends DecoratedActions, P = {}, DS = {}
   }
 
   return {
-    getInitialState: (p: P) => {
-      if (typeof initialState === 'function') {
-        return (initialState as (props: P) => S)(p);
-      }
-      return initialState;
-    },
+    getInitialState,
     test(f) {
       f(getState(), propsRef.current);
       return this;
@@ -292,7 +282,7 @@ export function createMockStoreV6<S, A extends DecoratedActions, P = {}, DS = {}
         propsRef.current,
         actionsRef as any,
         options,
-        typeof initialState === 'function' ? (initialState as (p: P) => S) : () => initialState,
+        getInitialState,
         setState,
         init,
         isDeferred
@@ -309,8 +299,7 @@ export function createMockStoreV6<S, A extends DecoratedActions, P = {}, DS = {}
 
     onInit(newProps: Partial<P> = {}) {
       // reset initial state
-      const state = typeof initialState === 'function' ? (initialState as (props: P) => S)(props) : initialState;
-
+      const state = getInitialState(props);
       const newStateRef = createRef(state);
       const newPropsRef = createRef({ ...propsRef.current, ...newProps });
       const derivedStateRef = createRef<DerivedState<DS>>({ state: null, deps: {} });

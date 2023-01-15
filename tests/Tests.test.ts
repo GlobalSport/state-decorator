@@ -502,20 +502,6 @@ describe('createMockStore', () => {
   });
 
   // REAL WORLD TEST
-  // asyncThatCrashes: {
-  //   getPromise: () => Promise.resolve(),
-  //   effects: ({ s }) => {
-  //     const nullObj = null;
-  //     nullObj.crash = 'test';
-  //     return s;
-  //   },
-  // },
-
-  // it.only('asyncThatCrashes works as expected', async () => {
-  //   return mockStore.getAction('asyncThatCrashes').call();
-  // });
-
-  // REAL WORLD TEST
   it('asyncThatCrashes works as expected', async () => {
     return mockStore
       .getAction('asyncThatCrashes')
@@ -524,26 +510,6 @@ describe('createMockStore', () => {
         expect(e.sourceError).toBeInstanceOf(EffectError);
       });
   });
-
-  // REAL WORLD TEST
-  // asyncManagedError: {
-  //   getPromise: () => Promise.reject(new MyError()),
-  //   errorEffects: ({ s }) => ({  error: 'true' })
-  // },
-  // it.only('asyncManagedErrorThrow works as expected', async () => {
-  //   return mockStore
-  //     .getAction('asyncManagedErrorThrow')
-  //     .call()
-  //     .catch((e: ActionError<State>) => {
-  //       // test source error
-  //       if (!(e.sourceError instanceof MyError)) {
-  //         return Promise.reject();
-  //       }
-
-  //       // check that error was correcly managed
-  //       expect(e.state.error).toEqual('true');
-  //     });
-  // });
 
   it('allows to test asynchronous action, managed error', (done) => {
     mockStore

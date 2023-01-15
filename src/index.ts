@@ -187,10 +187,7 @@ export type StoreApi<S, A extends DecoratedActions, P, DS = {}> = {
   /**
    * @returns The store configuration
    */
-  getConfig: () => {
-    getInitialState: S | ((p: P) => S);
-    actions: StoreActions<S, A, P, DS>;
-  } & StoreOptions<S, A, P, DS>;
+  getConfig: () => StoreConfig<S, A, P, DS>;
 
   /**
    * Invoke onMountDeferred + onPropChange flagged onMountDeferred
@@ -244,7 +241,9 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
 
   const middlewaresRef = createRef<Middleware<S, A, P>[]>([]);
 
-  const { getInitialState, actions: actionsImpl, middlewares = [], ...options } = config;
+  const { actions: actionsImpl, middlewares = [], ...options } = config;
+
+  const getInitialState: (p: P) => S = config['getInitialState'] || (() => config['initialState']);
 
   let stateListeners: Record<string, StateListener> = {};
   let stateListenerCount = 0;
@@ -305,7 +304,7 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
     if (!initializedRef.current) {
       propsRef.current = p;
       initializedRef.current = true;
-      stateRef.current = typeof getInitialState === 'function' ? (getInitialState as (p: P) => S)(p) : getInitialState;
+      stateRef.current = getInitialState(p);
 
       const initialActionSet = new Set(options?.initialActionsMarkedLoading);
 

@@ -511,14 +511,13 @@ export function buildOnPropChangeEffects<S, DS, P>(
   indices: number[],
   index: number,
   isInit: boolean,
-  getInitialState: S | ((p: P) => S)
+  getInitialState: (p: P) => S
 ): OnPropsChangeEffectsContext<S, DS, P> {
   const res = buildInvocationContextBase(stateRef, derivedStateRef, propsRef) as OnPropsChangeEffectsContext<S, DS, P>;
   res.indices = indices;
   res.index = index;
   res.isInit = isInit;
-  res.getInitialState =
-    typeof getInitialState === 'function' ? (getInitialState as (p: P) => S) : () => getInitialState;
+  res.getInitialState = getInitialState;
   return res;
 }
 
@@ -1271,7 +1270,7 @@ export function onPropChange<S, P, A, DS>(
   oldProps: P,
   actionsRef: Ref<A>,
   options: StoreOptions<S, A, P, DS>,
-  getInitialState: S | ((p: P) => S),
+  getInitialState: (p: P) => S,
   setState: SetStateFunc<S, A>,
   isInit: boolean,
   isDeferred: boolean

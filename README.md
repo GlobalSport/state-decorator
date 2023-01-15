@@ -1671,6 +1671,12 @@ TypeError: Cannot set property 'crash' of null
 
 ## API
 
+### Create mock store
+
+| Name            | Parameters                                       |                                   |
+| --------------- | ------------------------------------------------ | --------------------------------- |
+| createMockStore | (config: StoreConfig, props: Props) => MockStore | Create a mock store from a config |
+
 ### MockStore
 
 | Function        | Arguments                            | Returns             | Description                                                                                 |

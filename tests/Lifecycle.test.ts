@@ -19,7 +19,7 @@ describe('Lifecycle', () => {
   describe('getInitialState', () => {
     it('singleton state', () => {
       const store = createStore<State, Actions, {}>({
-        getInitialState: { prop: 'init' },
+        initialState: { prop: 'init' },
         actions: {
           setProp: setArgIn('prop'),
         },
@@ -30,7 +30,7 @@ describe('Lifecycle', () => {
       expect(store.state).toEqual({ prop: 'init' });
     });
 
-    it('singleton state', () => {
+    it('get state function', () => {
       const store = createStore<State, Actions, {}>({
         getInitialState: () => ({ prop: 'init' }),
         actions: {

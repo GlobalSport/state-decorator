@@ -503,8 +503,33 @@ export type StoreOptions<S, A, P = {}, DS = {}> = {
   derivedState?: DerivedStateOption<S, P, DS>;
 };
 
-export type StoreConfig<S, A extends DecoratedActions, P = {}, DS = {}> = {
-  getInitialState: S | ((p: P) => S);
+type StoreConfigBase<S, A extends DecoratedActions, P = {}, DS = {}> = {
   actions: StoreActions<S, A, P, DS>;
   middlewares?: MiddlewareFactory<S, A, P>[];
 } & StoreOptions<S, A, P, DS>;
+
+type StoreConfigObj<S, A extends DecoratedActions, P = {}, DS = {}> = StoreConfigBase<S, A, P, DS> & {
+  initialState: S;
+};
+
+type StoreConfigFunc<S, A extends DecoratedActions, P = {}, DS = {}> = StoreConfigBase<S, A, P, DS> & {
+  getInitialState: (p: P) => S;
+};
+
+export type StoreConfig<S, A extends DecoratedActions, P = {}, DS = {}> =
+  | StoreConfigObj<S, A, P, DS>
+  | StoreConfigFunc<S, A, P, DS>;
+
+// const cfg: StoreConfig<{ p: string }, { do: () => void }, {}, {}> = {
+//   getInitialState: () => ({ p: 'coucou' }),
+//   actions: {
+//     do: () => ({}),
+//   },
+// };
+
+// const cfg2: StoreConfig<{ p: string }, { do: () => void }, {}, {}> = {
+//   initialState: { p: 'coucou' },
+//   actions: {
+//     do: () => ({}),
+//   },
+// };
