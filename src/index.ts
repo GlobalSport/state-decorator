@@ -260,7 +260,8 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
     updateSnapshot();
 
     Object.keys(stateListeners).forEach((listenerId) => {
-      stateListeners[listenerId]();
+      // listeners car be removed while calling updates
+      stateListeners[listenerId]?.();
     });
   }
 
