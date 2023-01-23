@@ -428,8 +428,9 @@ export type OnPropsChangeSideEffectsContext<S, P, A, DS = {}> = OnPropsChangeEff
 
 type DerivedStateOption<S, P, DS> = {
   [k in keyof DS]: {
-    getDeps: (ctx: ContextBase<S, P>) => any[];
-    get: (ctx: ContextBase<S, P>) => DS[k];
+    getDeps?: (ctx: ContextBase<S, P>) => any[];
+    get: (ctx: ContextBase<S, P> & ContextDerivedStateState<DS>) => DS[k];
+    derivedDeps?: (keyof DS)[];
   };
 };
 

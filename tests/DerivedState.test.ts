@@ -1,5 +1,7 @@
 import { createStore, StoreActions, StoreOptions } from '../src/index';
 
+import Graph from '../src/graph';
+
 describe('Derived state', () => {
   type State = {
     other: number;
@@ -461,5 +463,175 @@ describe('Derived state', () => {
 
     // but no derived state change
     expect(store.state.filteredListProps).toBe(savedList);
+  });
+});
+
+describe('Use derived state to compute derived state', () => {
+  it('initial use case', () => {
+    type State = {
+      value: string;
+    };
+
+    type DerivedState = {
+      derived1: string;
+      derived2: string;
+    };
+
+    type Actions = {
+      setValue: (v: string) => void;
+    };
+
+    const getInitialState: () => State = () => ({ value: 'init' });
+    const storeActions: StoreActions<State, Actions, {}, DerivedState> = {
+      setValue: ({ s, args: [v] }) => ({ ...s, value: v }),
+    };
+
+    const storeOptions: StoreOptions<State, Actions, {}, DerivedState> = {
+      derivedState: {
+        derived1: {
+          getDeps: ({ s }) => [s.value],
+          get: ({ s }) => `${s.value}_derived`,
+        },
+        derived2: {
+          getDeps: ({ s }) => [s.value],
+          get: ({ ds }) => `${ds.derived1}_derived`,
+        },
+      },
+    };
+
+    const store = createStore(getInitialState, storeActions, storeOptions);
+    store.init({});
+
+    const {
+      state,
+      actions: { setValue },
+    } = store;
+
+    expect(state.value).toEqual('init');
+    expect(state.derived1).toEqual('init_derived');
+    expect(state.derived2).toEqual('init_derived_derived');
+
+    setValue('value');
+
+    const newState = store.state;
+
+    expect(newState.value).toEqual('value');
+    expect(newState.derived1).toEqual('value_derived');
+    expect(newState.derived2).toEqual('value_derived_derived');
+  });
+
+  it('bad order use case but deps allow to order', () => {
+    type State = {
+      value: string;
+    };
+
+    type DerivedState = {
+      derived1: string;
+      derived2: string;
+    };
+
+    type Actions = {
+      setValue: (v: string) => void;
+    };
+
+    const getInitialState: () => State = () => ({ value: 'init' });
+    const storeActions: StoreActions<State, Actions, {}, DerivedState> = {
+      setValue: ({ s, args: [v] }) => ({ ...s, value: v }),
+    };
+
+    const storeOptions: StoreOptions<State, Actions, {}, DerivedState> = {
+      derivedState: {
+        // derived2 depends on derived1 => it must be defined first
+        derived2: {
+          get: ({ ds }) => `${ds.derived1}_derived2`,
+          derivedDeps: ['derived1'],
+        },
+        derived1: {
+          getDeps: ({ s }) => [s.value],
+          get: ({ s }) => `${s.value}_derived1`,
+        },
+      },
+    };
+
+    const store = createStore(getInitialState, storeActions, storeOptions);
+    store.init({});
+
+    const {
+      state,
+      actions: { setValue },
+    } = store;
+
+    expect(state.value).toEqual('init');
+    expect(state.derived1).toEqual('init_derived1');
+    expect(state.derived2).toEqual('init_derived1_derived2');
+
+    setValue('value');
+
+    const newState = store.state;
+
+    expect(newState.value).toEqual('value');
+    expect(newState.derived1).toEqual('value_derived1');
+    expect(newState.derived2).toEqual('value_derived1_derived2');
+  });
+
+  it.skip('dependency circular dependency', () => {
+    type State = {
+      value: string;
+    };
+
+    type DerivedState = {
+      derived1: string;
+      derived2: string;
+      derived3: string;
+    };
+
+    type Actions = {
+      setValue: (v: string) => void;
+    };
+
+    const getInitialState: () => State = () => ({ value: 'init' });
+    const storeActions: StoreActions<State, Actions, {}, DerivedState> = {
+      setValue: ({ s, args: [v] }) => ({ ...s, value: v }),
+    };
+
+    const storeOptions: StoreOptions<State, Actions, {}, DerivedState> = {
+      derivedState: {
+        derived3: {
+          get: ({ ds }) => `${ds.derived2}_derived3`,
+          derivedDeps: ['derived2'],
+        },
+        derived2: {
+          get: ({ ds }) => `${ds.derived1}_derived2`,
+          derivedDeps: ['derived1'],
+        },
+        derived1: {
+          getDeps: ({ s }) => [s.value],
+          get: ({ s }) => `${s.value}_derived1`,
+          derivedDeps: ['derived3'],
+        },
+      },
+    };
+
+    const store = createStore(getInitialState, storeActions, storeOptions);
+    store.init({});
+  });
+});
+
+describe('Graph', () => {
+  it('cyclic', () => {
+    const graph = new Graph(['derive1', 'derived2', 'derived3', 'derived4']);
+    graph.setEdges('derived3', ['derived2']);
+    graph.setEdges('derived2', ['derived1']);
+    graph.setEdges('derived1', ['derived3']);
+
+    expect(graph.isCyclic()).toBeTruthy();
+  });
+
+  it('not cyclic', () => {
+    const graph = new Graph(['derive1', 'derived2', 'derived3', 'derived4']);
+    graph.setEdges('derived3', ['derived2']);
+    graph.setEdges('derived2', ['derived1']);
+
+    expect(graph.isCyclic()).toBeFalsy();
   });
 });

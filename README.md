@@ -781,7 +781,7 @@ const store = createStore(getInitialState, actionsImpl, {
 
 # Derived state
 
-A derived state is a state that can be deduced from state and props.
+A derived state is a state that can be deduced from state, props and/or derived state.
 
 ```typescript
 import { createStore } from 'state-decorator';
@@ -800,30 +800,46 @@ type Props = {
 
 type DerivedState = {
   derivedProp: number;
+  derivedProp2: number;
+  derivedProp3: number;
 };
 
-const store = createStore<State, Actions, Props, DerivedState>(
-  () => ({ value: 0 }),
-  {
+const store = createStore<State, Actions, Props, DerivedState>({
+  getInitialState: () => ({ value: 0 }),
+  actions: {
     add1: ({ s }) => ({ ...s, value: s.value + 1 }),
   },
-  {
-    derivedState: {
-      derivedProp: {
-        // get the list of dependencies to be checked to trigger the computation of the derived state
-        // if state.value AND/OR props.prop1 changes, derivedProp is recomputed
-        getDeps: ({ state, props }) => [state.value, props.propIn],
-        // compute derived state from state & props (use short aliases)
-        get: ({ s, p }) => s.value * p.propIn,
-      },
+  derivedState: {
+    derivedProp: {
+      // get the list of dependencies to be checked to trigger the computation of the derived state
+      // if state.value AND/OR props.prop1 changes, derivedProp is recomputed
+      getDeps: ({ state, props }) => [state.value, props.propIn],
+      // compute derived state from state & props (use short aliases)
+      get: ({ s, p }) => s.value * p.propIn,
     },
-  }
-);
+    derivedProp2: {
+      // derived prop from another derived prop
+      derivedDeps: ['derivedProp'],
+      // compute derived state from state & props (use short aliases)
+      get: ({ ds }) => ds.derivedProp * 2,
+    },
+    derivedProp2: {
+      // depends on state, props and another derived state
+      getDeps: ({ s, p }) => [s.value, p.propIn],
+      derivedDeps: ['derivedProp'],
+      get: ({ s, p, ds }) => s.value * p.propIn * ds.derivedProp,
+    },
+  },
+});
 
 export function App(props: Props) {
   const { state } = useStore(store, props);
   // state contains the store state and derived state
-  return <div>{state.derivedProp}</div>;
+  return (
+    <div>
+      {state.derivedProp} {state.derivedProp2} {state.derivedProp3}
+    </div>
+  );
 }
 ```
 

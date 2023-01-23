@@ -13,6 +13,7 @@ OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 PERFORMANCE OF THIS SOFTWARE.
 ***************************************************************************** */
 
+import Graph from './graph';
 import shallow from './shallow';
 import {
   AsyncAction,
@@ -480,6 +481,15 @@ export function buildInvocationContextBase<S, DS, P>(
     derived: derivedStateRef?.current?.state,
     props: propsRef.current,
     p: propsRef.current,
+  };
+}
+
+/** @internal */
+function addDerivedStateContext<T, DS>(s: T, ds: DS) {
+  return {
+    ...s,
+    ds,
+    derived: ds,
   };
 }
 
@@ -1215,15 +1225,21 @@ export function computeDerivedValues<S, A, P, DS>(
   const compare = globalConfig.comparator;
 
   const depsMap = derivedStateRef.current.deps;
-  const ctx = buildInvocationContextBase(s, null, p);
+  const ctx = buildInvocationContextBase<S, DS, P>(s, null, p);
 
   const keys = Object.keys(options.derivedState) as (keyof DS)[];
 
   derivedStateRef.current.state = keys.reduce((acc, propName) => {
     let compute = false;
 
+    const derivedCfg = options.derivedState[propName];
     const previousDeps = depsMap[propName];
-    const deps = options.derivedState[propName].getDeps(ctx);
+    const deps = derivedCfg.getDeps?.(ctx) ?? [];
+
+    if (derivedCfg.derivedDeps) {
+      derivedCfg.derivedDeps.forEach((k) => deps.push(acc[k] ?? derivedStateRef.current?.state?.[k]));
+    }
+
     if (previousDeps == null) {
       compute = true;
     } else {
@@ -1237,7 +1253,7 @@ export function computeDerivedValues<S, A, P, DS>(
     depsMap[propName] = deps;
 
     if (compute) {
-      acc[propName] = options.derivedState[propName].get(ctx);
+      acc[propName] = options.derivedState[propName].get(addDerivedStateContext(ctx, acc));
     } else {
       acc[propName] = derivedStateRef.current.state[propName];
     }
@@ -1246,6 +1262,69 @@ export function computeDerivedValues<S, A, P, DS>(
   }, {} as DS);
 
   return hasChanged;
+}
+
+/** @internal */
+export function fixDerivedDeps<S, A, P, DS>(options: StoreOptions<S, A, P, DS>) {
+  type DerivedKey = keyof DS;
+
+  const keys = Object.keys(options.derivedState) as DerivedKey[];
+
+  const graph = new Graph(keys as string[]);
+  keys.forEach((k) => {
+    graph.setEdges(k as string, options.derivedState[k].derivedDeps as string[]);
+  });
+
+  if (graph.isCyclic()) {
+    throw new Error('There are cycles in the derived state dependencies');
+  }
+
+  let hasDeps = false;
+  const depsSet: Partial<Record<DerivedKey, DerivedKey[]>> = {};
+
+  for (const key of keys) {
+    const deps = options.derivedState[key].derivedDeps ?? [];
+    hasDeps = hasDeps || deps.length > 0;
+    depsSet[key] = deps.concat();
+  }
+
+  // 2 no cycles => compute order
+
+  if (hasDeps) {
+    keys.sort((a, b) => {
+      const v1 = depsSet[a].length;
+      const v2 = depsSet[b].length;
+      return v1 - v2;
+    });
+
+    let sortedKeys: DerivedKey[] = [];
+    let usedSet = new Set<DerivedKey>();
+
+    const len = keys.length;
+
+    while (usedSet.size !== len) {
+      const k = keys.pop();
+      if (!usedSet.has(k)) {
+        depsSet[k] = depsSet[k].filter((d) => !usedSet.has(d));
+        const remainingDeps = depsSet[k];
+
+        if (remainingDeps.length === 0) {
+          sortedKeys.push(k);
+          usedSet.add(k);
+        } else {
+          keys.splice(0, 0, k);
+        }
+      }
+    }
+
+    const newDerivedState: StoreOptions<S, A, P, DS>['derivedState'] = {} as any;
+
+    for (const k of sortedKeys) {
+      newDerivedState[k] = options.derivedState[k];
+    }
+
+    options.derivedState = newDerivedState;
+  }
 }
 
 // --------------------------------------

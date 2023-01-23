@@ -41,6 +41,7 @@ import {
   buildErrorMap,
   buildOnUnMountInvocationContext,
   EffectError,
+  fixDerivedDeps,
 } from './impl';
 
 import {
@@ -293,6 +294,11 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
         state: null,
         deps: {},
       };
+
+      // fix derived store
+      if (options?.derivedState) {
+        fixDerivedDeps(options);
+      }
 
       // init middlewares
       middlewaresRef.current = [];
