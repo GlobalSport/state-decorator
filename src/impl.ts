@@ -254,6 +254,7 @@ function clone(obj: any) {
   } catch (e) {
     const msg =
       'StateDecorator: Cannot clone object. Set setCloneFunction on global global with another implementation like lodash/cloneDeep.';
+    // @ts-ignore
     if (process.env.NODE_ENV === 'development') {
       console.error(msg);
       console.error(e.toString());
@@ -639,6 +640,7 @@ function addSideEffectsContext<S, DS, T extends { s: S; state: S }, A>(
 }
 
 function notInitWarning<A>(actionName: keyof A) {
+  // @ts-ignore
   if (process.env.NODE_ENV === 'development') {
     console.warn(
       `[state-decorator] ${

@@ -16,10 +16,11 @@
     "bump-version": "yarn test && yarn clean && yarn rollup && bump --commit 'build: release v%s' --tag --push && yarn copy",
     "clean": "rimraf ./dist",
     "copy": "copyfiles -f package.json README.md LICENSE lib && json -I -f lib/package.json -e \"this.private=false; this.devDependencies=undefined; this.optionalDependencies=undefined; this.scripts=undefined; this.husky=undefined; this['lint-staged']=undefined; \"",
-    "build": "yarn rollup && yarn copy",
-    "build:dev": "yarn rollup:dev && yarn copy",
-    "analyze": "cross-env NODE_ENV=analyze rollup -c rollup.config.js",
+    "build": "yarn rollup && yarn rollup-dev && yarn copy",
+    "build:dev": "yarn rollup:dev && yarn rollup-dev && yarn copy",
+    "analyze": "cross-env NODE_ENV=analyze rollup",
     "rollup": "cross-env NODE_ENV=production rollup -c rollup.config.js",
+    "rollup-dev": "cross-env NODE_ENV=development rollup -c development.config.js",
     "tslint": "tslint -p ./tsconfig.json --fix",
     "rollup:dev": "cross-env NODE_ENV=development rollup -c rollup.config.js",
     "prepare": "husky install"
@@ -27,6 +28,7 @@
   "devDependencies": {
     "@rollup/plugin-commonjs": "^17.1.0",
     "@rollup/plugin-node-resolve": "^11.2.0",
+    "@rollup/plugin-replace": "^5.0.2",
     "@swc/cli": "^0.1.59",
     "@swc/core": "^1.2.126",
     "@swc/jest": "^0.2.24",

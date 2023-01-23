@@ -1,5 +1,5 @@
 import { createStore } from './sd';
-import { devtools } from './sd//middlewares';
+import { devtools } from './sd/development';
 import FlashingBox from './FlashingBox';
 import SliceView from './GlobalStateSliceView';
 import { StoreConfig } from './sd';

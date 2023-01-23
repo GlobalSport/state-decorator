@@ -63,7 +63,7 @@ export {
 };
 
 import { useEffect, useLayoutEffect, useReducer, useRef } from 'react';
-import { logDetailedEffects } from './middlewares';
+import { logDetailedEffects } from './development';
 
 function isAsyncActionPromise<S, F extends (...args: any[]) => any, A, P>(
   action: StateDecoratorAction<S, F, A, P>

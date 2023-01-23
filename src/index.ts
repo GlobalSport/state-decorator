@@ -79,6 +79,8 @@ import {
   ClearErrorFunc,
 } from './types';
 
+import { logDetailedEffects } from './development';
+
 export {
   EffectError,
   DecoratedActions,
@@ -260,7 +262,7 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
     updateSnapshot();
 
     Object.keys(stateListeners).forEach((listenerId) => {
-      // listeners car be removed while calling updates
+      // listeners can be removed while calling updates (!)
       stateListeners[listenerId]?.();
     });
   }
@@ -339,14 +341,21 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
         actions: actionsImpl,
         setState: setInternalState,
       };
+
+      if (config.logEnabled && logDetailedEffects) {
+        console.log('logDetailedEffects');
+
+        middlewares.push(logDetailedEffects());
+      }
+
       const mapper = (m: MiddlewareFactory<S, A, P>) => {
         const middleware = m();
         middlewaresRef.current.push(middleware);
         middleware.init?.(ctx);
       };
+
       globalConfig.defaultMiddlewares?.forEach(mapper);
       middlewares?.forEach(mapper);
-      // end init
 
       computeDerivedValues(stateRef, propsRef, derivedStateRef, options);
 
@@ -369,6 +378,7 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
       }
 
       notifyStateListeners();
+      // end init
     }
   }
 

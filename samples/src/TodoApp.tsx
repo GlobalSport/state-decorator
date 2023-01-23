@@ -104,6 +104,8 @@ const storeConfig: StoreConfig<State, Actions, {}, DerivedState> = {
     onSetFilter: setArgIn('filter'),
   },
 
+  logEnabled: true,
+
   derivedState: {
     filteredTodoIds: {
       getDeps: ({ s }) => [s.todoIds, s.todoMap, s.filter],

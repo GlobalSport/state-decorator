@@ -448,6 +448,8 @@ export type StoreOptions<S, A, P = {}, DS = {}> = {
    */
   name?: string;
 
+  logEnabled?: boolean;
+
   /**
    * Indicates that all asynchronous actions errors are managed externally.
    * Same as setting isErrorManaged to true for all actions.
