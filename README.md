@@ -1059,7 +1059,7 @@ function Subtitle(props: { subtitle: string }) {
 
 # Derived state
 
-A derived state is a state that can be deduced from state and props.
+A derived state is a state that can be deduced from state, props or derived state.
 
 ```typescript
 import { createStore } from 'state-decorator';
@@ -1078,6 +1078,8 @@ type Props = {
 
 type DerivedState = {
   derivedProp: number;
+  derivedProp2: number;
+  derivedProp3: number;
 };
 
 const store = createStore<State, Actions, Props, DerivedState>({
@@ -1093,13 +1095,29 @@ const store = createStore<State, Actions, Props, DerivedState>({
       // compute derived state from state & props (use short aliases)
       get: ({ s, p }) => s.value * p.propIn,
     },
+    derivedProp2: {
+      // derived prop from another derived prop
+      derivedDeps: ['derivedProp'],
+      // compute derived state from state & props (use short aliases)
+      get: ({ ds }) => ds.derivedProp * 2,
+    },
+    derivedProp2: {
+      // depends on state, props and another derived state
+      getDeps: ({ s, p }) => [s.value, p.propIn],
+      derivedDeps: ['derivedProp'],
+      get: ({ s, p, ds }) => s.value * p.propIn * ds.derivedProp,
+    },
   },
 });
 
 export function App(props: Props) {
   const { state } = useStore(store, props);
   // state contains the store state and derived state
-  return <div>{state.derivedProp}</div>;
+  return (
+    <div>
+      {state.derivedProp} {state.derivedProp2} {state.derivedProp3}
+    </div>
+  );
 }
 ```
 
