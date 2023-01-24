@@ -574,7 +574,7 @@ describe('Use derived state to compute derived state', () => {
     expect(newState.derived2).toEqual('value_derived1_derived2');
   });
 
-  it.skip('dependency circular dependency', () => {
+  it('dependency circular dependency', () => {
     type State = {
       value: string;
     };
@@ -612,8 +612,16 @@ describe('Use derived state to compute derived state', () => {
       },
     };
 
-    const store = createStore(getInitialState, storeActions, storeOptions);
-    store.init({});
+    try {
+      const store = createStore(getInitialState, storeActions, storeOptions);
+      store.init({});
+      throw new Error('unexpected');
+    } catch (e) {
+      // expected error of circular dependency
+      if (e.message === 'unexpected') {
+        throw new Error('unexpected');
+      }
+    }
   });
 });
 
