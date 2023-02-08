@@ -1154,14 +1154,16 @@ setGlobalConfig({
 });
 ```
 
-# Debug actions
+# Trace actions
 
-To debug actions, add a middleware to the store.
+To trace actions, add a logger development middleware to the store.
+
+These middlewares are deactivated if the `NODE_ENV` during the build is not `development` or `test`.
 
 ## Concise logger
 
 ```typescript
-import { logEffects } from 'state-decorator/middlewares';
+import { logEffects } from 'state-decorator/development';
 
 function Container(props: Props) {
   const { state, actions } = useLocalStore({ getInitialState, actions, middlewares: [logEffects()] });
@@ -1191,7 +1193,7 @@ Example:
 ## Detailed Logger
 
 ```typescript
-import { logDetailedEffects } from 'state-decorator/middlewares';
+import { logDetailedEffects } from 'state-decorator/development';
 
 function Container(props: Props) {
   const { state, actions } = useLocalStore({ getInitialState, actions, middlewares: [logDetailedEffects()] });
@@ -1215,12 +1217,14 @@ Example:
  ║ calendarEndDate : null => 2018-08-19T22:00:00.000Z
 ```
 
+Note: In v7, it can be activated by adding `logEnabled: true` in the configuration.
+
 ## Redux devtools
 
 You can connect any StateDecorator store to [Chrome Redux devtools extension](https://chrome.google.com/webstore/detail/redux-devtools/lmhkpmbekcpmknklioeibfkpmmfibljd?hl=en) by adding the `devtools` middleware to the store.
 
 ```typescript
-import { devtools } from 'state-decorator/middlewares';
+import { devtools } from 'state-decorator/development';
 
 function Container(props: Props) {
   const { state, actions } = useLocalStore({ getInitialState, actions, middlewares: [devtools()] });

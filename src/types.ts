@@ -435,20 +435,23 @@ type DerivedStateOption<S, P, DS> = {
   };
 };
 
-export type OnPropsChangeOptions<S, DS, A, P> = {
+export type OnPropsChangeOptions<S, DS, A, P, FxRes = Partial<S>> = {
   onMount?: boolean;
   onMountDeferred?: boolean;
   getDeps: (p: P) => any[];
-  effects?: (ctx: OnPropsChangeEffectsContext<S, DS, P>) => Partial<S>;
+  effects?: (ctx: OnPropsChangeEffectsContext<S, DS, P>) => FxRes;
   sideEffects?: (ctx: OnPropsChangeSideEffectsContext<S, P, A>) => void;
 };
 
-export type StoreOptions<S, A, P = {}, DS = {}> = {
+export type StoreOptions<S, A, P = {}, DS = {}, FxRes = Partial<S>> = {
   /**
    * The state decorator name. Use in debug traces to identify the useStateDecorator instance.
    */
   name?: string;
 
+  /**
+   * In development only (NODE_ENV="development"), activates state changes traces on the console.
+   */
   logEnabled?: boolean;
 
   /**
@@ -467,7 +470,7 @@ export type StoreOptions<S, A, P = {}, DS = {}> = {
   /**
    * One or several configurations of inbound properties change managements.
    */
-  onPropsChange?: OnPropsChangeOptions<S, DS, A, P> | OnPropsChangeOptions<S, DS, A, P>[];
+  onPropsChange?: OnPropsChangeOptions<S, DS, A, P, FxRes> | OnPropsChangeOptions<S, DS, A, P, FxRes>[];
 
   /**
    * The callback function called if an asynchronous function succeeded and a success messsage is defined.
@@ -504,6 +507,9 @@ export type StoreOptions<S, A, P = {}, DS = {}> = {
    * Compute derived state
    */
   derivedState?: DerivedStateOption<S, P, DS>;
+
+  /* @internal */
+  fullStateEffects?: boolean;
 };
 
 type StoreConfigBase<S, A extends DecoratedActions, P = {}, DS = {}> = {

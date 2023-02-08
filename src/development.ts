@@ -32,7 +32,7 @@ export let logDetailedEffects: <S, A extends DecoratedActions, P>(logger?: Logge
 export let devtools: <S, A extends DecoratedActions, P>() => MiddlewareFactory<S, A, P> = null;
 
 // @ts-ignore
-if (process.env.NODE_ENV === 'development') {
+if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') {
   const getNoopMiddleware = <S, A extends DecoratedActions, P>(): Middleware<S, A, P> => {
     const middleware: Middleware<S, A, P> = {
       init: () => {},

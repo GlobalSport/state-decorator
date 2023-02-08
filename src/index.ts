@@ -541,6 +541,7 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
         derivedStateRef,
         propsRef,
         initializedRef,
+        options,
         setState
       ) as any;
     } else if (isAsyncAction(action)) {

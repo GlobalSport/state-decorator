@@ -10,7 +10,7 @@ import {
   ErrorMap,
   LoadingParallelMap,
   ErrorParallelMap,
-  StoreOptions,
+  StoreOptions as StoreOptionsBase,
   AsyncActionPromise,
   InvocationContext,
   GetPromiseInvocationContext,
@@ -45,7 +45,6 @@ export {
   LoadingParallelMap,
   ErrorParallelMap,
   ParallelActionError,
-  StoreOptions,
   AsyncActionPromise as AsynchActionPromise,
   InvocationContext,
   GetPromiseInvocationContext,
@@ -72,6 +71,13 @@ export {
   IsLoadingFunc,
 };
 
+export type StoreOptions<S, A, P = {}, DS = {}, FxRes = S> = StoreOptionsBase<S, A, P, DS, FxRes>;
+
+export type StoreAction<S, F extends (...args: any[]) => any, A, P, DS = {}, FxRes = S> =
+  | AsyncAction<S, F, A, P, DS, FxRes>
+  | SimpleSyncAction<S, F, P, DS, FxRes>
+  | SyncAction<S, F, A, P, DS, FxRes>;
+
 /**
  * Creates and manages a local store.
  * The component will be refreshed for every change in the store.
@@ -92,7 +98,11 @@ export default function useLocalStoreV6<S, A extends DecoratedActions, P, DS = {
   middlewares?: MiddlewareFactory<S, A, P>[],
   refreshOnUpdate: boolean = true
 ) {
-  return useLocalStoreV7({ getInitialState, actions: actionImpl, ...options, middlewares }, props, refreshOnUpdate);
+  return useLocalStoreV7(
+    { getInitialState, actions: actionImpl, ...options, middlewares, fullStateEffects: true },
+    props,
+    refreshOnUpdate
+  );
 }
 
 export const useLocalStore = useLocalStoreV6;

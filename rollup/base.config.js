@@ -5,7 +5,6 @@ import { visualizer } from 'rollup-plugin-visualizer';
 import { terser } from 'rollup-plugin-terser';
 
 import stripBanner from 'rollup-plugin-strip-banner';
-import replace from '@rollup/plugin-replace';
 
 const isProd = process.env.NODE_ENV === 'production';
 const isAnalyze = process.env.NODE_ENV === 'analyze';
@@ -32,10 +31,6 @@ export default function (input, file, externals = []) {
     },
     plugins: [
       nodeResolve(),
-      replace({
-        preventAssignment: true,
-        'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV),
-      }),
       commonjs(),
       typescript({
         typescript: require('typescript'),

@@ -3,7 +3,7 @@
  */
 
 import { StoreActions, StoreOptions, createStore, ConflictPolicy } from '../src';
-import { logEffects, logDetailedEffects, Logger, devtools } from '../src/middlewares';
+import { logEffects, logDetailedEffects, Logger, devtools } from '../src/development';
 
 function getFailedTimeoutPromise(timeout: number, err: Error = null, id: string): Promise<string> {
   return new Promise((_, rej) => {

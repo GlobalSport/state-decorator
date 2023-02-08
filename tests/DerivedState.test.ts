@@ -1,4 +1,4 @@
-import { createStore, StoreActions, StoreOptions } from '../src/index';
+import { createStore, StoreActions, StoreOptions } from '../src';
 
 import Graph from '../src/graph';
 
@@ -523,7 +523,7 @@ describe('Use derived state to compute derived state', () => {
       },
     };
 
-    const store = createStore(getInitialState, storeActions, storeOptions);
+    const store = createStore({ getInitialState, actions: storeActions, ...storeOptions });
     store.init({});
 
     const {
@@ -577,7 +577,7 @@ describe('Use derived state to compute derived state', () => {
       },
     };
 
-    const store = createStore(getInitialState, storeActions, storeOptions);
+    const store = createStore({ getInitialState, actions: storeActions, ...storeOptions });
     store.init({});
 
     const {
