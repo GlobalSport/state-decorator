@@ -19,14 +19,14 @@ The StateDecorator is a set of Reacts hook that manages a complex component stat
 
 # V7: Partial state and new hooks
 
-- React 17 (upcoming V8 for React 18)
+- React 18 support
 - All effects can now return a partial state that will be merged with current state.
 - More documentation on global and local store use cases.
 - **useLocalStore** and **useStore** now have a parameter to specify if the React component must re-rerender after a state change.
 - New **useStoreContextSlice** hook was added to get a slice of a store in a context.
 - New **onMountDeferred** to execute initialization code after initial render
 - New effect helpers
-- Removed useBindStore hook.
+- See migration details in [migration section](#migration).
 
 # 🏎️ V6: The Store
 
@@ -1752,16 +1752,19 @@ TypeError: Cannot set property 'crash' of null
 
 ### Step 1: V6 compatibility layer
 
+Only **useLocalStore** is supported by compatiblity layer.
+
 ```diff
 -import useLocalStore from 'state-decorator';
--import { useLocalStore } from 'state-decorator';
+-import useLocalStore from 'state-decorator/v6';
 
 +import { useLocalStoreV6 } from 'state-decorator';
 ```
 
 ### Step 2: Migrate code
 
-#### Config
+- Merge _getInitialState_, _actions_, _options_ in a single object.
+- Remove state spread in effects
 
 ```diff
 - const getInitialState: (p:Props) => ({myProp: ''});
