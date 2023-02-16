@@ -150,7 +150,7 @@ export function App(props: Props) => {
 V6 is designed to work with a react version supporting hooks (>=16.8) but as React 18 is different
 
 - _useLocalStore_ can be safely used in React 18 (as it's using props drilling).
-- _useStore_ and _useStoreSlide_ **cannot** be used with React 18, v7 version will support these use cases.
+- _useStore_ and _useStoreSlice_ **cannot** be used with React 18, v7 version will support these use cases.
 
 # Initial state
 
