@@ -250,7 +250,7 @@ const config: StoreConfig<State, Actions, Props> = {
 };
 ```
 
-[![See Debounce demo](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/debounce-forked-tmk2j?file=/src/Debounce.tsx)
+[![See Debounce demo](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/debounce-v7-i5om2e?file=/src/Debounce.tsx)
 
 ## Recipes
 
@@ -486,7 +486,7 @@ It can takes the following values (use **ConflictPolicy** enum), choose the one 
   - A **getPromiseId** function must be provided to assign an identifier to each call from call arguments.
   - The **isLoading** function will return the loading state for each promise identifier.
 
-[![Edit ConflictPolicy](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/conflictpolicy-v6-fhqco)
+[![Edit ConflictPolicy](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/conflictpolicy-v7-1bcwht?file=/src/ConflictPolicy.tsx)
 
 ## Retry
 
@@ -558,7 +558,7 @@ const config: StoreConfig<State, Actions, Props> = {
 };
 ```
 
-[![Edit Optimistic actions](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/optimistic-actions-v6-mvsoh?file=/src/Optimistic.tsx)
+[![Edit Optimistic actions](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/optimistic-actions-v7-w3b8ht?file=/src/Optimistic.tsx)
 
 **Notes**:
 
@@ -606,7 +606,7 @@ const config: StoreConfig<State, Actions, Props> = {
 
 Note: ongoing abortable actions will be automatically aborted on store destruction (during React component unmount for example). The list of aborted actions is available in the **onUnmount** callback in the store's options.
 
-[![Edit Abort](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/abort-v6-uvnl7)
+[![Edit Abort](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/abort-v7-ts0wrm?file=/src/ParallelAbort.tsx)
 
 ## Helper effect functions
 
@@ -737,7 +737,7 @@ export function SubComponent() {
 }
 ```
 
-[![Edit Slice](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/slices-v6-eg471?file=/src/SliceView.tsx)
+[![Edit Slice](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/local-state-slices-v7-ehmj6f?file=/src/SliceView.tsx)
 
 # Update store when props change
 
@@ -959,7 +959,7 @@ The problem is that if the context contains a complex state with lots of props, 
 
 To overcome this problem, the StateDecorator provides a **useStoreSlice** and **useStoreContextSlice** hook that allow to define and extracts a slice of the state and trigger a re-render of the React component only if the slice has changed.
 
-[![Edit Slice](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/slices-v6-eg471?file=/src/SliceView.tsx)
+[![Edit Slice](https://codesandbox.io/static/img/play-codesandbox.svg)](hhttps://codesandbox.io/s/local-state-slices-v7-ehmj6f?file=/src/SliceView.tsx)
 
 ## Global Store
 
@@ -1958,13 +1958,13 @@ Choose one of _useLocalStore_, _useStore_, _useBindStore_ or _useStoreSlice_.
 
 ## TodoApp
 
-[![Edit Todo](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/todo-forked-ml0z6?file=/src/TodoApp.tsx)
+[![Edit Todo](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/todo-v7-m94sm2?file=/src/TodoApp.tsx)
 
 ## Conflicting actions
 
 Show various ways of handling conflicting actions, ie. asynchronous actions triggered when a previous action of same type is still ongoing.
 
-[![Edit ConflictPolicy](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/conflictpolicy-v6-fhqco)
+[![Edit ConflictPolicy](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/conflictpolicy-v7-1bcwht?file=/src/ConflictPolicy.tsx)
 
 ## Parallel actions
 
@@ -1984,7 +1984,7 @@ const parallelActions: StoreActions<State, Actions> = {
 };
 ```
 
-[![Edit Parallel](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/conflictpolicy-v6-fhqco?file=/src/Parallel.tsx)
+[![Edit Parallel](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/conflictpolicy-v7-1bcwht?file=/src/Parallel.tsxx)
 
 # Visual Studio Code user snippet
 
