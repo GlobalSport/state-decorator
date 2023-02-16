@@ -11,7 +11,7 @@
 import React, { useState } from 'react';
 import { StoreActions } from '../../src/types';
 import { logDetailedEffects, devtools, logEffects } from '../../src/middlewares';
-import { createStore, useStoreSlice, useBindStore, slice, pick } from '../../src';
+import { createStore, useStoreSlice, slice, pick, useStore } from '../../src';
 import { useRef } from 'react';
 import { immerizeActions } from './immerizeActions';
 import FlashingBox from './FlashingBox';
@@ -158,7 +158,7 @@ export default function MyContainer() {
 }
 
 export function StateContainer(props: MyProps) {
-  useBindStore(myStore, props);
+  useStore(myStore, props);
 
   return <StateView />;
 }

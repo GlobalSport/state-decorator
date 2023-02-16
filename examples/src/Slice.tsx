@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { useBindStore, StoreActions, createStore, useStoreSlice } from '../../src/';
+import { StoreActions, createStore, useStoreSlice, useStore } from '../../src/';
 import { devtools } from '../../src/middlewares';
 import SliceView from './SliceView';
 
@@ -44,7 +44,7 @@ const actionsImpl: StoreActions<State, Actions, {}> = {
 export const store = createStore(getInitialState, actionsImpl, { name: 'Slice store' }, [devtools()]);
 
 function Slice() {
-  useBindStore(store);
+  useStore(store);
 
   return <SliceView />;
 }

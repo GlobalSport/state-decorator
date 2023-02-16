@@ -2,7 +2,7 @@ import React, { Fragment, memo } from 'react';
 import { useRef } from 'react';
 import { useEffect } from 'react';
 import { useCallback } from 'react';
-import { createStore, useStore, useStoreSlice, StoreApi, useBindStore, slice } from '../../src';
+import { createStore, useStore, useStoreSlice, StoreApi, slice } from '../../src';
 import { StoreActions } from '../../src/types';
 import { immerizeActions } from './immerizeActions';
 
@@ -103,7 +103,7 @@ const store = createStore(getInitialState, actions);
 
 function ShapesApp() {
   console.log('render app');
-  useBindStore(store, { generateId });
+  useStore(store, { generateId });
 
   return <ShapesAppView />;
 }

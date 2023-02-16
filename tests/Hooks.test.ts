@@ -3,7 +3,7 @@
  */
 
 import { renderHook, act } from '@testing-library/react-hooks';
-import { useLocalStore, useBindStore, useStore, useStoreSlice, createStore, StoreActions } from '../src/';
+import { useLocalStore, useStore, useStoreSlice, createStore, StoreActions } from '../src/';
 
 describe('react hooks', () => {
   type State = {
@@ -34,16 +34,6 @@ describe('react hooks', () => {
   it('useStore works as expected', () => {
     const store = createStore(getInitialState, actionsImpl);
     const { result } = renderHook(() => useStore(store));
-    expect(result.current.state).toEqual({ prop1: '' });
-    act(() => {
-      result.current.actions.setProp1('v1');
-    });
-    expect(result.current.state).toEqual({ prop1: 'v1' });
-  });
-
-  it('useBindStore works as expected', () => {
-    const store = createStore(getInitialState, actionsImpl);
-    const { result } = renderHook(() => useBindStore(store));
     expect(result.current.state).toEqual({ prop1: '' });
     act(() => {
       result.current.actions.setProp1('v1');

@@ -143,8 +143,14 @@ export function App(props: Props) => {
 | ------------- | ------------------------------------------------------ | ----------------------------------- | ----------------------------- |
 | useLocalStore | Create a store and binds it to the react component     | Y                                   | Y                             |
 | useStore      | Binds an existing store to a react component (sharing) | Y                                   | Y                             |
-| useBindStore  | Bind an existing store to a react component (sharing)  | N                                   | Y                             |
 | useStoreSlice | Binds a store slice to a react component (sharing)     | If slice has changed only           | N                             |
+
+# React 18 compatibility
+
+V6 is designed to work with a react version supporting hooks (>=16.8) but as React 18 is different
+
+- _useLocalStore_ can be safely used in React 18 (as it's using props drilling).
+- _useStore_ and _useStoreSlide_ **cannot** be used with React 18, v7 version will support these use cases.
 
 # Initial state
 
@@ -607,7 +613,7 @@ const store = createStore(getInitialState, actionsImpl, {
 
 ## State sharing and slices
 
-- Declare a store and bind it to a component using _useStore_ or _useBindStore_ hooks.
+- Declare a store and bind it to a component using _useStore_ hooks.
 - Deeper in the tree component, use _useStoreSlice_ to get a store slice.
 - Component using slices will be refreshed only if their store slice changes.
 
@@ -625,10 +631,6 @@ export const store = createStore(getInitialState, userAppActions);
 
 export function Container(prop: Props) {
   const { state, actions } = useStore(store, props);
-
-  // or
-  // useBindStore(store, props);
-  // if you are not interested in getting the state here
 
   return <div />;
 }
@@ -1473,7 +1475,7 @@ If you are using optimistic effects, make sure to set the **optimisticActions** 
 
 ### Hooks
 
-Choose one of _useLocalStore_, _useStore_, _useBindStore_ or _useStoreSlice_.
+Choose one of _useLocalStore_, _useStore_, _useStoreSlice_.
 
 ### Actions
 

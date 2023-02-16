@@ -728,29 +728,6 @@ export function useStore<S, A extends DecoratedActions, P, DS = {}>(store: Store
 }
 
 /**
- * Binds the store to this component.
- * Store will be destroyed when component is unmouted.
- * Props passed to actions will come from this components.
- * If store is configured to react of props changes, it will used passed props.
- * A store must be bound to only one React component.
- *
- * This component will NOT be refreshed for any change in the store.
- *
- * @param store The store to listen to.
- * @param props The parent component props
- */
-export function useBindStore<S, A extends DecoratedActions, P, DS = {}>(store: StoreApi<S, A, P, DS>, props: P = null) {
-  // access to store in debugger
-  useRef(store);
-
-  store.setProps(props);
-  useEffect(() => {
-    return () => store.destroy();
-  }, []);
-  return store;
-}
-
-/**
  * Creates and manages a local store.
  * @param getInitialState Function to compute initial state from props.
  * @param actionImpl Actions implementation.
