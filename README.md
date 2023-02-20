@@ -1756,9 +1756,7 @@ Only **useLocalStore** is supported by compatiblity layer.
 
 ```diff
 -import useLocalStore from 'state-decorator';
--import useLocalStore from 'state-decorator/v6';
-
-+import { useLocalStoreV6 } from 'state-decorator';
++import useLocalStore from 'state-decorator/v6';
 ```
 
 ### Step 2: Migrate code
