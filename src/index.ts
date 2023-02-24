@@ -82,7 +82,7 @@ import {
 
 import { logDetailedEffects } from './development';
 
-export {
+export type {
   EffectError,
   DecoratedActions,
   StoreActions,
