@@ -1,4 +1,4 @@
-/*! *****************************************************************************
+/* ! *****************************************************************************
 Copyright (c) GlobalSport SAS.
 
 Permission to use, copy, modify, and/or distribute this software for any
@@ -106,7 +106,6 @@ export type {
   AsyncAction,
   SimpleSyncAction,
   ContextState,
-  ConflictPolicy,
   GlobalConfig,
   Middleware,
   setGlobalConfig,
@@ -116,6 +115,8 @@ export type {
   LoadingMapProps,
   StoreConfig,
 };
+
+export { ConflictPolicy };
 
 const { useSyncExternalStoreWithSelector } = useSyncExternalStoreExports;
 

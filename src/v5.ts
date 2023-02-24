@@ -1,4 +1,4 @@
-/*! *****************************************************************************
+/* ! *****************************************************************************
 Copyright (c) GlobalSport SAS.
 
 Permission to use, copy, modify, and/or distribute this software for any
@@ -13,7 +13,7 @@ OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 PERFORMANCE OF THIS SOFTWARE.
 ***************************************************************************** */
 
-import {
+import type {
   SyncAction as NewAdvancedSyncAction,
   AsyncActionPromise as NewAsynchActionPromise,
   DecoratedActions,
@@ -31,9 +31,11 @@ import {
   MiddlewareFactory,
 } from './types';
 
-import { createStore, StoreApi, setGlobalConfig, ConflictPolicy } from './index';
+import { ConflictPolicy } from './types';
 
-import {
+import { createStore, StoreApi, setGlobalConfig } from './index';
+
+import type {
   AdvancedSynchAction,
   AsynchActionPromiseGet,
   StateDecoratorAction,
@@ -47,7 +49,7 @@ import {
   AsynchAction,
 } from './v5_types';
 
-export {
+export type {
   AdvancedSynchAction,
   AsynchActionPromiseGet,
   StateDecoratorAction,
@@ -352,7 +354,7 @@ export function useOnMount(onMount: () => any) {
   useEffect(() => {
     const removeListener = onMount();
     return typeof removeListener === 'function' ? removeListener : undefined;
-  }, []);
+  }, [onMount]);
 }
 
 /**
@@ -362,7 +364,7 @@ export function useOnMount(onMount: () => any) {
 export function useOnUnmount(onUnmount: () => void, propList: any[] = []) {
   useEffect(() => {
     return onUnmount;
-  }, propList);
+  }, [propList, onUnmount]);
 }
 
 /**
@@ -375,5 +377,5 @@ export function useOnUnload(onUnload: () => void) {
     return () => {
       document.removeEventListener('beforeunload', onUnload);
     };
-  }, []);
+  }, [onUnload]);
 }

@@ -1,4 +1,4 @@
-/*! *****************************************************************************
+/* ! *****************************************************************************
 Copyright (c) GlobalSport SAS.
 
 Permission to use, copy, modify, and/or distribute this software for any
@@ -83,7 +83,7 @@ type MockStoreAction<S, A extends DecoratedActions, F extends (...args: any[]) =
   /**
    * If action is asynchronous, mock the getPromise call to be resolved with specified object.
    */
-  promiseResolves: (res: any /*PromiseResult<F>*/) => MockStoreAction<S, A, F, P, DS>;
+  promiseResolves: (res: any /* PromiseResult<F>*/) => MockStoreAction<S, A, F, P, DS>;
 
   /**
    * If action is asynchronous, mock the getPromise call to be rejected with specified error.

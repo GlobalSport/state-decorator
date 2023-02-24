@@ -1,4 +1,4 @@
-/*! *****************************************************************************
+/* ! *****************************************************************************
 Copyright (c) GlobalSport SAS.
 
 Permission to use, copy, modify, and/or distribute this software for any
@@ -15,9 +15,9 @@ PERFORMANCE OF THIS SOFTWARE.
 
 import type { StoreAction } from './types';
 
-import { setGlobalConfig, ConflictPolicy } from './index';
+import { ConflictPolicy } from './types';
 
-import {
+import type {
   AdvancedSynchAction,
   AsynchActionPromiseGet,
   StateDecoratorAction,
@@ -32,6 +32,7 @@ import {
 } from './v5_types';
 
 import {
+  setGlobalConfig,
   isSimpleSyncAction as isV6SyncAction,
   isSyncAction as isV6AdvancedAction,
   isAsyncAction as isV6AsyncAction,
@@ -39,7 +40,7 @@ import {
   isAsyncGetPromiseGetAction as isV6AsyncGetPromiseGetAction,
 } from './impl';
 
-export {
+export type {
   AdvancedSynchAction,
   AsynchActionPromiseGet,
   StateDecoratorAction,
