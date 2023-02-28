@@ -1,6 +1,6 @@
 import { GlobalConfig, ParallelActionError, EffectError } from './impl';
 
-import {
+import type {
   DecoratedActions,
   StoreActions,
   AsyncAction,
@@ -22,7 +22,6 @@ import {
   ContextBase,
   OnPropsChangeEffectsContext,
   ContextState,
-  ConflictPolicy,
   Middleware,
   AbortActionCallback,
   MiddlewareFactory,
@@ -32,19 +31,23 @@ import {
   StoreConfig,
 } from './types';
 
-import useLocalStoreV7, { setGlobalConfig, IsLoadingFunc, StoreApi, StateListenerContext } from './index';
+import useLocalStoreV7, {
+  setGlobalConfig,
+  IsLoadingFunc,
+  StoreApi,
+  StateListenerContext,
+  ConflictPolicy,
+} from './index';
 
-export {
+export type {
   StateListenerContext,
   StoreApi,
-  EffectError,
   DecoratedActions,
   StoreActions,
   LoadingMap,
   ErrorMap,
   LoadingParallelMap,
   ErrorParallelMap,
-  ParallelActionError,
   AsyncActionPromise as AsynchActionPromise,
   InvocationContext,
   GetPromiseInvocationContext,
@@ -59,10 +62,8 @@ export {
   AsyncAction,
   SimpleSyncAction,
   ContextState,
-  ConflictPolicy,
   GlobalConfig,
   Middleware,
-  setGlobalConfig,
   LoadingProps,
   AbortActionCallback,
   ErrorProps,
@@ -70,6 +71,8 @@ export {
   StoreConfig,
   IsLoadingFunc,
 };
+
+export { EffectError, ParallelActionError, ConflictPolicy, setGlobalConfig };
 
 export type StoreOptions<S, A, P = {}, DS = {}, FxRes = S> = StoreOptionsBase<S, A, P, DS, FxRes>;
 

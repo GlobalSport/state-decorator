@@ -44,7 +44,7 @@ import {
   fixDerivedDeps,
 } from './impl';
 
-import {
+import type {
   DecoratedActions,
   StoreActions,
   AsyncAction,
@@ -67,7 +67,6 @@ import {
   ContextBase,
   OnPropsChangeEffectsContext,
   ContextState,
-  ConflictPolicy,
   Middleware,
   AbortActionCallback,
   MiddlewareFactory,
@@ -80,17 +79,17 @@ import {
   ClearErrorFunc,
 } from './types';
 
+import { ConflictPolicy } from './types';
+
 import { logDetailedEffects } from './development';
 
 export type {
-  EffectError,
   DecoratedActions,
   StoreActions,
   LoadingMap,
   ErrorMap,
   LoadingParallelMap,
   ErrorParallelMap,
-  ParallelActionError,
   StoreOptions,
   AsyncActionPromise as AsynchActionPromise,
   InvocationContext,
@@ -108,7 +107,6 @@ export type {
   ContextState,
   GlobalConfig,
   Middleware,
-  setGlobalConfig,
   LoadingProps,
   AbortActionCallback,
   ErrorProps,
@@ -116,7 +114,7 @@ export type {
   StoreConfig,
 };
 
-export { ConflictPolicy };
+export { setGlobalConfig, EffectError, ParallelActionError, ConflictPolicy };
 
 const { useSyncExternalStoreWithSelector } = useSyncExternalStoreExports;
 

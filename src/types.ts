@@ -508,7 +508,9 @@ export type StoreOptions<S, A, P = {}, DS = {}, FxRes = Partial<S>> = {
    */
   derivedState?: DerivedStateOption<S, P, DS>;
 
-  /* @internal */
+  /**
+   * Disable auto spread of state on effects (v6 behavior).
+   */
   fullStateEffects?: boolean;
 };
 

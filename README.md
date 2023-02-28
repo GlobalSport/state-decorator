@@ -866,11 +866,11 @@ There are two types of stores:
 
   - store is created as an instance (**createStore**) and it is exported from the JS module.
   - it can be imported in any other JS module.
-  - store lifespan is equal to the application one.
+  - store lifespan is equal to the application one (ie. it's a singleton).
 
 - Local store:
   - store is created by a hook (**useLocalStore**) and is bound to a React component (each instance of this component owns its own store).
-  - action and props can be shared using props or sharing the store itself (see example below)
+  - state and actions can be shared using props or sharing the store itself (see example below)
   - store is destroyed when its owner React component is unmounted.
 
 ## Using props
@@ -1156,7 +1156,9 @@ setGlobalConfig({
 
 # Trace actions
 
-To trace actions, add a logger development middleware to the store.
+To easily trace effects, use **logEnabled** option, that will automatically add a detailed logger.
+
+To trace effects, add a logger development middleware to the store.
 
 These middlewares are deactivated if the `NODE_ENV` during the build is not `development` or `test`.
 
