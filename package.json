@@ -1,8 +1,9 @@
 {
   "name": "state-decorator",
-  "version": "7.0.0-rc3",
+  "version": "7.0.0-rc4",
   "description": "React state management library",
   "main": "index.js",
+  "module": "es/index.js",
   "types": "index.d.ts",
   "private": true,
   "repository": "git@github.com:GlobalSport/state-decorator.git",

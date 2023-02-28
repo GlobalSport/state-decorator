@@ -21,7 +21,7 @@ export default function (input, file, externals = []) {
       },
       {
         format: 'es',
-        file: `./lib/es/${file}.mjs`,
+        file: `./lib/es/${file}.js`,
         sourcemap: true,
       },
     ],
