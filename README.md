@@ -1740,6 +1740,20 @@ TypeError: Cannot set property 'crash' of null
 - Immutability: each effects **must** return a new state instance (or `null` if there's no change).
 - I recommend using [Immer](https://github.com/immerjs/immer) to manage complex cases (deep nesting). A **immerizeActions** action decorator is provided to decorate each effect with Immer.
 
+# Build
+
+This library provides CJS and ES files.
+
+Webpack users should add this alias rule to prevent importing both (especially when importing another file than `index.js`):
+
+```js
+resolve: {
+  alias: {
+    'state-decorator': 'state-decorator/es',
+  },
+},
+```
+
 # Limitations
 
 - Due to bundle size constraints and used in specific use cases only, a basic function is used to clone state / props / arguments in conflicting actions and optimistic effects use cases. In some edge cases (like clone moment objects, class instances), you must provide a clone implementation like Lodash cloneDeep implementation.

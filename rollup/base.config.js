@@ -14,8 +14,14 @@ export default function (input, file, externals = []) {
     input: input,
     output: [
       {
-        format: 'es',
+        format: 'cjs',
         file: `./lib/${file}.js`,
+        sourcemap: true,
+        exports: 'named',
+      },
+      {
+        format: 'es',
+        file: `./lib/es/${file}.mjs`,
         sourcemap: true,
       },
     ],
