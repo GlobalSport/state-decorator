@@ -534,7 +534,19 @@ export function createMockStoreAction<S, A extends DecoratedActions, F extends (
 
         // simulate optimistic actions
         if (impl.optimisticEffects) {
-          impl.effects = impl.optimisticEffects;
+          if (impl.effects) {
+            const optiEffects = impl.optimisticEffects;
+            const effects = impl.effects;
+
+            impl.effects = (ctx: any) => {
+              let newState = optiEffects(ctx);
+              newState = { ...ctx.state, ...newState };
+              return { ...newState, ...effects({ ...ctx, state: newState, s: newState }) };
+            };
+          } else {
+            impl.effects = impl.optimisticEffects;
+          }
+
           delete impl.optimisticEffects;
         }
 

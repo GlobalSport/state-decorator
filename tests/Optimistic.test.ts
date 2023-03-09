@@ -19,6 +19,7 @@ describe('Optimistic', () => {
     setAsync: (v: string) => Promise<string>;
     setAsyncParallel: (v: string, key: string, fail: boolean, timeout: number) => Promise<string>;
     setOptimisticSuccess: (v: string) => Promise<string>;
+    setOptimisticSuccessWithEffects: (v: string) => Promise<string>;
     setOptimisticFail: (v: string) => Promise<string>;
   };
 
@@ -53,6 +54,15 @@ describe('Optimistic', () => {
       getPromise: ({ args: [v] }) => Promise.resolve(v),
       optimisticEffects: ({ args: [v] }) => ({
         propOptimistic: v,
+      }),
+    },
+    setOptimisticSuccessWithEffects: {
+      getPromise: ({ args: [v] }) => Promise.resolve(v),
+      optimisticEffects: ({ args: [v] }) => ({
+        propOptimistic: v,
+      }),
+      effects: ({ s }) => ({
+        propSync: s.propOptimistic + '_fx',
       }),
     },
     setOptimisticFail: {
@@ -104,6 +114,25 @@ describe('Optimistic', () => {
     expect(store.state).toEqual({
       propProps: '',
       propSync: '',
+      propSimpleSync: '',
+      propAsync: '',
+      propAsyncParallel: {},
+      propOptimistic: 'value',
+      propError: '',
+    });
+  });
+
+  it('works as expected (success with effects)', async () => {
+    const store = createStore({ getInitialState, actions, ...options, middlewares: [optimisticActions()] });
+    store.init({ propIn: '', propIn2: '' });
+
+    await store.actions.setOptimisticSuccessWithEffects('value');
+
+    expect(store.loading).toBeFalsy();
+
+    expect(store.state).toEqual({
+      propProps: '',
+      propSync: 'value_fx',
       propSimpleSync: '',
       propAsync: '',
       propAsyncParallel: {},

@@ -67,6 +67,7 @@ describe('createMockStore', () => {
     setOptimistic: {
       getPromise: ({ args: [param] }) => Promise.resolve(param),
       optimisticEffects: ({ args: [param] }) => ({ prop1: param }),
+      effects: () => ({ prop2: 666 }),
     },
     asyncThatCrashes: {
       getPromise: () => Promise.resolve(),
@@ -589,11 +590,11 @@ describe('createMockStore', () => {
     await action.call('new value').then((res) => {
       expect(res.state).toEqual({
         prop1: 'new value',
-        prop2: 0,
+        prop2: 666,
         prop3: '',
         prop4: '',
         error: '',
-        concat: 'new value,0,,,', // derived state is included
+        concat: 'new value,666,,,', // derived state is included
       });
     });
 
