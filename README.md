@@ -695,75 +695,6 @@ const config: StoreConfig<State, Actions, Props> = {
 };
 ```
 
-## State sharing and slices
-
-- Declare a store and bind it to a component using _useStore_ or _useBindStore_ hooks.
-- Deeper in the tree component, use _useStoreSlice_ to get a store slice.
-- Component using slices will be refreshed only if their store slice changes.
-
-```typescript
-import React from 'react';
-import { useStore, useStoreSlice, StoreActions } from 'state-decorator';
-
-// Declare typings & actions as above
-
-// Create a store
-
-export const store = createStore(config);
-
-// Bind to react component
-
-export function Container(prop: Props) {
-  const { state, actions } = useStore(store, props);
-
-  // or
-  // useBindStore(store, props);
-  // if you are not interested in getting the state here
-
-  return <div />;
-}
-
-// Components deeper in the component tree will be refreshed if, and only if,
-// slice is changed (here: text property)
-
-export function SubComponent2() {
-  const s = useStoreSlice(store, ['text']);
-  return <div>{s.text}</div>;
-}
-
-export function SubComponent() {
-  const s = useStoreSlice(store, (s) => ({ text: s.text }));
-  return <div>{s.text}</div>;
-}
-```
-
-[![Edit Slice](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/local-state-slices-v7-ehmj6f?file=/src/SliceView.tsx)
-
-# Update store when props change
-
-## Getting started
-
-```typescript
-import { createStore } from 'state-decorator';
-
-const config: StoreConfig<State, Actions, Props> = {
-  getInitialState,
-  actions,
-  onPropsChange: {
-    // list of depedencies that should trigger effects & side effects if changed
-    getDeps: (p) => [p.id],
-    // state changes, indices contains the indices of dependencies that have changed
-    effects: ({ props, indices, isInit }) => ({ selectedId: props.id }),
-    // other changes (use short aliases)
-    sideEffects: ({ p, a, indices, isInit }) => {
-      a.loadItem(p.id);
-    },
-    // whether apply effects & side effects on mount
-    onMount: true,
-  },
-};
-```
-
 ## Multiple props change configuration
 
 The store can manage several props change configurations to have a better granularity.
@@ -998,6 +929,8 @@ function Subtitle(props: { subtitle: string }) {
 ```
 
 ## Local Store
+
+**IMPORTANT**: the context children _MUST_ be with no prop and memoized to prevent refreshes (React can display warning on the console)
 
 ```typescript
 // ------- stores/MyStore.ts --------
