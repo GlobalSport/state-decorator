@@ -348,8 +348,6 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
       };
 
       if (config.logEnabled && logDetailedEffects) {
-        console.log('logDetailedEffects');
-
         middlewares.push(logDetailedEffects());
       }
 
