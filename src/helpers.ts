@@ -1,104 +1,158 @@
+function addDirty<S, K extends keyof S>(s: any, dirtyProp?: K) {
+  if (dirtyProp) {
+    (s[dirtyProp] as any) = true;
+  }
+  return (s as unknown) as Partial<S>;
+}
+
 /**
  * Effect function that sets the first action argument to the specified prop.
+ * if dirtyProp is set
  */
-export function setArgIn<S, K extends keyof S>(propName: K): (ctx: { s: S; args: [S[K]] }) => Partial<S> {
+export function setArgIn<S, K extends keyof S, K2 extends keyof S>(
+  propName: K,
+  dirtyProp?: K2
+): (ctx: { s: S; args: [S[K]] }) => Partial<S> {
   return ({ s, args: [v] }) =>
     s[propName] === v
       ? null
-      : (({
-          [propName]: v,
-        } as unknown) as Partial<S>);
+      : addDirty<S, any>(
+          {
+            [propName]: v,
+          },
+          dirtyProp
+        );
 }
 
 /**
  * Effect function that sets <code>true</code> in the specified prop.
  */
-export function setTrueIn<S, K extends keyof S>(propName: K): (ctx: { s: S }) => Partial<S> {
+export function setTrueIn<S, K extends keyof S, K2 extends keyof S>(
+  propName: K,
+  dirtyProp?: K2
+): (ctx: { s: S }) => Partial<S> {
   return ({ s }) =>
     s[propName]
       ? null
-      : (({
-          [propName]: true,
-        } as unknown) as Partial<S>);
+      : addDirty<S, any>(
+          {
+            [propName]: true,
+          },
+          dirtyProp
+        );
 }
 
 /**
  * Effect function that sets <code>false</code> in the specified prop.
  */
-export function setFalseIn<S, K extends keyof S>(propName: K): (ctx: { s: S }) => Partial<S> {
+export function setFalseIn<S, K extends keyof S, K2 extends keyof S>(
+  propName: K,
+  dirtyProp?: K2
+): (ctx: { s: S }) => Partial<S> {
   return ({ s }) =>
     !s[propName]
       ? null
-      : (({
-          [propName]: false,
-        } as unknown) as Partial<S>);
+      : addDirty<S, any>(
+          {
+            [propName]: false,
+          },
+          dirtyProp
+        );
 }
 
 /**
  * Effect function that sets toggles the boolean value of the specified prop.
  */
-export function toggleProp<S, K extends keyof S>(propName: K): (ctx: { s: S }) => Partial<S> {
+export function toggleProp<S, K extends keyof S, K2 extends keyof S>(
+  propName: K,
+  dirtyProp?: K2
+): (ctx: { s: S }) => Partial<S> {
   return ({ s }) =>
-    (({
-      [propName]: !s[propName],
-    } as unknown) as Partial<S>);
-}
-
-/**
- * Effect function that sets the update the specifed prop as an array using first action argument as index
- * and second as value to set.
- */
-export function setArgsInMap<S, K extends keyof S, T>(propName: K): (ctx: { s: S; args: [string, T] }) => Partial<S> {
-  return ({ s, args: [id, v] }) =>
-    (({
-      [propName]: {
-        ...s[propName],
-        [id]: v,
+    addDirty<S, any>(
+      {
+        [propName]: !s[propName],
       },
-    } as unknown) as Partial<S>);
+      dirtyProp
+    );
 }
 
 /**
  * Effect function that sets the update the specifed prop as an array using first action argument as index
  * and second as value to set.
  */
-export function setArgsInArray<S, K extends keyof S, T>(propName: K): (ctx: { s: S; args: [number, T] }) => Partial<S> {
+export function setArgsInMap<S, K extends keyof S, K2 extends keyof S, T>(
+  propName: K,
+  dirtyProp?: K2
+): (ctx: { s: S; args: [string, T] }) => Partial<S> {
+  return ({ s, args: [id, v] }) =>
+    addDirty<S, any>(
+      {
+        [propName]: {
+          ...s[propName],
+          [id]: v,
+        },
+      },
+      dirtyProp
+    );
+}
+
+/**
+ * Effect function that sets the update the specifed prop as an array using first action argument as index
+ * and second as value to set.
+ */
+export function setArgsInArray<S, K extends keyof S, K2 extends keyof S, T>(
+  propName: K,
+  dirtyProp?: K2
+): (ctx: { s: S; args: [number, T] }) => Partial<S> {
   return ({ s, args: [idx, v] }) => {
     const arr = (s[propName] as any) as T[];
 
     const newArr = [...arr];
     newArr[idx] = v;
-    return ({
-      [propName]: newArr,
-    } as unknown) as Partial<S>;
+    return addDirty<S, any>(
+      {
+        [propName]: newArr,
+      },
+      dirtyProp
+    );
   };
 }
 
 /**
  * Effect function that sets the asynchronous action result to the specified prop.
  */
-export function setResIn<S, K extends keyof S>(propName: K): (ctx: { s: S; res: S[K] }) => Partial<S> {
+export function setResIn<S, K extends keyof S, K2 extends keyof S>(
+  propName: K,
+  dirtyProp?: K2
+): (ctx: { s: S; res: S[K] }) => Partial<S> {
   return ({ res }) =>
-    (({
-      [propName]: res,
-    } as unknown) as Partial<S>);
+    addDirty<S, any>(
+      {
+        [propName]: res,
+      },
+      dirtyProp
+    );
 }
 
 /**
  * Effect function that sets the update the specifed prop as an array using first action argument as index
  * and second as value to set.
  */
-export function setResInArray<S, K extends keyof S, T>(
-  propName: K
+export function setResInArray<S, K extends keyof S, K2 extends keyof S, T>(
+  propName: K,
+  dirtyProp?: K2
 ): (ctx: { s: S; args: [number]; res: T }) => Partial<S> {
   return ({ s, args: [idx], res }) => {
     const arr = (s[propName] as any) as T[];
 
     const newArr = [...arr];
     newArr[idx] = res;
-    return ({
-      [propName]: newArr,
-    } as unknown) as Partial<S>;
+    return addDirty<S, any>(
+      {
+        [propName]: newArr,
+      },
+      dirtyProp
+    );
   };
 }
 
@@ -106,14 +160,18 @@ export function setResInArray<S, K extends keyof S, T>(
  * Effect function that sets the update the specifed prop as an array using first action argument as index
  * and second as value to set.
  */
-export function setResInMap<S, K extends keyof S, T>(
-  propName: K
+export function setResInMap<S, K extends keyof S, K2 extends keyof S, T>(
+  propName: K,
+  dirtyProp?: K2
 ): (ctx: { s: S; args: [string]; res: T }) => Partial<S> {
   return ({ s, args: [id], res }) =>
-    (({
-      [propName]: {
-        ...s[propName],
-        [id]: res,
+    addDirty<S, any>(
+      {
+        [propName]: {
+          ...s[propName],
+          [id]: res,
+        },
       },
-    } as unknown) as Partial<S>);
+      dirtyProp
+    );
 }
