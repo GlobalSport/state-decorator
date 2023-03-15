@@ -12,7 +12,9 @@ LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
 OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 PERFORMANCE OF THIS SOFTWARE.
 ***************************************************************************** */
-import useSyncExternalStoreExports from 'use-sync-external-store/shim/with-selector';
+import useSyncExternalStoreWithSelectorExports from 'use-sync-external-store/shim/with-selector';
+import useSyncExternalStoreExports from 'use-sync-external-store/shim/index';
+
 import { Context, useContext, useEffect, useLayoutEffect, useMemo, useReducer, useRef } from 'react';
 import {
   computeAsyncActionInput,
@@ -116,7 +118,8 @@ export type {
 
 export { setGlobalConfig, EffectError, ParallelActionError, ConflictPolicy };
 
-const { useSyncExternalStoreWithSelector } = useSyncExternalStoreExports;
+const { useSyncExternalStoreWithSelector } = useSyncExternalStoreWithSelectorExports;
+const { useSyncExternalStore } = useSyncExternalStoreExports;
 
 export type IsLoadingFunc<A> = (...props: (keyof A | [keyof A, string])[]) => boolean;
 type StateListenerUnregister = () => void;
@@ -752,6 +755,18 @@ export function useStoreSlice<S, A extends DecoratedActions, P, DS>(store: Store
 }
 
 /**
+ * Binds the store to this component.
+ * Store will NOT be destroyed when component is unmouted.
+ * The component will be refreshed for every change in the store.
+ *
+ * @param store The store to listen to.
+ * @returns The store.
+ */
+export function useSyncStore<S, A extends DecoratedActions, P, DS>(store: StoreApi<S, A, P, DS>) {
+  return useSyncExternalStore(store.addStateListener, store.getSnapshot);
+}
+
+/**
  * A react hook to get a state slice from a store context.
  * The component be refreshed if, and only if, one property of the slice has changed.
  * @param store The store to listen to.
@@ -802,7 +817,7 @@ export function useStoreContextSlice<S, A extends DecoratedActions, P, DS>(
  * @param refreshOnUpdate Whether refresh the component if store state changes.
  * @returns The store.
  */
-export function useStore<S, A extends DecoratedActions, P, DS = {}>(
+function useStoreImpl<S, A extends DecoratedActions, P, DS = {}>(
   store: StoreApi<S, A, P, DS>,
   props: P = null,
   refreshOnUpdate: boolean = true
@@ -870,7 +885,7 @@ export function useLocalStore<S, A extends DecoratedActions, P, DS = {}>(
     };
   }, []);
 
-  return useStore(storeRef.current, props, refreshOnUpdate);
+  return useStoreImpl(storeRef.current, props, refreshOnUpdate);
 }
 
 export default useLocalStore;

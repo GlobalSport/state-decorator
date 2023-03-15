@@ -153,7 +153,7 @@ export function App(props: Props) => {
 | Hook                 | Purpose                                             | Returns | Is component refreshed on store change? | Is store destroyed on unmount? |
 | -------------------- | --------------------------------------------------- | ------- | --------------------------------------- | ------------------------------ |
 | useLocalStore        | Create a store and binds it to the react component. | Store   | if **refreshOnUpdate** is set           | Y                              |
-| useStore             | Binds a store instance to the react component.      | Store   | if **refreshOnUpdate** is set           | N                              |
+| useStore             | Binds a store instance to the react component.      | Store   | yes                                     | N                              |
 | useStoreSlice        | Get a slice of a store.                             | Slice   | If slice has changed only               | N                              |
 | useStoreContextSlice | Get a slice of a store stored in a context          | Slice   | If slice has changed only               | N                              |
 
