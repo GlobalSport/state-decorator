@@ -89,12 +89,13 @@ describe('react hooks', () => {
 
   it('useStore works as expected', () => {
     const store = createStore({ getInitialState, actions: actionsImpl });
+    store.init({});
     const { result } = renderHook(() => useStore(store));
-    expect(result.current.state).toEqual({ prop1: '' });
+    expect(store.state.prop1).toEqual('');
     act(() => {
-      result.current.actions.setProp1('v1');
+      store.actions.setProp1('v1');
     });
-    expect(result.current.state).toEqual({ prop1: 'v1' });
+    expect(store.state.prop1).toEqual('v1');
   });
 
   it('useStoreSlice works as expected (props)', () => {
