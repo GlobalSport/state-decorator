@@ -115,7 +115,7 @@ describe('createMockStore', () => {
     },
   };
 
-  function getInitialState(): State {
+  function getInitialState(props): State {
     return {
       prop1: '',
       prop2: 0,
@@ -265,6 +265,30 @@ describe('createMockStore', () => {
     });
   });
 
+  describe('onInit', () => {
+    function getInitialState(props: Props): State {
+      return {
+        prop1: props.prop,
+        prop2: 0,
+        prop3: '',
+        prop4: '',
+        error: '',
+      };
+    }
+
+    const mockStore2 = createMockStore({ getInitialState, actions });
+
+    it('allows to test initial props changes + onMount', () => {
+      mockStore2
+        .onInit({
+          prop: 'new_prop',
+        })
+        .test((res) => {
+          expect(res.state.prop1).toEqual('new_prop');
+        });
+    });
+  });
+
   describe('onPropsChange', () => {
     const optionsPropsChange: StoreOptions<State, Actions, Props, DerivedState> = {
       onPropsChange: [
@@ -313,6 +337,7 @@ describe('createMockStore', () => {
           expect(res.actions.setProp3).not.toHaveBeenCalled();
           expect(res.actions.setProp4).toHaveBeenCalledWith('new_prop2'); // 2nd prop change called
           expect(res.props.prop).toEqual('new_prop');
+          expect(res.props.prop2).toEqual('new_prop2');
         });
     });
 

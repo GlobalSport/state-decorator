@@ -299,9 +299,10 @@ export function createMockStoreV6<S, A extends DecoratedActions, P = {}, DS = {}
 
     onInit(newProps: Partial<P> = {}) {
       // reset initial state
+      const props = { ...propsRef.current, ...newProps };
       const state = getInitialState(props);
       const newStateRef = createRef(state);
-      const newPropsRef = createRef({ ...propsRef.current, ...newProps });
+      const newPropsRef = createRef(props);
       const derivedStateRef = createRef<DerivedState<DS>>({ state: null, deps: {} });
       const actionsRef = getActionsRef(actions as any, mockActions);
 
