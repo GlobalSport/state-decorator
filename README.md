@@ -20,9 +20,9 @@ The StateDecorator is a set of Reacts hook that manages a complex component stat
 # V7: Partial state and new hooks
 
 - React 18 support
-- All effects can now return a partial state that will be merged with current state.
+- All effects now return a partial state that will be merged with current state.
 - More documentation on global and local store use cases.
-- **useLocalStore** and **useStore** now have a parameter to specify if the React component must re-rerender after a state change.
+- **useLocalStore** now have a parameter to specify if the React component must re-rerender after a state change.
 - New **useStoreContextSlice** hook was added to get a slice of a store in a context.
 - New **onMountDeferred** to execute initialization code after initial render
 - New effect helpers
@@ -629,6 +629,10 @@ const actions: StoreActions<State, Actions> = {
   setMyProp: setArgIn('myProp'),
   // same as
   // setMyProp: ({ args: [v] }) => ({ myProp: v }),
+
+  setMyProp2: setArgIn('myProp', 'isDirty'),
+  // same as
+  // setMyProp2: ({ args: [v] }) => ({ myProp: v, isDirty: true }),
 };
 ```
 
