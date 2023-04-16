@@ -42,7 +42,7 @@ describe('Helper effect functions', () => {
     expect(newState.isDirty).toBeFalsy();
   });
 
-  it('setArgIn (isDrity)', () => {
+  it('setArgIn (isDirty)', () => {
     const f = setArgIn<State, 'myProp', 'isDirty'>('myProp', 'isDirty');
     const state: State = {
       ...defaultState,
