@@ -1,6 +1,6 @@
 {
   "name": "state-decorator",
-  "version": "7.0.0-rc9",
+  "version": "7.0.0-rc10",
   "description": "React state management library",
   "main": "index.js",
   "module": "es/index.js",
@@ -12,7 +12,7 @@
   "sideEffects": false,
   "scripts": {
     "test": "jest tests/*",
-    "bump-beta": "yarn test && yarn clean && yarn rollup && bump --commit 'build: release v%s' && yarn copy",
+    "bump-beta": "yarn test && yarn clean && yarn rollup && yarn copy",
     "bump-version": "yarn test && yarn clean && yarn rollup && bump --commit 'build: release v%s' --tag --push && yarn copy",
     "clean": "rimraf ./lib",
     "lint": "yarn eslint src/**.ts",
