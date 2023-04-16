@@ -763,7 +763,9 @@ export function useStoreSlice<S, A extends DecoratedActions, P, DS>(store: Store
  * @returns The store.
  */
 export function useStore<S, A extends DecoratedActions, P, DS>(store: StoreApi<S, A, P, DS>) {
-  return useSyncExternalStore(store.addStateListener, store.getSnapshot);
+  // returns the snapshot, but we do prefer the store itself
+  useSyncExternalStore(store.addStateListener, store.getSnapshot);
+  return store;
 }
 
 /**
