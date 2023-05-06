@@ -21,7 +21,7 @@ module.exports = {
     sourceType: 'module',
   },
   extends: ['plugin:react/recommended', 'plugin:react-hooks/recommended'],
-  plugins: ['eslint-plugin-react', '@typescript-eslint', '@typescript-eslint/tslint'],
+  plugins: ['eslint-plugin-react', '@typescript-eslint'],
   root: true,
   rules: {
     'react-hooks/exhaustive-deps': 'warn',

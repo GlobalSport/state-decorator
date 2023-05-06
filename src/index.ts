@@ -843,6 +843,7 @@ function useStoreImpl<S, A extends DecoratedActions, P, DS = {}>(
     // Here we enforce a initialization of the store after a destroy in the useEffect delete callback
 
     store.init(props);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useLayoutEffect(() => {
