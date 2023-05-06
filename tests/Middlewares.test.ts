@@ -3,7 +3,7 @@
  */
 
 import { StoreActions, StoreOptions, createStore, ConflictPolicy } from '../src';
-import { logEffects, logDetailedEffects, Logger, devtools } from '../src/middlewares';
+import { logEffects, logDetailedEffects, Logger, devtools } from '../src/development';
 
 function getFailedTimeoutPromise(timeout: number, err: Error = null, id: string): Promise<string> {
   return new Promise((_, rej) => {
@@ -42,11 +42,11 @@ describe('middlewares', () => {
   };
 
   const actions: StoreActions<State, Actions, Props> = {
-    setSimpleSync: ({ s, args: [v] }) => ({ ...s, propSimpleSync: v }),
-    setSync: { effects: ({ s, args: [v] }) => ({ ...s, propSync: v }) },
+    setSimpleSync: ({ s, args: [v] }) => ({ propSimpleSync: v }),
+    setSync: { effects: ({ s, args: [v] }) => ({ propSync: v }) },
     setAsync: {
       getPromise: ({ args: [v] }) => Promise.resolve(v),
-      effects: ({ s, res }) => ({ ...s, propAsync: res }),
+      effects: ({ s, res }) => ({ propAsync: res }),
     },
     setAsyncParallel: {
       conflictPolicy: ConflictPolicy.PARALLEL,
@@ -54,38 +54,34 @@ describe('middlewares', () => {
       getPromise: ({ args: [v, , willFail, timeout], promiseId }) =>
         willFail ? getFailedTimeoutPromise(timeout, new Error('error'), promiseId) : getTimeoutPromise(timeout, v),
       optimisticEffects: ({ s, args: [v], promiseId }) => ({
-        ...s,
         propAsyncParallel: {
           ...s.propAsyncParallel,
           [promiseId]: v,
         },
       }),
       errorEffects: ({ s, promiseId }) => ({
-        ...s,
         propAsyncParallel: { ...s.propAsyncParallel, [promiseId]: 'error' },
       }),
     },
     setOptimisticSuccess: {
       getPromise: ({ args: [v] }) => Promise.resolve(v),
       optimisticEffects: ({ s, args: [v] }) => ({
-        ...s,
         propOptimistic: v,
       }),
     },
     setOptimisticFail: {
       getPromise: ({ args: [v], promiseId }) => getFailedTimeoutPromise(50, new Error(v), promiseId),
       optimisticEffects: ({ s, args: [v] }) => ({
-        ...s,
         propOptimistic: v,
       }),
-      errorEffects: ({ s, err }) => ({ ...s, propError: err.message }),
+      errorEffects: ({ s, err }) => ({ propError: err.message }),
     },
   };
 
   const options: StoreOptions<State, Actions, Props, any> = {
     onPropsChange: {
       getDeps: (p) => [p.propIn],
-      effects: ({ s, p }) => ({ ...s, propProps: p.propIn }),
+      effects: ({ s, p }) => ({ propProps: p.propIn }),
     },
   };
 
@@ -101,7 +97,7 @@ describe('middlewares', () => {
 
   it('logEffects', async () => {
     let logger = jest.fn();
-    const store = createStore(getInitialState, actions, options, [logEffects(logger)]);
+    const store = createStore({ getInitialState, actions, ...options, middlewares: [logEffects(logger)] });
 
     store.init({ propIn: '' });
 
@@ -119,7 +115,7 @@ describe('middlewares', () => {
       groupEnd: jest.fn(),
       groupCollapsed: jest.fn(),
     };
-    const store = createStore(getInitialState, actions, options, [logDetailedEffects(logger)]);
+    const store = createStore({ getInitialState, actions, ...options, middlewares: [logDetailedEffects(logger)] });
 
     store.init({ propIn: '' });
 
@@ -168,7 +164,7 @@ describe('middlewares', () => {
 
       (window as any).__REDUX_DEVTOOLS_EXTENSION__ = reduxDevTools;
 
-      const store = createStore(getInitialState, actions, { name: 'store' }, [devtools()]);
+      const store = createStore({ getInitialState, actions, name: 'store', middlewares: [devtools()] });
 
       // INIT
       store.init({
@@ -320,7 +316,7 @@ describe('middlewares', () => {
     });
 
     it('extension not present', () => {
-      const store = createStore(getInitialState, actions, { name: 'store' }, [devtools()]);
+      const store = createStore({ getInitialState, actions, name: 'store', middlewares: [devtools()] });
       store.init({
         propIn: '',
       });

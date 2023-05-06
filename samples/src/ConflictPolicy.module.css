@@ -1,0 +1,8 @@
+.btn {
+  margin-right: var(--theme-spacing-2);
+}
+
+.box {
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}

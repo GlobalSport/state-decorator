@@ -1,4 +1,4 @@
-/*! *****************************************************************************
+/* ! *****************************************************************************
 Copyright (c) GlobalSport SAS.
 
 Permission to use, copy, modify, and/or distribute this software for any

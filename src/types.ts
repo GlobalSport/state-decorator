@@ -1,4 +1,4 @@
-/*! *****************************************************************************
+/* ! *****************************************************************************
 Copyright (c) GlobalSport SAS.
 
 Permission to use, copy, modify, and/or distribute this software for any
@@ -88,11 +88,11 @@ export type PromiseProvider<S, DS, F extends (...args: any[]) => any, A, P> = (
 /**
  * Simple form of a synchronous action.
  */
-export type SimpleSyncAction<S, F extends (...args: any[]) => any, P, DS, FxRes = S> = (
+export type SimpleSyncAction<S, F extends (...args: any[]) => any, P, DS, FxRes = Partial<S>> = (
   ctx: InvocationContext<S, DS, F, P>
 ) => FxRes | null;
 
-export type SyncAction<S, F extends (...args: any[]) => any, A, P, DS, FxRes = S> = {
+export type SyncAction<S, F extends (...args: any[]) => any, A, P, DS, FxRes = Partial<S>> = {
   /**
    * Function that update the state when the action is called.
    */
@@ -124,7 +124,7 @@ export type AbortActionCallback<A> = (actionName: keyof A, promiseId?: string) =
 
 export type GetErrorMessage<S, DS, F extends (...args: any[]) => any, P> = (
   ctx: ErrorMessageInvocationContext<S, DS, F, P>
-) => string;
+) => string | null;
 
 export type ContextState<S> = {
   state: S;
@@ -265,7 +265,7 @@ export type Middleware<S, A extends DecoratedActions, P> = {
   destroy: () => void;
 };
 
-export type AsyncActionBase<S, F extends (...args: any[]) => any, A, P, DS, FxRes = S> = {
+export type AsyncActionBase<S, F extends (...args: any[]) => any, A, P, DS, FxRes = Partial<S>> = {
   /**
    * This action can be aborted. An abortSignal will be injected to the <code>promise</code> / <code>promiseGet</code>.
    */
@@ -367,21 +367,21 @@ export type AsyncActionBase<S, F extends (...args: any[]) => any, A, P, DS, FxRe
   isTriggerRetryError?: (e: Error) => boolean;
 };
 
-export type AsyncActionPromise<S, F extends (...args: any[]) => any, A, P, DS = {}, FxRes = S> = AsyncActionBase<
+export type AsyncActionPromise<
   S,
-  F,
+  F extends (...args: any[]) => any,
   A,
   P,
-  DS,
-  FxRes
-> & {
+  DS = {},
+  FxRes = Partial<S>
+> = AsyncActionBase<S, F, A, P, DS, FxRes> & {
   /**
    * The request, returns a promise
    */
   getPromise: PromiseProvider<S, DS, F, A, P>;
 };
 
-export type AsyncActionPromiseGet<S, F extends (...args: any[]) => any, A, P, DS, FxRes = S> = AsyncActionBase<
+export type AsyncActionPromiseGet<S, F extends (...args: any[]) => any, A, P, DS, FxRes = Partial<S>> = AsyncActionBase<
   S,
   F,
   A,
@@ -398,11 +398,11 @@ export type AsyncActionPromiseGet<S, F extends (...args: any[]) => any, A, P, DS
   getGetPromise: PromiseProvider<S, DS, F, A, P>;
 };
 
-export type AsyncAction<S, F extends (...args: any[]) => any, A, P, DS = {}, FxRes = S> =
+export type AsyncAction<S, F extends (...args: any[]) => any, A, P, DS = {}, FxRes = Partial<S>> =
   | AsyncActionPromise<S, F, A, P, DS, FxRes>
   | AsyncActionPromiseGet<S, F, A, P, DS, FxRes>;
 
-export type StoreAction<S, F extends (...args: any[]) => any, A, P, DS = {}, FxRes = S> =
+export type StoreAction<S, F extends (...args: any[]) => any, A, P, DS = {}, FxRes = Partial<S>> =
   | AsyncAction<S, F, A, P, DS, FxRes>
   | SimpleSyncAction<S, F, P, DS, FxRes>
   | SyncAction<S, F, A, P, DS, FxRes>;
@@ -411,7 +411,7 @@ export type StoreAction<S, F extends (...args: any[]) => any, A, P, DS = {}, FxR
  * S: The type of the state
  * A: The type of the actions to pass to the children (used to check keys only).
  */
-export type StoreActions<S, A extends DecoratedActions, P = {}, DS = {}, FxRes = S> = {
+export type StoreActions<S, A extends DecoratedActions, P = {}, DS = {}, FxRes = Partial<S>> = {
   [Prop in keyof A]: StoreAction<S, A[Prop], A, P, DS, FxRes>;
 };
 
@@ -419,6 +419,7 @@ export type OnPropsChangeEffectsContext<S, DS, P> = ContextWithDerived<S, DS, P>
   indices: number[];
   index: number;
   isInit: boolean;
+  getInitialState: (p: P) => S;
 };
 
 export type OnPropsChangeSideEffectsContext<S, P, A, DS = {}> = OnPropsChangeEffectsContext<S, DS, P> & {
@@ -434,18 +435,24 @@ type DerivedStateOption<S, P, DS> = {
   };
 };
 
-export type OnPropsChangeOptions<S, DS, A, P> = {
+export type OnPropsChangeOptions<S, DS, A, P, FxRes = Partial<S>> = {
   onMount?: boolean;
+  onMountDeferred?: boolean;
   getDeps: (p: P) => any[];
-  effects?: (ctx: OnPropsChangeEffectsContext<S, DS, P>) => S;
+  effects?: (ctx: OnPropsChangeEffectsContext<S, DS, P>) => FxRes;
   sideEffects?: (ctx: OnPropsChangeSideEffectsContext<S, P, A>) => void;
 };
 
-export type StoreOptions<S, A, P = {}, DS = {}> = {
+export type StoreOptions<S, A, P = {}, DS = {}, FxRes = Partial<S>> = {
   /**
    * The state decorator name. Use in debug traces to identify the useStateDecorator instance.
    */
   name?: string;
+
+  /**
+   * In development only (NODE_ENV="development"), activates state changes traces on the console.
+   */
+  logEnabled?: boolean;
 
   /**
    * Indicates that all asynchronous actions errors are managed externally.
@@ -463,7 +470,7 @@ export type StoreOptions<S, A, P = {}, DS = {}> = {
   /**
    * One or several configurations of inbound properties change managements.
    */
-  onPropsChange?: OnPropsChangeOptions<S, DS, A, P> | OnPropsChangeOptions<S, DS, A, P>[];
+  onPropsChange?: OnPropsChangeOptions<S, DS, A, P, FxRes> | OnPropsChangeOptions<S, DS, A, P, FxRes>[];
 
   /**
    * The callback function called if an asynchronous function succeeded and a success messsage is defined.
@@ -486,6 +493,12 @@ export type StoreOptions<S, A, P = {}, DS = {}> = {
   onMount?: (ctx: OnMountInvocationContext<S, A, P>) => void;
 
   /**
+   * Initial actions executed after initial render.
+   *
+   */
+  onMountDeferred?: (ctx: OnMountInvocationContext<S, A, P>) => void;
+
+  /**
    * Callback on store destruction.
    */
   onUnmount?: (ctx: OnUnMountInvocationContext<S, A, P>) => Promise<any> | void;
@@ -494,4 +507,40 @@ export type StoreOptions<S, A, P = {}, DS = {}> = {
    * Compute derived state
    */
   derivedState?: DerivedStateOption<S, P, DS>;
+
+  /**
+   * Disable auto spread of state on effects (v6 behavior).
+   */
+  fullStateEffects?: boolean;
 };
+
+type StoreConfigBase<S, A extends DecoratedActions, P = {}, DS = {}> = {
+  actions: StoreActions<S, A, P, DS>;
+  middlewares?: MiddlewareFactory<S, A, P>[];
+} & StoreOptions<S, A, P, DS>;
+
+type StoreConfigObj<S, A extends DecoratedActions, P = {}, DS = {}> = StoreConfigBase<S, A, P, DS> & {
+  initialState: S;
+};
+
+type StoreConfigFunc<S, A extends DecoratedActions, P = {}, DS = {}> = StoreConfigBase<S, A, P, DS> & {
+  getInitialState: (p: P) => S;
+};
+
+export type StoreConfig<S, A extends DecoratedActions, P = {}, DS = {}> =
+  | StoreConfigObj<S, A, P, DS>
+  | StoreConfigFunc<S, A, P, DS>;
+
+// const cfg: StoreConfig<{ p: string }, { do: () => void }, {}, {}> = {
+//   getInitialState: () => ({ p: 'coucou' }),
+//   actions: {
+//     do: () => ({}),
+//   },
+// };
+
+// const cfg2: StoreConfig<{ p: string }, { do: () => void }, {}, {}> = {
+//   initialState: { p: 'coucou' },
+//   actions: {
+//     do: () => ({}),
+//   },
+// };

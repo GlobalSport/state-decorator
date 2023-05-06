@@ -1,0 +1,8 @@
+.valueBox {
+  display: flex;
+  align-items: center;
+
+  border: 1px solid #ccc;
+  padding: var(--theme-spacing-1);
+  border-radius: 4px;
+}

@@ -1,4 +1,4 @@
-/*! *****************************************************************************
+/* ! *****************************************************************************
 Copyright (c) GlobalSport SAS.
 
 Permission to use, copy, modify, and/or distribute this software for any
@@ -15,9 +15,9 @@ PERFORMANCE OF THIS SOFTWARE.
 
 import type { StoreAction } from './types';
 
-import { setGlobalConfig, ConflictPolicy } from './index';
+import { ConflictPolicy } from './types';
 
-import {
+import type {
   AdvancedSynchAction,
   AsynchActionPromiseGet,
   StateDecoratorAction,
@@ -32,6 +32,7 @@ import {
 } from './v5_types';
 
 import {
+  setGlobalConfig,
   isSimpleSyncAction as isV6SyncAction,
   isSyncAction as isV6AdvancedAction,
   isAsyncAction as isV6AsyncAction,
@@ -39,7 +40,7 @@ import {
   isAsyncGetPromiseGetAction as isV6AsyncGetPromiseGetAction,
 } from './impl';
 
-export {
+export type {
   AdvancedSynchAction,
   AsynchActionPromiseGet,
   StateDecoratorAction,
@@ -163,21 +164,27 @@ export function testV6SyncAction<S, F extends (...args: any[]) => any, A, P>(
 ) {
   if (isV6SyncAction(action)) {
     const decoratedAction: SynchAction<S, F, P> = (s, args, p) =>
-      action({
+      mergeState(
         s,
-        args,
-        p,
-        ds: null,
-        derived: null,
-        state: s,
-        props: p,
-        promiseId: null,
-      });
-
+        action({
+          s,
+          args,
+          p,
+          ds: null,
+          derived: null,
+          state: s,
+          props: p,
+          promiseId: null,
+        })
+      );
     test(decoratedAction);
     return Promise.resolve();
   }
   return Promise.reject(new Error('This action is not a synchronous action'));
+}
+
+function mergeState<S>(s: S, newState: Partial<S>): S {
+  return newState == null ? null : { ...s, ...newState };
 }
 
 /**
@@ -192,19 +199,21 @@ export function testV6AdvancedSyncAction<S, F extends (...args: any[]) => any, A
   if (isV6AdvancedAction(actionIn)) {
     const decoratedAction: AdvancedSynchAction<S, F, A, P> = {
       action: (s, args, p) =>
-        actionIn.effects({
+        mergeState(
           s,
-          args,
-          p,
-          ds: null,
-          derived: null,
-          state: s,
-          props: p,
-          res: null,
-          result: null,
-          promiseId: null,
-        }),
-
+          actionIn.effects({
+            s,
+            args,
+            p,
+            ds: null,
+            derived: null,
+            state: s,
+            props: p,
+            res: null,
+            result: null,
+            promiseId: null,
+          })
+        ),
       onActionDone: (s, args, p, a, notifyWarning) => {
         actionIn.sideEffects({
           s,
@@ -303,61 +312,73 @@ export function testV6AsyncAction<S, F extends (...args: any[]) => any, A, P>(
 
       reducer: (s, res, args, p) =>
         actionIn.effects
-          ? actionIn.effects({
+          ? mergeState(
               s,
-              args,
-              p,
-              res,
-              ds: null,
-              derived: null,
-              state: s,
-              props: p,
-              result: res,
-              promiseId: null,
-            })
+              actionIn.effects({
+                s,
+                args,
+                p,
+                res,
+                ds: null,
+                derived: null,
+                state: s,
+                props: p,
+                result: res,
+                promiseId: null,
+              })
+            )
           : null,
 
       preReducer: (s, args, p) =>
         actionIn.preEffects
-          ? actionIn.preEffects({
+          ? mergeState(
               s,
-              args,
-              p,
-              ds: null,
-              derived: null,
-              state: s,
-              props: p,
-              promiseId: null,
-            })
+              actionIn.preEffects({
+                s,
+                args,
+                p,
+                ds: null,
+                derived: null,
+                state: s,
+                props: p,
+                promiseId: null,
+              })
+            )
           : null,
       optimisticReducer: (s, args, p) =>
         actionIn.optimisticEffects
-          ? actionIn.optimisticEffects({
+          ? mergeState(
               s,
-              args,
-              p,
-              ds: null,
-              derived: null,
-              state: s,
-              props: p,
-              promiseId: actionIn.getPromiseId?.(...args),
-            })
+              actionIn.optimisticEffects({
+                s,
+                args,
+                p,
+                ds: null,
+                derived: null,
+                state: s,
+                props: p,
+                promiseId: actionIn.getPromiseId?.(...args),
+              })
+            )
           : null,
 
       errorReducer: (s, err, args, p) =>
         actionIn.errorEffects
-          ? actionIn.errorEffects({
+          ? mergeState(
               s,
-              args,
-              p,
-              err,
-              ds: null,
-              derived: null,
-              state: s,
-              props: p,
-              error: err,
-              promiseId: actionIn.getPromiseId?.(...args),
-            })
+              actionIn.errorEffects({
+                s,
+                args,
+                p,
+                err,
+                ds: null,
+                derived: null,
+                state: s,
+                props: p,
+                error: err,
+                promiseId: actionIn.getPromiseId?.(...args),
+              })
+            )
           : null,
 
       onDone: (s, res, args, p, a, notifyWarning) => {

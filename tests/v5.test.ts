@@ -31,18 +31,18 @@ describe('v5 compatibility layer', () => {
   };
 
   const v6actions: StoreActions<State, Actions, Props> = {
-    setSimpleSync: ({ s, args: [v] }) => ({ ...s, propSimpleSync: v }),
+    setSimpleSync: ({ s, args: [v] }) => ({ propSimpleSync: v }),
     setSync: {
-      effects: ({ s, args: [v] }) => ({ ...s, propSync: v }),
+      effects: ({ s, args: [v] }) => ({ propSync: v }),
       sideEffects: ({ p }) => {
         p.callback?.();
       },
     },
     setAsync: {
-      preEffects: ({ s }) => ({ ...s, propAsync: 'pre' }),
+      preEffects: ({ s }) => ({ propAsync: 'pre' }),
       getGetPromise: ({ args: [v] }) => Promise.resolve(v),
-      effects: ({ s, res }) => ({ ...s, propAsync: res }),
-      errorEffects: ({ s, err }) => ({ ...s, propAsync: err.message }),
+      effects: ({ s, res }) => ({ propAsync: res }),
+      errorEffects: ({ s, err }) => ({ propAsync: err.message }),
       sideEffects: ({ p }) => {
         p.callback?.();
       },
@@ -54,7 +54,7 @@ describe('v5 compatibility layer', () => {
     },
     setAsyncFail: {
       getPromise: () => Promise.reject(new Error('boom')),
-      errorEffects: ({ s, err }) => ({ ...s, propAsync: err.message }),
+      errorEffects: ({ s, err }) => ({ propAsync: err.message }),
       errorSideEffects: () => {},
     },
     setAsyncParallel: {
@@ -63,32 +63,30 @@ describe('v5 compatibility layer', () => {
       getPromise: ({ args: [v, , willFail, timeout], promiseId }) =>
         willFail ? getFailedTimeoutPromise(timeout, new Error('error'), promiseId) : getTimeoutPromise(timeout, v),
       optimisticEffects: ({ s, args: [v, k], promiseId }) => ({
-        ...s,
         propAsyncParallel: {
           ...s.propAsyncParallel,
           [promiseId]: v,
         },
       }),
       errorEffects: ({ s, promiseId }) => ({
-        ...s,
         propAsyncParallel: { ...s.propAsyncParallel, [promiseId]: 'error' },
       }),
     },
   };
 
   const v5actions: StateDecoratorActions<State, Actions, Props> = {
-    setSimpleSync: (s, [v]) => ({ ...s, propSimpleSync: v }),
+    setSimpleSync: (s, [v]) => ({ propSimpleSync: v }),
     setSync: {
-      action: (s, [v]) => ({ ...s, propSync: v }),
+      action: (s, [v]) => ({ propSync: v }),
       onActionDone: (s, _, p, a) => {
         p.callback?.();
       },
     },
     setAsync: {
-      preReducer: (s) => ({ ...s, propAsync: 'pre' }),
+      preReducer: (s) => ({ propAsync: 'pre' }),
       promiseGet: ([v]) => Promise.resolve(v),
-      reducer: (s, res) => ({ ...s, propAsync: res }),
-      errorReducer: (s, err) => ({ ...s, propAsync: err.message }),
+      reducer: (s, res) => ({ propAsync: res }),
+      errorReducer: (s, err) => ({ propAsync: err.message }),
       onDone: (s, res, args, p) => {
         p.callback?.();
       },
@@ -100,7 +98,7 @@ describe('v5 compatibility layer', () => {
     },
     setAsyncFail: {
       promise: () => Promise.reject(new Error('boom')),
-      errorReducer: (s, err) => ({ ...s, propAsync: err.message }),
+      errorReducer: (s, err) => ({ propAsync: err.message }),
       onFail: () => {},
     },
     setAsyncParallel: {
@@ -109,14 +107,12 @@ describe('v5 compatibility layer', () => {
       promise: ([v, k, willFail, timeout], s, p) =>
         willFail ? getFailedTimeoutPromise(timeout, new Error('error'), k) : getTimeoutPromise(timeout, v),
       optimisticReducer: (s, [v, k]) => ({
-        ...s,
         propAsyncParallel: {
           ...s.propAsyncParallel,
           [k]: v,
         },
       }),
       errorReducer: (s, err, [v, k]) => ({
-        ...s,
         propAsyncParallel: { ...s.propAsyncParallel, [k]: 'error' },
       }),
       successMessage: 'success',
@@ -129,7 +125,7 @@ describe('v5 compatibility layer', () => {
     notifyError: jest.fn(),
     onPropsChange: {
       getDeps: (p) => [p.propIn],
-      effects: ({ s, p }) => ({ ...s, propProps: p.propIn }),
+      effects: ({ s, p }) => ({ propProps: p.propIn }),
       sideEffects: ({ a }) => {
         a.setAsync('value');
       },
@@ -142,7 +138,7 @@ describe('v5 compatibility layer', () => {
     notifySuccess: jest.fn(),
     onMount: jest.fn(),
     getPropsRefValues: (p) => [p.propIn],
-    onPropsChangeReducer: (s, p) => ({ ...s, propProps: p.propIn }),
+    onPropsChangeReducer: (s, p) => ({ propProps: p.propIn }),
     onPropsChange: (s, p, a) => {
       a.setAsync('value');
     },

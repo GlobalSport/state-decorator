@@ -2,7 +2,7 @@ import typescript from 'rollup-plugin-typescript2';
 import commonjs from '@rollup/plugin-commonjs';
 import { nodeResolve } from '@rollup/plugin-node-resolve';
 import { visualizer } from 'rollup-plugin-visualizer';
-import { terser } from 'rollup-plugin-terser';
+import terser from '@rollup/plugin-terser';
 
 import stripBanner from 'rollup-plugin-strip-banner';
 
@@ -26,6 +26,9 @@ export default function (input, file, externals = []) {
       },
     ],
     external: ['react', 'react-dom', ...externals],
+    treeshake: {
+      moduleSideEffects: false, // Prune unused pure external imports
+    },
     plugins: [
       nodeResolve(),
       commonjs(),
