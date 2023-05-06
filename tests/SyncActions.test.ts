@@ -1,5 +1,5 @@
 import { createStore } from '../src/index';
-import { StoreActions } from '../src/types';
+import { StoreActions, StoreConfig } from '../src/types';
 
 describe('Advanced synchronous action', () => {
   type State = {
