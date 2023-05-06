@@ -4,7 +4,7 @@
   <img src="https://github.com/GlobalSport/state-decorator/blob/develop/doc/state-decorator-logo-small.png?raw=true" alt="useLocalStore logo"/>
 </p>
 
-The StateDecorator is a set of Reacts hook that manages a complex component state in an easy, testable and deterministic way.
+The StateDecorator is a set of React hooks that manage a complex component state in an easy, testable and deterministic way.
 
 # Features
 
@@ -124,7 +124,9 @@ const config: StoreConfig<State, Actions, Props> = {
 
 // Bind to react component and use state/actions
 export function App(props: Props) => {
+
   const { state, actions } = useLocalStore(config);
+
   return (
     <div>
       {state.user && (
@@ -164,7 +166,9 @@ The initial state is build using a function provided to the store.
 ```typescript
 const config: StoreConfig<State, Actions, Props> = {
   getInitialState: (p) => ({ counter: 0 }),
-  actions: {},
+  actions: {
+    /* ... */
+  },
 };
 
 export const CounterContainer = () => {
@@ -220,15 +224,18 @@ const config: StoreConfig<State, Actions, Props> = {
 
 ```typescript
 action: {
-  effects: (ctx) => ctx.state, // state changes
-  sideEffects: (ctx) => {
-    // side effect code
-  },
   // debounce effect and side effects if > 0
   debounceTimeout: 0,
 
   // debounce side effects if > 0
   debounceSideEffectsTimeout: 0,
+
+  effects: (ctx) => ctx.state, // state changes
+
+  sideEffects: (ctx) => {
+    // side effect code
+  },
+
 }
 ```
 
@@ -252,10 +259,10 @@ const config: StoreConfig<State, Actions, Props> = {
 
 [![See Debounce demo](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/debounce-v7-i5om2e?file=/src/Debounce.tsx)
 
-## Recipes
+## Notes
 
 - If the effects function returns `null`, the side effects, if any, are not executed when the action is called.
-- If not effects function is defined by side effects function is provided, the side effects will be executed when the action is called.
+- If **no** effects function is defined but a side effects function is provided, the side effects will be executed when the action is called.
 
 ## Cancel action
 
@@ -826,7 +833,7 @@ export const store = createStore(getInitialState, userAppActions);
 //----------------------
 
 // In another file
-import React, { memo } from 'react';
+import { memo } from 'react';
 import { useStore } from 'state-decorator';
 import store from './GlobalStore';
 
@@ -856,7 +863,7 @@ const Subtitle = memo(function Subtitle(props: { subtitle: string }) {
 ### Local Store
 
 ```typescript
-import React, { memo } from 'react';
+import { memo } from 'react';
 import { useLocalStore } from 'state-decorator';
 
 // Declare typings & actions as above
@@ -906,7 +913,7 @@ export const store = createStore(getInitialState, userAppActions);
 
 //----------------------
 
-import React, { memo } from 'react';
+import { memo } from 'react';
 import { useStoreSlice } from 'state-decorator';
 import store from './GlobalStore';
 
@@ -1545,6 +1552,7 @@ If an error is triggered during the action and this error was managed (in _error
 import { ActionError } from 'state-decorator/test';
 
 // asyncManagedError: {
+//   rejectPromiseOnError: true,
 //   getPromise: () => Promise.reject(new MyError()),
 //   errorEffects: ({ s }) => ({ ...s, error: true })
 // },
@@ -1634,9 +1642,10 @@ TypeError: Cannot set property 'crash' of null
 
 ### Create mock store
 
-| Name            | Parameters                                       |                                   |
-| --------------- | ------------------------------------------------ | --------------------------------- |
-| createMockStore | (config: StoreConfig, props: Props) => MockStore | Create a mock store from a config |
+| Name                | Parameters                                       |                                   |
+| ------------------- | ------------------------------------------------ | --------------------------------- |
+| createMockStore     | (config: StoreConfig, props: Props) => MockStore | Create a mock store from a config |
+| createMockFromStore | (store: StoreAPI) => MockStore                   | Create a mock store from a store  |
 
 ### MockStore
 
