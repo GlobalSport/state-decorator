@@ -1691,7 +1691,7 @@ TypeError: Cannot set property 'crash' of null
 # Immutability
 
 - Immutability: each effects **must** return a new state instance (or `null` if there's no change).
-- I recommend using [Immer](https://github.com/immerjs/immer) to manage complex cases (deep nesting). A **immerizeActions** action decorator is provided to decorate each effect with Immer.
+- I recommend using [Immer](https://github.com/immerjs/immer) to manage complex cases (deep nesting).
 
 # Build
 

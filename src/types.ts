@@ -519,11 +519,11 @@ type StoreConfigBase<S, A extends DecoratedActions, P = {}, DS = {}> = {
   middlewares?: MiddlewareFactory<S, A, P>[];
 } & StoreOptions<S, A, P, DS>;
 
-type StoreConfigObj<S, A extends DecoratedActions, P = {}, DS = {}> = StoreConfigBase<S, A, P, DS> & {
+export type StoreConfigObj<S, A extends DecoratedActions, P = {}, DS = {}> = StoreConfigBase<S, A, P, DS> & {
   initialState: S;
 };
 
-type StoreConfigFunc<S, A extends DecoratedActions, P = {}, DS = {}> = StoreConfigBase<S, A, P, DS> & {
+export type StoreConfigFunc<S, A extends DecoratedActions, P = {}, DS = {}> = StoreConfigBase<S, A, P, DS> & {
   getInitialState: (p: P) => S;
 };
 

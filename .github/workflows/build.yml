@@ -24,3 +24,9 @@ jobs:
 
       - name: ⚙️ Typescript build
         run: yarn build
+
+      - name: ⚙️ Sample build
+        run: |
+          cd samples
+          yarn build
+

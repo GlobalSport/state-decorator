@@ -44,6 +44,7 @@ import {
   buildOnUnMountInvocationContext,
   EffectError,
   fixDerivedDeps,
+  isFuncConfig,
 } from './impl';
 
 import type {
@@ -248,7 +249,7 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
 
   const { actions: actionsImpl, middlewares = [], ...options } = config;
 
-  const getInitialState: (p: P) => S = config['getInitialState'] || (() => config['initialState']);
+  const getInitialState: (p: P) => S = isFuncConfig(config) ? config.getInitialState : () => config.initialState;
 
   let stateListeners: Record<string, StateListener> = {};
   let stateListenerCount = 0;
@@ -406,7 +407,7 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
   }
 
   function abortActionsOnDestroy() {
-    const abortedActions: AbortedActions<A> = Object.keys(actionsImpl).reduce((acc, actionName) => {
+    const abortedActions: AbortedActions<A> = Object.keys(actionsImpl).reduce<AbortedActions<A>>((acc, actionName) => {
       const action = actionsImpl[actionName];
       if (isAsyncAction(action) && action.abortable) {
         const map = loadingParallelMapRef.current[actionName];
@@ -419,7 +420,7 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
           return acc;
         }, []);
         if (aborted.length > 0) {
-          acc[actionName] = aborted;
+          acc[actionName as keyof A] = aborted;
         }
       }
       return acc;

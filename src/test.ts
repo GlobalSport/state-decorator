@@ -30,6 +30,7 @@ import {
   onPropChange,
   buildOnMountInvocationContext,
   buildErrorMap,
+  isFuncConfig,
 } from './impl';
 import { AsyncAction, DecoratedActions, InternalLoadingMap, StoreConfig } from './types';
 
@@ -179,7 +180,7 @@ export function createMockStore<S, A extends DecoratedActions, P, DS>(
   props: P = {} as P
 ): MockStore<S, A, P, DS> {
   const { actions, ...options } = config;
-  const getInitialState: (p: P) => S = config['getInitialState'] || (() => config['initialState']);
+  const getInitialState: (p: P) => S = isFuncConfig(config) ? config.getInitialState : () => config.initialState;
   return createMockStoreV6(getInitialState, actions, props, options);
 }
 
@@ -502,7 +503,7 @@ export function createMockStoreAction<S, A extends DecoratedActions, F extends (
           createRef(true),
           options,
           setState
-        )(...((args as any) as Parameters<A[keyof A]>));
+        )(...(args as any as Parameters<A[keyof A]>));
 
         promise = Promise.resolve();
       } else if (isSyncAction(action)) {
@@ -519,7 +520,7 @@ export function createMockStoreAction<S, A extends DecoratedActions, F extends (
           options,
           setState,
           (_: keyof A) => {}
-        )(...((args as any) as Parameters<A[keyof A]>));
+        )(...(args as any as Parameters<A[keyof A]>));
 
         promise = Promise.resolve();
       } else if (isAsyncAction(action)) {
@@ -551,22 +552,24 @@ export function createMockStoreAction<S, A extends DecoratedActions, F extends (
           delete impl.optimisticEffects;
         }
 
-        promise = (decorateAsyncAction({
-          actionName,
-          derivedStateRef,
-          propsRef,
-          loadingParallelMapRef,
-          errorMapRef,
-          promisesRef,
-          conflictActionsRef,
-          initializedRef,
-          options,
-          setState,
-          stateRef: newStateRef,
-          actionsRef: actionsRef as any,
-          action: impl,
-          clearError: (_: keyof A) => {},
-        }) as any)(...((args as any) as Parameters<A[keyof A]>));
+        promise = (
+          decorateAsyncAction({
+            actionName,
+            derivedStateRef,
+            propsRef,
+            loadingParallelMapRef,
+            errorMapRef,
+            promisesRef,
+            conflictActionsRef,
+            initializedRef,
+            options,
+            setState,
+            stateRef: newStateRef,
+            actionsRef: actionsRef as any,
+            action: impl,
+            clearError: (_: keyof A) => {},
+          }) as any
+        )(...(args as any as Parameters<A[keyof A]>));
       }
 
       return (promise ?? Promise.resolve())
@@ -577,7 +580,7 @@ export function createMockStoreAction<S, A extends DecoratedActions, F extends (
             state: getState(newStateRef),
             props: propsRef.current,
             errorMap: buildErrorMap(errorMapRef.current),
-            actions: (actionsRef.current as any) as MockActions<A, any>,
+            actions: actionsRef.current as any as MockActions<A, any>,
           };
         })
         .catch((e: Error) => {
@@ -587,7 +590,7 @@ export function createMockStoreAction<S, A extends DecoratedActions, F extends (
               getState(stateRef),
               getState(newStateRef),
               propsRef.current,
-              (actionsRef.current as any) as MockActions<A, any>
+              actionsRef.current as any as MockActions<A, any>
             )
           );
         });
