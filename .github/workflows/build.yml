@@ -28,5 +28,7 @@ jobs:
       - name: ⚙️ Sample build
         run: |
           cd samples
-          yarn build
+          yarn install --frozen-lockfile --immutable --prefer-offline
+          yarn tsc
+          yarn vite build
 
