@@ -23,10 +23,10 @@ describe('Advanced synchronous action', () => {
     callbackSideEffects?: (s: State) => void;
   };
 
-  const actionsImpl: StoreActions<State, Actions, Props> = {
-    setProp1: { effects: ({ s, args: [p] }) => ({ ...s, prop1: p }) },
+  const actions: StoreActions<State, Actions, Props> = {
+    setProp1: { effects: ({ args: [p] }) => ({ prop1: p }) },
     setProp2: {
-      effects: ({ s, args: [p] }) => ({ ...s, prop2: p }),
+      effects: ({ args: [p] }) => ({ prop2: p }),
       sideEffects: ({ s, p }) => {
         p.callback(s);
       },
@@ -37,21 +37,21 @@ describe('Advanced synchronous action', () => {
       },
     },
     setEffectsDebounced: {
-      effects: ({ s, args: [p] }) => ({ ...s, prop2: p }),
+      effects: ({ args: [p] }) => ({ prop2: p }),
       sideEffects: ({ s, p }) => {
         p.callback(s);
       },
       debounceTimeout: 50,
     },
     setSideEffectsDebounced: {
-      effects: ({ s, args: [p] }) => ({ ...s, prop2: p }),
+      effects: ({ args: [p] }) => ({ prop2: p }),
       sideEffects: ({ s, p }) => {
         p.callback(s);
       },
       debounceSideEffectsTimeout: 50,
     },
     setSideEffectsDebounced2: {
-      effects: ({ s, args: [p] }) => ({ ...s, prop2: p }),
+      effects: ({ args: [p] }) => ({ prop2: p }),
       debounceSideEffectsTimeout: 50,
     },
     setCancelled: { effects: () => null, sideEffects: ({ p }) => p.callbackCancelled() },
@@ -63,7 +63,7 @@ describe('Advanced synchronous action', () => {
   });
 
   it('works as expected', () => {
-    const store = createStore(getInitialState, actionsImpl);
+    const store = createStore({ getInitialState, actions });
     const listener = jest.fn();
     const callback = jest.fn();
     const callbackSideEffects = jest.fn();
@@ -135,7 +135,7 @@ describe('Advanced synchronous action', () => {
   });
 
   it('debounced side effects', (done) => {
-    const store = createStore(getInitialState, actionsImpl);
+    const store = createStore({ getInitialState, actions });
 
     const listener = jest.fn();
     const callback = jest.fn((s: State) => {});
@@ -168,7 +168,7 @@ describe('Advanced synchronous action', () => {
   });
 
   it('debounced no side effects', (done) => {
-    const store = createStore(getInitialState, actionsImpl);
+    const store = createStore({ getInitialState, actions });
 
     const listener = jest.fn();
     const callback = jest.fn((s: State) => {});
@@ -187,7 +187,7 @@ describe('Advanced synchronous action', () => {
   });
 
   it('debounced effects', (done) => {
-    const store = createStore(getInitialState, actionsImpl);
+    const store = createStore({ getInitialState, actions });
 
     const listener = jest.fn();
     const callback = jest.fn((s: State) => {});
@@ -222,7 +222,7 @@ describe('Advanced synchronous action', () => {
   });
 
   it('debounced side effects (destroy before end)', () => {
-    const store = createStore(getInitialState, actionsImpl);
+    const store = createStore({ getInitialState, actions });
 
     const listener = jest.fn();
     const callback = jest.fn((s: State) => {});
@@ -241,7 +241,7 @@ describe('Advanced synchronous action', () => {
   });
 
   it('debounced effects (destroy before end)', () => {
-    const store = createStore(getInitialState, actionsImpl);
+    const store = createStore({ getInitialState, actions });
 
     const listener = jest.fn();
     const callback = jest.fn((s: State) => {});

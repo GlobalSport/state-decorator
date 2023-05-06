@@ -1,7 +1,0 @@
-language: node
-node_js: 12
-cache:
-  yarn: false
-script:
-- yarn test
-- yarn build

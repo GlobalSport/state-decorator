@@ -33,7 +33,7 @@ describe('Todo', () => {
           todoIds: [],
           todoMap: {},
         })
-        .onInit({ initialTodos: null })
+        .onInit({ initialTodos: undefined })
         .test(({ state, actions }) => {
           // test state after initialization, ie:
           // - options.onPropsChange with onMount: true
@@ -265,7 +265,7 @@ describe('Todo', () => {
   //     onPropsChange: [
   //       {
   //         getDeps: (p) => [p.initialTodos],
-  //         effects: ({ s, p }) => ({ ...s, ...splitList(p.initialTodos) }),
+  //         effects: ({ s, p }) => ({  ...splitList(p.initialTodos) }),
   //         onMount: true,
   //       },
   //     ],

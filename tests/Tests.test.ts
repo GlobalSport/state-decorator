@@ -43,11 +43,11 @@ describe('createMockStore', () => {
     concat: string;
   };
 
-  const actionsImpl: StoreActions<State, Actions, Props> = {
-    setProp1: ({ s, args: [v] }) => ({ ...s, prop1: v }),
-    setProp4: ({ s, args: [v] }) => ({ ...s, prop4: v }),
+  const actions: StoreActions<State, Actions, Props> = {
+    setProp1: ({ args: [v] }) => ({ prop1: v }),
+    setProp4: ({ args: [v] }) => ({ prop4: v }),
     setProp2: {
-      effects: ({ s, args: [v] }) => ({ ...s, prop2: v }),
+      effects: ({ args: [v] }) => ({ prop2: v }),
       sideEffects: ({ a, s }) => {
         a.setProp1(`sideEffect ${s.prop2}`);
       },
@@ -55,8 +55,8 @@ describe('createMockStore', () => {
     setProp3: {
       rejectPromiseOnError: true,
       getPromise: ({ args: [param, fail] }) => (fail ? Promise.reject(new Error('boom')) : Promise.resolve(param)),
-      effects: ({ s, res }) => ({ ...s, prop3: res }),
-      errorEffects: ({ s, err }) => ({ ...s, error: err.message }),
+      effects: ({ res }) => ({ prop3: res }),
+      errorEffects: ({ err }) => ({ error: err.message }),
       sideEffects: ({ a, s }) => {
         a.setProp1(`sideEffect ${s.prop3}`);
       },
@@ -66,7 +66,8 @@ describe('createMockStore', () => {
     },
     setOptimistic: {
       getPromise: ({ args: [param] }) => Promise.resolve(param),
-      optimisticEffects: ({ s, args: [param] }) => ({ ...s, prop1: param }),
+      optimisticEffects: ({ args: [param] }) => ({ prop1: param }),
+      effects: () => ({ prop2: 666 }),
     },
     asyncThatCrashes: {
       getPromise: () => Promise.resolve(),
@@ -79,24 +80,24 @@ describe('createMockStore', () => {
     asyncManagedError: {
       getPromise: () => Promise.reject(new MyError()),
       errorEffects: ({ s }) => {
-        return { ...s, error: 'true' };
+        return { error: 'true' };
       },
     },
     asyncManagedErrorThrow: {
       getPromise: () => Promise.reject(new MyError()),
-      errorEffects: ({ s }) => ({ ...s, error: 'true' }),
+      errorEffects: ({ s }) => ({ error: 'true' }),
       rejectPromiseOnError: true,
     },
     setWrappedAction: {
       getPromise: ({ a }) => a.setProp3('res', false),
-      effects: ({ s, res }) => ({ ...s, prop3: res }),
+      effects: ({ res }) => ({ prop3: res }),
     },
   };
 
   const options: StoreOptions<State, Actions, Props, DerivedState> = {
     onPropsChange: {
       getDeps: (p) => [p.prop],
-      effects: ({ s, p }) => ({ ...s, prop1: p.prop }),
+      effects: ({ p }) => ({ prop1: p.prop }),
       sideEffects: ({ p, a }) => {
         a.setProp1(p.prop);
       },
@@ -114,7 +115,7 @@ describe('createMockStore', () => {
     },
   };
 
-  function getInitialState(): State {
+  function getInitialState(props): State {
     return {
       prop1: '',
       prop2: 0,
@@ -124,9 +125,9 @@ describe('createMockStore', () => {
     };
   }
 
-  const mockStore = createMockStore(getInitialState, actionsImpl, { prop: '', prop2: '', onMount: null }, options);
+  const mockStore = createMockStore({ getInitialState, actions, ...options }, { prop: '', prop2: '', onMount: null });
 
-  const store = createStore(getInitialState, actionsImpl, options);
+  const store = createStore({ getInitialState, actions, ...options });
   const mockStore2 = createMockFromStore(store, { prop: '', prop2: '', onMount: null });
 
   it('allows to set state correctly', () => {
@@ -264,19 +265,43 @@ describe('createMockStore', () => {
     });
   });
 
+  describe('onInit', () => {
+    function getInitialState(props: Props): State {
+      return {
+        prop1: props.prop,
+        prop2: 0,
+        prop3: '',
+        prop4: '',
+        error: '',
+      };
+    }
+
+    const mockStore2 = createMockStore({ getInitialState, actions });
+
+    it('allows to test initial props changes + onMount', () => {
+      mockStore2
+        .onInit({
+          prop: 'new_prop',
+        })
+        .test((res) => {
+          expect(res.state.prop1).toEqual('new_prop');
+        });
+    });
+  });
+
   describe('onPropsChange', () => {
     const optionsPropsChange: StoreOptions<State, Actions, Props, DerivedState> = {
       onPropsChange: [
         {
           getDeps: (p) => [p.prop],
-          effects: ({ s, p }) => ({ ...s, prop1: p.prop }),
+          effects: ({ s, p }) => ({ prop1: p.prop }),
           sideEffects: ({ p, a }) => {
             a.setProp1(p.prop);
           },
         },
         {
           getDeps: (p) => [p.prop2],
-          effects: ({ s, p }) => ({ ...s, prop3: p.prop2 }),
+          effects: ({ s, p }) => ({ prop3: p.prop2 }),
           sideEffects: ({ p, a }) => {
             a.setProp4(p.prop2);
           },
@@ -295,10 +320,8 @@ describe('createMockStore', () => {
     };
 
     const mockStore2 = createMockStore(
-      getInitialState,
-      actionsImpl,
-      { prop: '', prop2: '', onMount: null },
-      optionsPropsChange
+      { getInitialState, actions, ...optionsPropsChange },
+      { prop: '', prop2: '', onMount: null }
     );
 
     it('allows to test initial props changes + onMount', () => {
@@ -314,6 +337,7 @@ describe('createMockStore', () => {
           expect(res.actions.setProp3).not.toHaveBeenCalled();
           expect(res.actions.setProp4).toHaveBeenCalledWith('new_prop2'); // 2nd prop change called
           expect(res.props.prop).toEqual('new_prop');
+          expect(res.props.prop2).toEqual('new_prop2');
         });
     });
 
@@ -504,20 +528,6 @@ describe('createMockStore', () => {
   });
 
   // REAL WORLD TEST
-  // asyncThatCrashes: {
-  //   getPromise: () => Promise.resolve(),
-  //   effects: ({ s }) => {
-  //     const nullObj = null;
-  //     nullObj.crash = 'test';
-  //     return s;
-  //   },
-  // },
-
-  // it.only('asyncThatCrashes works as expected', async () => {
-  //   return mockStore.getAction('asyncThatCrashes').call();
-  // });
-
-  // REAL WORLD TEST
   it('asyncThatCrashes works as expected', async () => {
     return mockStore
       .getAction('asyncThatCrashes')
@@ -526,26 +536,6 @@ describe('createMockStore', () => {
         expect(e.sourceError).toBeInstanceOf(EffectError);
       });
   });
-
-  // REAL WORLD TEST
-  // asyncManagedError: {
-  //   getPromise: () => Promise.reject(new MyError()),
-  //   errorEffects: ({ s }) => ({ ...s, error: 'true' })
-  // },
-  // it.only('asyncManagedErrorThrow works as expected', async () => {
-  //   return mockStore
-  //     .getAction('asyncManagedErrorThrow')
-  //     .call()
-  //     .catch((e: ActionError<State>) => {
-  //       // test source error
-  //       if (!(e.sourceError instanceof MyError)) {
-  //         return Promise.reject();
-  //       }
-
-  //       // check that error was correcly managed
-  //       expect(e.state.error).toEqual('true');
-  //     });
-  // });
 
   it('allows to test asynchronous action, managed error', (done) => {
     mockStore
@@ -625,11 +615,11 @@ describe('createMockStore', () => {
     await action.call('new value').then((res) => {
       expect(res.state).toEqual({
         prop1: 'new value',
-        prop2: 0,
+        prop2: 666,
         prop3: '',
         prop4: '',
         error: '',
-        concat: 'new value,0,,,', // derived state is included
+        concat: 'new value,666,,,', // derived state is included
       });
     });
 
@@ -834,14 +824,12 @@ describe('createMockStore', () => {
 
     it('fails if no onMount is set on options', () => {
       const store = createMockStore(
-        getInitialState,
-        actionsImpl,
+        { getInitialState, actions },
         {
           prop: '',
           prop2: '',
           onMount: jest.fn(),
-        },
-        null
+        }
       );
 
       try {

@@ -19,6 +19,7 @@ describe('Optimistic', () => {
     setAsync: (v: string) => Promise<string>;
     setAsyncParallel: (v: string, key: string, fail: boolean, timeout: number) => Promise<string>;
     setOptimisticSuccess: (v: string) => Promise<string>;
+    setOptimisticSuccessWithEffects: (v: string) => Promise<string>;
     setOptimisticFail: (v: string) => Promise<string>;
   };
 
@@ -28,11 +29,11 @@ describe('Optimistic', () => {
   };
 
   const actions: StoreActions<State, Actions, Props> = {
-    setSimpleSync: ({ s, args: [v] }) => ({ ...s, propSimpleSync: v }),
-    setSync: { effects: ({ s, args: [v] }) => ({ ...s, propSync: v }) },
+    setSimpleSync: ({ args: [v] }) => ({ propSimpleSync: v }),
+    setSync: { effects: ({ args: [v] }) => ({ propSync: v }) },
     setAsync: {
       getPromise: ({ args: [v] }) => Promise.resolve(v),
-      effects: ({ s, res }) => ({ ...s, propAsync: res }),
+      effects: ({ res }) => ({ propAsync: res }),
     },
     setAsyncParallel: {
       conflictPolicy: ConflictPolicy.PARALLEL,
@@ -40,38 +41,43 @@ describe('Optimistic', () => {
       getPromise: ({ args: [v, , willFail, timeout], promiseId }) =>
         willFail ? getFailedTimeoutPromise(timeout, new Error('error'), promiseId) : getTimeoutPromise(timeout, v),
       optimisticEffects: ({ s, args: [v], promiseId }) => ({
-        ...s,
         propAsyncParallel: {
           ...s.propAsyncParallel,
           [promiseId]: v,
         },
       }),
       errorEffects: ({ s, promiseId }) => ({
-        ...s,
         propAsyncParallel: { ...s.propAsyncParallel, [promiseId]: 'error' },
       }),
     },
     setOptimisticSuccess: {
       getPromise: ({ args: [v] }) => Promise.resolve(v),
-      optimisticEffects: ({ s, args: [v] }) => ({
-        ...s,
+      optimisticEffects: ({ args: [v] }) => ({
         propOptimistic: v,
+      }),
+    },
+    setOptimisticSuccessWithEffects: {
+      getPromise: ({ args: [v] }) => Promise.resolve(v),
+      optimisticEffects: ({ args: [v] }) => ({
+        propOptimistic: v,
+      }),
+      effects: ({ s }) => ({
+        propSync: s.propOptimistic + '_fx',
       }),
     },
     setOptimisticFail: {
       getPromise: ({ args: [v], promiseId }) => getFailedTimeoutPromise(50, new Error(v), promiseId),
-      optimisticEffects: ({ s, args: [v] }) => ({
-        ...s,
+      optimisticEffects: ({ args: [v] }) => ({
         propOptimistic: v,
       }),
-      errorEffects: ({ s, err }) => ({ ...s, propError: err.message }),
+      errorEffects: ({ err }) => ({ propError: err.message }),
     },
   };
 
   const options: StoreOptions<State, Actions, Props, any> = {
     onPropsChange: {
       getDeps: (p) => [p.propIn],
-      effects: ({ s, p }) => ({ ...s, propProps: p.propIn }),
+      effects: ({ p }) => ({ propProps: p.propIn }),
     },
   };
 
@@ -86,7 +92,7 @@ describe('Optimistic', () => {
   });
 
   it('works as expected (success, basic)', async () => {
-    const store = createStore(getInitialState, actions, options, [optimisticActions()]);
+    const store = createStore({ getInitialState, actions, ...options, middlewares: [optimisticActions()] });
     store.init({ propIn: '', propIn2: '' });
 
     const p = store.actions.setOptimisticSuccess('value');
@@ -116,8 +122,27 @@ describe('Optimistic', () => {
     });
   });
 
+  it('works as expected (success with effects)', async () => {
+    const store = createStore({ getInitialState, actions, ...options, middlewares: [optimisticActions()] });
+    store.init({ propIn: '', propIn2: '' });
+
+    await store.actions.setOptimisticSuccessWithEffects('value');
+
+    expect(store.loading).toBeFalsy();
+
+    expect(store.state).toEqual({
+      propProps: '',
+      propSync: 'value_fx',
+      propSimpleSync: '',
+      propAsync: '',
+      propAsyncParallel: {},
+      propOptimistic: 'value',
+      propError: '',
+    });
+  });
+
   it('works as expected (failure, basic)', async () => {
-    const store = createStore(getInitialState, actions, options, [optimisticActions()]);
+    const store = createStore({ getInitialState, actions, ...options, middlewares: [optimisticActions()] });
     store.init({ propIn: '', propIn2: '' });
 
     const p = store.actions.setOptimisticFail('value');
@@ -148,7 +173,7 @@ describe('Optimistic', () => {
   });
 
   it('works as expected (extra effects before failure)', () => {
-    const store = createStore(getInitialState, actions, options, [optimisticActions()]);
+    const store = createStore({ getInitialState, actions, ...options, middlewares: [optimisticActions()] });
     store.init({ propIn: '', propIn2: '' });
 
     const p = store.actions.setOptimisticFail('value');
@@ -183,7 +208,7 @@ describe('Optimistic', () => {
   });
 
   it('works as expected (fail, onPropsChange)', () => {
-    const store = createStore(getInitialState, actions, options, [optimisticActions()]);
+    const store = createStore({ getInitialState, actions, ...options, middlewares: [optimisticActions()] });
     store.init({ propIn: '', propIn2: '' });
 
     const p = store.actions.setOptimisticFail('value');
@@ -223,16 +248,16 @@ describe('Optimistic', () => {
       onPropsChange: [
         {
           getDeps: (p) => [p.propIn],
-          effects: ({ s, p }) => ({ ...s, propProps: p.propIn }),
+          effects: ({ s, p }) => ({ propProps: p.propIn }),
         },
         {
           getDeps: (p) => [p.propIn2],
-          effects: ({ s, p }) => ({ ...s, propProps: s.propProps + '_' + p.propIn2 }),
+          effects: ({ s, p }) => ({ propProps: s.propProps + '_' + p.propIn2 }),
         },
       ],
     };
 
-    const store = createStore(getInitialState, actions, options, [optimisticActions()]);
+    const store = createStore({ getInitialState, actions, ...options, middlewares: [optimisticActions()] });
 
     store.init({ propIn: '', propIn2: '' });
 
@@ -269,7 +294,7 @@ describe('Optimistic', () => {
   });
 
   it('works as expected (fail, parallel promises)', () => {
-    const store = createStore(getInitialState, actions, options, [optimisticActions()]);
+    const store = createStore({ getInitialState, actions, ...options, middlewares: [optimisticActions()] });
     store.init({ propIn: '', propIn2: '' });
 
     const p = store.actions.setAsyncParallel('value1', 'k1', true, 200);

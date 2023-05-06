@@ -4,19 +4,29 @@
   <img src="https://github.com/GlobalSport/state-decorator/blob/develop/doc/state-decorator-logo-small.png?raw=true" alt="useLocalStore logo"/>
 </p>
 
-The StateDecorator is a set of Reacts hook that manages a complex component state in an easy, testable and deterministic way.
+The StateDecorator is a set of React hooks that manage a complex component state in an easy, testable and deterministic way.
 
 # Features
 
 - Deterministic state changes (clear separation of effects and side effects)
 - Ease asynchronous actions state changes (loading / error states, success & error handlers, parallel actions management, optimistic updates...)
 - Easily and efficiently share slices of state.
-- Easily testable (uses pure functions, utility functions provided)
+- Easily testable (test framework provided)
 - Easily update state from or react to props changes
-- Ease debugging (trace state changes)
+- Ease debugging (trace state changes, dev tools)
 - Improve code conciseness (no boiler plate code)
-- Enforce separation of container components and presentation components.
-- Strongly typed
+- Strongly typed (Typescript)
+
+# V7: Partial state and new hooks
+
+- React 18 support
+- All effects now return a partial state that will be merged with current state.
+- More documentation on global and local store use cases.
+- **useLocalStore** now have a parameter to specify if the React component must re-rerender after a state change.
+- New **useStoreContextSlice** hook was added to get a slice of a store in a context.
+- New **onMountDeferred** to execute initialization code after initial render
+- New effect helpers
+- See migration details in [migration section](#migration).
 
 # 🏎️ V6: The Store
 
@@ -48,8 +58,7 @@ yarn add state-decorator
 ### Example
 
 ```typescript
-import React from 'react';
-import { useLocalStore, StoreActions } from 'state-decorator';
+import { useLocalStore, StoreConfig } from "state-decorator";
 
 // Typings
 
@@ -74,46 +83,50 @@ type Props = {
 };
 
 // Initial state & actions
+const config: StoreConfig<State, Actions, Props> = {
+  getInitialState: () => ({
+    selectedUserId: null,
+    user: null,
+  }),
 
-export const getInitialState = (): State => ({
-  selectedUserId: null,
-  user: null,
-});
+  actions: {
+    // synchronous action (simple form)
+    selectUser: ({ args: [id] }) => ({ selectedUserId: id }),
 
-export const userAppActions: StoreActions<State, Actions, Props> = {
-  // synchronous action (simple form)
-  selectUser: ({ state, args: [id] }) => ({ ...state, selectedUserId: id }),
-
-  // a synchronous action with side effects
-  selectAndLoadUser: {
-    // same as simple form, using aliases (use short context alias 's' instead of 'state')
-    // effects contain only immutable state changes
-    effects: ({ s, args: [id] }) => ({ ...s, selectedUserId: id }),
-    // side effects (ie. other effects than state changes), using "actions" alias
-    sideEffects: ({ a }) => {
-      a.loadUser();
+    // a synchronous action with side effects
+    selectAndLoadUser: {
+      // effects contain only immutable state changes
+      effects: ({ args: [id] }) => ({ selectedUserId: id }),
+      // side effects (ie. other effects than state changes), using "actions" alias
+      sideEffects: ({ a }) => {
+        a.loadUser();
+      },
     },
-  },
 
-  // asynchronous action
-  loadUser: {
-    // promise provider, can use action context (ctx) to get current state, args, props etc.
-    getPromise: (ctx) => Promise.resolve({ firstName: 'John', lastName: 'Doe' }),
-    // state changes
-    effects: ({ s, res }) => ({ ...s, user: res }),
-    // state changes if error
-    errorEffects: ({ s, error }) => ({ ...s, user: null }),
-    // side effects here
-    sideEffects: ({ res, actions }) => {},
-    // side effects if error
-    errorSideEffects: ({ err, actions }) => {},
-    // many more options available here, read the doc!
+    // asynchronous action
+    loadUser: {
+      // promise provider, can use action context (ctx) to get current state, args, props etc.
+      getPromise: (ctx) =>
+        Promise.resolve({ firstName: "John", lastName: "Doe" }),
+      // state changes
+      effects: ({ res }) => ({ user: res }),
+      // state changes if error
+      errorEffects: ({ error }) => ({ user: null }),
+      // side effects here
+      sideEffects: ({ res, actions }) => {},
+      // side effects if error
+      errorSideEffects: ({ err, actions }) => {},
+      // many more options available here, read the doc!
+    },
   },
 };
 
+
 // Bind to react component and use state/actions
 export function App(props: Props) => {
-  const { state, actions } = useLocalStore(getInitialState, userAppActions, props);
+
+  const { state, actions } = useLocalStore(config);
+
   return (
     <div>
       {state.user && (
@@ -139,11 +152,12 @@ export function App(props: Props) => {
 
 # React hooks
 
-| Hook          | Purpose                                                | Component refreshed on store change | Store is destroyed on unmount |
-| ------------- | ------------------------------------------------------ | ----------------------------------- | ----------------------------- |
-| useLocalStore | Create a store and binds it to the react component     | Y                                   | Y                             |
-| useStore      | Binds an existing store to a react component (sharing) | Y                                   | Y                             |
-| useStoreSlice | Binds a store slice to a react component (sharing)     | If slice has changed only           | N                             |
+| Hook                 | Purpose                                             | Returns | Is component refreshed on store change? | Is store destroyed on unmount? |
+| -------------------- | --------------------------------------------------- | ------- | --------------------------------------- | ------------------------------ |
+| useLocalStore        | Create a store and binds it to the react component. | Store   | if **refreshOnUpdate** is set           | Y                              |
+| useStore             | Binds a store instance to the react component.      | Store   | yes                                     | N                              |
+| useStoreSlice        | Get a slice of a store.                             | Slice   | If slice has changed only               | N                              |
+| useStoreContextSlice | Get a slice of a store stored in a context          | Slice   | If slice has changed only               | N                              |
 
 # React 18 compatibility
 
@@ -157,12 +171,15 @@ V6 is designed to work with a react version supporting hooks (>=16.8) but as Rea
 The initial state is build using a function provided to the store.
 
 ```typescript
-export const getInitialState = (p: Props): State => ({
-  counter: 0,
-});
+const config: StoreConfig<State, Actions, Props> = {
+  getInitialState: (p) => ({ counter: 0 }),
+  actions: {
+    /* ... */
+  },
+};
 
 export const CounterContainer = () => {
-  const { state, actions } = useLocalStore(getInitialState, actionsImpl);
+  const { state, actions } = useLocalStore(config);
   return <CounterView {...state} {...actions} />;
 };
 ```
@@ -197,14 +214,16 @@ The StateDecorator is taking a list of actions and decorate them to inject state
 ## Short form
 
 ```typescript
-action: (ctx) => ctx.state, // state changes
+action: (ctx) => ctx.state, // changes to be merged to current state
 ```
 
 Example:
 
 ```typescript
-const actions: StoreActions<State, Actions> = {
-  setText: ({ s, args: [newText] }) => ({ ...s, text: newText }),
+const config: StoreConfig<State, Actions, Props> = {
+  actions: {
+    setText: ({ args: [newText] }) => ({ text: newText }),
+  },
 };
 ```
 
@@ -212,40 +231,45 @@ const actions: StoreActions<State, Actions> = {
 
 ```typescript
 action: {
-  effects: (ctx) => ctx.state, // state changes
-  sideEffects: (ctx) => {
-    // side effect code
-  },
   // debounce effect and side effects if > 0
   debounceTimeout: 0,
 
   // debounce side effects if > 0
   debounceSideEffectsTimeout: 0,
+
+  effects: (ctx) => ctx.state, // state changes
+
+  sideEffects: (ctx) => {
+    // side effect code
+  },
+
 }
 ```
 
 Example:
 
 ```typescript
-const actions: StoreActions<State, Actions> = {
-  setText: {
-    effects: ({ s, args: [newText] }) => ({ ...s, text: newText }),
-    // use either debounceTimeout or debounceSideEffectsTimeout
-    // debounceTimeout: 5000,
-    debounceSideEffectsTimeout: 5000,
-    sideEffects: ({ a }) => {
-      a.saveDocument();
+const config: StoreConfig<State, Actions, Props> = {
+  actions: {
+    setText: {
+      effects: ({ args: [newText] }) => ({ text: newText }),
+      // use either debounceTimeout or debounceSideEffectsTimeout
+      // debounceTimeout: 5000,
+      debounceSideEffectsTimeout: 5000,
+      sideEffects: ({ a }) => {
+        a.saveDocument();
+      },
     },
   },
 };
 ```
 
-[![See Debounce demo](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/debounce-forked-tmk2j?file=/src/Debounce.tsx)
+[![See Debounce demo](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/debounce-v7-i5om2e?file=/src/Debounce.tsx)
 
-## Recipes
+## Notes
 
 - If the effects function returns `null`, the side effects, if any, are not executed when the action is called.
-- If not effects function is defined by side effects function is provided, the side effects will be executed when the action is called.
+- If **no** effects function is defined but a side effects function is provided, the side effects will be executed when the action is called.
 
 ## Cancel action
 
@@ -276,14 +300,16 @@ action: {
 Example:
 
 ```typescript
-const actions: StoreActions<State, Actions> = {
-  loadList: {
-    getPromise: () => fetch('https://myapi/myservices').then((res) => (res.ok ? res.json() : Promise.reject())),
-    effects: ({ s, res }) => ({ ...s, list: res }),
-    sideEffects: ({ a }) => {
-      a.otherAction();
+const config: StoreConfig<State, Actions, Props> = {
+  actions: {
+    loadList: {
+      getPromise: () => fetch('https://myapi/myservices').then((res) => (res.ok ? res.json() : Promise.reject())),
+      effects: ({ res }) => ({ list: res }),
+      sideEffects: ({ a }) => {
+        a.otherAction();
+      },
+      getErrorMessage: () => 'Cannot load list',
     },
-    getErrorMessage: () => 'Cannot load list',
   },
 };
 ```
@@ -381,11 +407,13 @@ const store = useLocalStore(getInitialState, actionsImpl, props, {
 
 ```typescript
 // action implementation
-const actions: StoreActions<State, Actions> = {
-  loadList: {
-    getPromise: () => new Promise((_, reject) => setTimeout(reject, 500, new Error('Too bad'))),
-    getSuccessMessage: () => 'success!',
-    getErrorMessage: ({ err }) => `Error: ${err.message}`,
+const config: StoreConfig<State, Actions, Props> = {
+  actions: {
+    loadList: {
+      getPromise: () => new Promise((_, reject) => setTimeout(reject, 500, new Error('Too bad'))),
+      getSuccessMessage: () => 'success!',
+      getErrorMessage: ({ err }) => `Error: ${err.message}`,
+    },
   },
 };
 ```
@@ -402,7 +430,7 @@ If some actions need to be triggered, set **errorSideEffects**.
 const actions: StoreActions<State, Actions> = {
   loadList: {
     getPromise: () => new Promise((_, reject) => setTimeout(reject, 500, new Error('Too bad'))),
-    errorEffects: ({ state, error }) => ({ ...state, error: error.message, list: [] }),
+    errorEffects: ({ error }) => ({ error: error.message, list: [] }),
     getErrorMessage: ({ err }) => err.message,
     errorSideEffects: ({ error }) => {
       Logger.log(error);
@@ -472,7 +500,7 @@ It can takes the following values (use **ConflictPolicy** enum), choose the one 
   - A **getPromiseId** function must be provided to assign an identifier to each call from call arguments.
   - The **isLoading** function will return the loading state for each promise identifier.
 
-[![Edit ConflictPolicy](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/conflictpolicy-v6-fhqco)
+[![Edit ConflictPolicy](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/conflictpolicy-v7-1bcwht?file=/src/ConflictPolicy.tsx)
 
 ## Retry
 
@@ -502,10 +530,20 @@ setGlobalConfig({
 On a specific store:
 
 ```typescript
-import { createStore } from 'state-decorator';
+import { createStore, StoreConfig } from 'state-decorator';
 import { optimisticActions } from 'state-decorator/middlewares';
 
-const store = createStore(getInitialState, actionsImpl, options, [optimisticActions()],
+const config: StoreConfig<State, Actions, Props> = {
+  getInitialState: () => ({
+    /* ... */
+  }),
+  actions: {
+    /* ... */
+  },
+  middlewares: [optimisticActions()],
+};
+
+const store = createStore(config);
 ```
 
 An optimistic action assumes that the action will, most of the time, succeed. So it will apply the effects as soon as the asynchronous action is called (as opposite to the regular effects which are applied when the promise is resolved).
@@ -523,16 +561,18 @@ The undo strategy is the following:
 Example:
 
 ```typescript
-const actions: StoreActions<State, Actions> = {
-  deleteItem: {
-    getPromise: ([id]) => new Promise((resolve) => setTimeout(resolve, 500)),
-    optimisticEffects: (state, args) => ({ ...state, list: list.filter((item) => item.id === args[0]) }),
-    errorEffects: (state, error: Error) => ({ ...state, error: error.message }),
+const config: StoreConfig<State, Actions, Props> = {
+  actions: {
+    deleteItem: {
+      getPromise: ([id]) => new Promise((resolve) => setTimeout(resolve, 500)),
+      optimisticEffects: ({ args: [id] }) => ({ list: list.filter((item) => item.id === id) }),
+      errorEffects: ({err} => ({ err: error.message }),
+    },
   },
 };
 ```
 
-[![Edit Optimistic actions](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/optimistic-actions-v6-mvsoh?file=/src/Optimistic.tsx)
+[![Edit Optimistic actions](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/optimistic-actions-v7-w3b8ht?file=/src/Optimistic.tsx)
 
 **Notes**:
 
@@ -551,26 +591,28 @@ Ongoing asynchronous actions can be aborted using, under the hood, the [AbortCon
 3. An abort is a specific failure of an action, ie. **errorEffects** and **errorSideEffects** will be called. Use the error type and name to distinguish an aborted action from a regular failed action.
 
 ```typescript
-export const actionsAbort: StoreActions<State, Actions, Props> = {
-  onAction: {
-    abortable: true,
-    preEffects: () => ({ isError: false, isSuccess: false, isAborted: false }),
-    getPromise: ({s, args: [willCrash] abortSignal}) =>
-      new Promise((resolve, reject) => {
-        const timeout = window.setTimeout(willCrash ? reject : resolve, 2500, willCrash ? new Error('boom') : 'result');
-        abortSignal.addEventListener('abort', () => {
-          window.clearTimeout(timeout);
-          reject(new DOMException('Aborted', 'AbortError'));
-        });
-      }),
-    errorEffects: ({s, err}) => (err.name === 'AbortError' ? { ...s, isAborted: true } : { ...s, isError: true }),
-    effects: ({s}) => ({ ...s, isSuccess: true }),
-    errorSideEffects: ({s, err}) => {
-      if (e.name === 'AbortError') {
-        console.log('AbortError side effect');
-      } else {
-        console.log('Other error side effect');
-      }
+const config: StoreConfig<State, Actions, Props> = {
+  actions: {
+    onAction: {
+      abortable: true,
+      preEffects: () => ({ isError: false, isSuccess: false, isAborted: false }),
+      getPromise: ({s, args: [willCrash] abortSignal}) =>
+        new Promise((resolve, reject) => {
+          const timeout = window.setTimeout(willCrash ? reject : resolve, 2500, willCrash ? new Error('boom') : 'result');
+          abortSignal.addEventListener('abort', () => {
+            window.clearTimeout(timeout);
+            reject(new DOMException('Aborted', 'AbortError'));
+          });
+        }),
+      errorEffects: ({ err}) => (err.name === 'AbortError' ? { isAborted: true } : { isError: true }),
+      effects: () => ({ isSuccess: true }),
+      errorSideEffects: ({ err }) => {
+        if (e.name === 'AbortError') {
+          console.log('AbortError side effect');
+        } else {
+          console.log('Other error side effect');
+        }
+      },
     },
   },
 };
@@ -578,20 +620,78 @@ export const actionsAbort: StoreActions<State, Actions, Props> = {
 
 Note: ongoing abortable actions will be automatically aborted on store destruction (during React component unmount for example). The list of aborted actions is available in the **onUnmount** callback in the store's options.
 
-[![Edit Abort](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/abort-v6-uvnl7)
+[![Edit Abort](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/abort-v7-ts0wrm?file=/src/ParallelAbort.tsx)
+
+## Helper effect functions
+
+For common / simple use cases, some helpers functions are provided to write basic action effects and improve actions readability.
+
+Example
+
+```typescript
+import { setArgIn } from 'state-decorator/helpers';
+
+type State = {
+  myProp: string;
+};
+
+type Actions = {
+  setMyProp: (v: string) => void;
+};
+
+const actions: StoreActions<State, Actions> = {
+  setMyProp: setArgIn('myProp'),
+  // same as
+  // setMyProp: ({ args: [v] }) => ({ myProp: v }),
+
+  setMyProp2: setArgIn('myProp', 'isDirty'),
+  // same as
+  // setMyProp2: ({ args: [v] }) => ({ myProp: v, isDirty: true }),
+};
+```
+
+| Name           | Purpose                                                                                                                                                   | Action signatue                |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ |
+| setArgIn       | Effect function to update a state property from action first argument                                                                                     | (v:T) => void                  |
+| setTrueIn      | Effect function to update a boolean state property to true                                                                                                | () => void                     |
+| setFalseIn     | Effect function to update a boolean state property to false                                                                                               | () => void                     |
+| toggleProp     | Effect function to toggle a boolean state property                                                                                                        | () => void                     |
+| setArgsInMap   | Effect function to update a state property of type Record<string, T> using first action argument as key and second as value                               | (id: string, v:T) => void      |
+| setArgsInArray | Effect function to update a state property of type T[] using first action argument as index and second as value                                           | (index: number, v:T) => void   |
+| setResIn       | Effect function of asynchronous action to update a state property with the result of the promise                                                          | () => Promise<T>               |
+| setResInArray  | Effect function to update a state property of type T[] using index from first action argument as index and as value the result of the promise             | (index: number) => Promise <T> |
+| setResInMap    | Effect function to update a state property of type Record<string, T> using key from first action argument as index and as value the result of the promise | (id: string) => Promise <T>    |
 
 ## Call actions on mount
 
 When store is created (for example whe React component in mounted), the **onMount** option is called.
 
 ```typescript
-import { createStore } from 'state-decorator';
+import { StoreConfig } from 'state-decorator';
 
-const store = createStore(getInitialState, actionsImpl, {
-  onMount: ({ a }) => {
-    a.loadList;
+const config: StoreConfig<State, Actions, Props> = {
+  getInitialState,
+  actions,
+  onMount: ({ p }) => {
+    p.loadParentList();
   },
-});
+};
+```
+
+After React component is mounted using _useLocalStore_, the **onMountDeferred** option is called (in a _useEffect_).
+The **onMount** is called _during_ the render of the hooks. If the onMount code is containing a function that is changing parent state,
+React will not update the parent state and will issue a warning.
+
+```typescript
+import { StoreConfig } from 'state-decorator';
+
+const config: StoreConfig<State, Actions, Props> = {
+  getInitialState,
+  actions,
+  onMountDeferred: ({ p }) => {
+    p.loadParentList();
+  },
+};
 ```
 
 If an initial action is launched each time a property changes, consider using the **onMount** flag of the **onPropsChange** entry.
@@ -601,105 +701,16 @@ If an initial action is launched each time a property changes, consider using th
 When the store is destroyed (for example on React component unmounted), the **onUnmount** option is called.
 
 ```typescript
-import { createStore } from 'state-decorator';
+import { StoreConfig } from 'state-decorator';
 
-const store = createStore(getInitialState, actionsImpl, {
+const config: StoreConfig<State, Actions, Props> = {
+  getInitialState,
+  actions,
   onUnmount: ({ s, abortedActions }) => {
     // ex: store s in local storage
     // ex: clean cache of aborted actions
   },
-});
-```
-
-## State sharing and slices
-
-- Declare a store and bind it to a component using _useStore_ hooks.
-- Deeper in the tree component, use _useStoreSlice_ to get a store slice.
-- Component using slices will be refreshed only if their store slice changes.
-
-```typescript
-import React from 'react';
-import { useStore, useStoreSlice, StoreActions } from 'state-decorator';
-
-// Declare typings & actions as above
-
-// Create a store
-
-export const store = createStore(getInitialState, userAppActions);
-
-// Bind to react component
-
-export function Container(prop: Props) {
-  const { state, actions } = useStore(store, props);
-
-  return <div />;
-}
-
-// Components deeper in the component tree will be refreshed if, and only if,
-// slice is changed (here: text property)
-
-export function SubComponent2() {
-  const s = useStoreSlice(store, ['text']);
-  return <div>{s.text}</div>;
-}
-
-export function SubComponent() {
-  const s = useStoreSlice(store, (s) => ({ text: s.text }));
-  return <div>{s.text}</div>;
-}
-```
-
-[![Edit Slice](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/slices-v6-eg471?file=/src/SliceView.tsx)
-
-# Global configuration
-
-Overrides configuration to set properties that will be used by all stores.
-
-```typescript
-// all parameters are optional
-setGlobalConfig({
-  // Used to clone state and props when managing optimistic conflicting actions.
-  clone: defaultCloneFunc,
-  // Compare to objets and returns if they are equal (slices).
-  comparator: shallow,
-  // Callback function to handle asychronous actions rejected promise (error reporting).
-  asyncErrorHandler: () => {},
-  // Tests if the error will trigger a retry of the action or will fail directly (retry promises)
-  retryOnErrorFunction: (error: Error) => error instanceof TypeError,
-  // Notification function on successful asynchronous action (if success message is set on action)
-  notifySuccess: undefined,
-  // Notification function on failed asynchronous action (if error message is set on action)
-  notifyError: undefined,
-  // Notification function injected in side effects action context (success and error) to notify warning
-  notifyWarning: undefined,
-  // Function called to return common error message if error message is not provided or error not managed in action.
-  // To override locally in action, provide a function that returns _null_.
-  // If _isErrorManaged_ is set to _true_, this function will not be called.
-  getErrorMessage: undefined,
-});
-```
-
-# Update store when props change
-
-## Getting started
-
-```typescript
-import { createStore } from 'state-decorator';
-
-const store = createStore(getInitialState, actionsImpl, {
-  onPropsChange: {
-    // list of depedencies that should trigger effects & side effects if changed
-    getDeps: (p) => [p.id],
-    // state changes, indices contains the indices of dependencies that have changed
-    effects: ({ state, props, indices, isInit }) => ({ ...state, selectedId: props.id }),
-    // other changes (use short aliases)
-    sideEffects: ({ p, a, indices, isInit }) => {
-      a.loadItem(p.id);
-    },
-    // whether apply effects & side effects on mount
-    onMount: true,
-  },
-});
+};
 ```
 
 ## Multiple props change configuration
@@ -711,9 +722,11 @@ The store can manage several props change configurations to have a better granul
 - Side effects are invoked after all effects using computed state
 
 ```typescript
-import { createStore } from 'state-decorator';
+import { StoreConfig } from 'state-decorator';
 
-const store = createStore(getInitialState, actionsImpl, {
+const config: StoreConfig<State, Actions, Props> = {
+  getInitialState,
+  actions,
   onPropsChange: [
     {
       getDeps: (p) => [p.id],
@@ -727,13 +740,13 @@ const store = createStore(getInitialState, actionsImpl, {
     },
     {
       getDeps: (p) => [p.otherProp],
-      effects: ({ state, props, indices }) => ({ ...state, otherProp: props.otherProp }),
+      effects: ({ props, indices }) => ({ otherProp: props.otherProp }),
       sideEffects: ({ p, a }) => {
         a.otherSideEffect(p.otherProp);
       },
     },
   ],
-});
+};
 ```
 
 ## OnMount
@@ -743,35 +756,43 @@ If the onMount flag is set on the props change configuration, the effects and si
 It allows to trigger same actions at creation time and when the dependencies props are changed.
 
 ```typescript
-const store = createStore(getInitialState, actionsImpl, {
+import { StoreConfig } from 'state-decorator';
+
+const config: StoreConfig<State, Actions, Props> = {
+  getInitialState,
+  actions,
   onMount: ({ p }) => {
     a.loadUser(p.userId);
   },
   onPropsChange: [
     {
       getDeps: (p) => [p.userId],
-      effects: ({ s, p }) => ({ ...s, userId: p.userId }),
+      effects: ({ p }) => ({ userId: p.userId }),
       sideEffects: ({ p, a }) => {
         a.loadUser(p.userId);
       },
     },
   ],
-});
+};
 
 // SAME AS
 
-const store = createStore(getInitialState, actionsImpl, {
+import { StoreConfig } from 'state-decorator';
+
+const config: StoreConfig<State, Actions, Props> = {
+  getInitialState,
+  actions,
   onPropsChange: [
     {
       getDeps: (p) => [p.userId],
-      effects: ({ s, p, isInit }) => (isInit ? null : { ...s, userId: p.userId }),
+      effects: ({ p, isInit }) => (isInit ? null : { userId: p.userId }),
       sideEffects: ({ p, a }) => {
         a.loadUser(p.userId);
       },
       onMount: true,
     },
   ],
-});
+};
 ```
 
 **Caution**: the effects are executed too. Use the isInit parameter is passed to the context to apply or not state change.
@@ -781,9 +802,215 @@ const store = createStore(getInitialState, actionsImpl, {
 - Use several prop change configurations to separate dependencies between props and have simple definition.
 - Use onMount flag to have a more systematic and simpler code.
 
+# Global / local Stores and State sharing
+
+There are two ways to share state and actions:
+
+- Using regular props.
+- Using state slices.
+
+There are two types of stores:
+
+- Global store:
+
+  - store is created as an instance (**createStore**) and it is exported from the JS module.
+  - it can be imported in any other JS module.
+  - store lifespan is equal to the application one (ie. it's a singleton).
+
+- Local store:
+  - store is created by a hook (**useLocalStore**) and is bound to a React component (each instance of this component owns its own store).
+  - state and actions can be shared using props or sharing the store itself (see example below)
+  - store is destroyed when its owner React component is unmounted.
+
+## Using props
+
+- Bind a React component to make store state / actions available on React component.
+- Any change in the store (state, loading actions, ...) will trigger a refresh of the bound React component.
+- Pass state / actions using regular React props.
+- Use React.memo to prevent unecessary React re-renders if needed.
+
+### Global store
+
+```typescript
+// Declare typings & actions as above
+
+// Create a store in a dedicated file, named GlobalStore.ts for example
+export const store = createStore(getInitialState, userAppActions);
+
+//----------------------
+
+// In another file
+import { memo } from 'react';
+import { useStore } from 'state-decorator';
+import store from './GlobalStore';
+
+// Bind to react component
+// Each time the store state changes, a re-render is done.
+export function Container(props: Props) {
+  const { state, actions } = useStore(store, props);
+  return (
+    <div>
+      <Title text={state.title} />
+      <Subtitle text={state.subtitle} />
+    </div>
+  );
+}
+
+// Simple presentation components
+// Use memo to prevent re-render if another part of the state has changed than "title"
+const Title = memo(function Title(props: { title: string }) {
+  return <div>{props.text}</div>;
+});
+
+const Subtitle = memo(function Subtitle(props: { subtitle: string }) {
+  return <div>{props.subtitle}</div>;
+});
+```
+
+### Local Store
+
+```typescript
+import { memo } from 'react';
+import { useLocalStore } from 'state-decorator';
+
+// Declare typings & actions as above
+
+// Create and bind to react component
+// Each time the store state changes, a re-render is done.
+export function Container(props: Props) {
+  const { state, actions } = useLocalStore(config, props);
+  return (
+    <div>
+      <Title text={state.title} />
+      <Subtitle text={state.subtitle} />
+    </div>
+  );
+}
+
+// Simple presentation components
+// Use memo to prevent re-render if another part of the state has changed than "title"
+const Title = memo(function Title(props: { title: string }) {
+  return <div>{props.title}</div>;
+});
+
+const Subtitle = memo(function Subtitle(props: { subtitle: string }) {
+  return <div>{props.subtitle}</div>;
+});
+```
+
+## State slices
+
+Using React props implies useless re-renders and optionally memoization.
+
+To prevent this, React provides [context](https://en.reactjs.org/docs/context.html) hooks.
+
+The problem is that if the context contains a complex state with lots of props, if **any** of these props is changing, **all** components that uses this context will be re-rendered.
+
+To overcome this problem, the StateDecorator provides a **useStoreSlice** and **useStoreContextSlice** hook that allow to define and extracts a slice of the state and trigger a re-render of the React component only if the slice has changed.
+
+[![Edit Slice](https://codesandbox.io/static/img/play-codesandbox.svg)](hhttps://codesandbox.io/s/local-state-slices-v7-ehmj6f?file=/src/SliceView.tsx)
+
+## Global Store
+
+```typescript
+// Declare typings & actions as above
+
+// Create a store in a dedicated file, named GlobalStore.ts for example
+export const store = createStore(getInitialState, userAppActions);
+
+//----------------------
+
+import { memo } from 'react';
+import { useStoreSlice } from 'state-decorator';
+import store from './GlobalStore';
+
+export function Container(props: Props) {
+  return (
+    <div>
+      <Title />
+      <Subtitle />
+    </div>
+  );
+}
+
+function Title() {
+  // extracts the "title" slice
+  // component is refresh only if title is changed in the store
+  const { title } = useStoreSlice(store, ['title']);
+  return <div>{title}</div>;
+}
+
+function Subtitle(props: { subtitle: string }) {
+  const { subtitle } = useStoreSlice(store, ['subtitle']);
+  return <div>{subtitle}</div>;
+}
+```
+
+## Local Store
+
+**IMPORTANT**: the context children _MUST_ be with no prop and memoized to prevent refreshes (React can display warning on the console)
+
+```typescript
+// ------- stores/MyStore.ts --------
+
+import React from 'react';
+import { useLocalStore, useStoreContextSlice } from 'state-decorator';
+
+// Declare typings & actions as above
+
+// Create a store context
+
+type StoreContextProps = StoreApi<State, Actions, Props>;
+
+export const StoreContext = createContext<StoreContextProps>(null);
+
+// The StoreContext will allow to access to the store
+// But this context is NOT refreshed if the store state is changed
+export function StoreContextProvider(p: { children: any; propIn: string }) {
+  const { children, ...props } = p;
+  const store = useLocalStore(config, props);
+  return <StoreContext.Provider value={store}>{children}</StoreContext.Provider>;
+}
+
+// In a container file ------------------------
+
+import { StoreContextProvider } from 'stores/MyStore';
+
+// If Container is destroyed store is destroyed
+export function Container(props: Props) {
+  return (
+    <StoreContextProvider {...props}>
+      <SubComponent />
+      <SubComponent2 />
+    </StoreContextProvider>
+  );
+}
+
+// Component deeper in the component tree...
+
+import { StoreContext } from 'stores/MyStore';
+
+function Title() {
+  // extracts the "title" slice
+  // component is refresh only if title is changed in the store
+  const { title } = useStoreContextSlice(StoreContext, ['title']);
+
+  // same as
+  // const store = useContext(StoreContext)
+  // const { title } = useStoreSlice(store, ['title']);
+
+  return <div>{title}</div>;
+}
+
+function Subtitle(props: { subtitle: string }) {
+  const { subtitle } = useStoreContextSlice(StoreContext, ['subtitle']);
+  return <div>{subtitle}</div>;
+}
+```
+
 # Derived state
 
-A derived state is a state that can be deduced from state, props and/or derived state.
+A derived state is a state that can be deduced from state, props or derived state.
 
 ```typescript
 import { createStore } from 'state-decorator';
@@ -852,17 +1079,47 @@ export function App(props: Props) {
 - In general, do **not** compute derived values directly in state, it's error prone as you can forget some places or implement different logic.
 - Use derived state especially if this state is shared accross several sub components
 
-# Debug actions
+# Global configuration
 
-To debug actions, add a middleware to the store.
+Overrides configuration to set properties that will be used by all stores.
+
+```typescript
+// all parameters are optional
+setGlobalConfig({
+  // Used to clone state and props when managing optimistic conflicting actions.
+  clone: defaultCloneFunc,
+  // Compare to objets and returns if they are equal (slices).
+  comparator: shallow,
+  // Callback function to handle asychronous actions rejected promise (error reporting).
+  asyncErrorHandler: () => {},
+  // Tests if the error will trigger a retry of the action or will fail directly (retry promises)
+  retryOnErrorFunction: (error: Error) => error instanceof TypeError,
+  // Notification function on successful asynchronous action (if success message is set on action)
+  notifySuccess: undefined,
+  // Notification function on failed asynchronous action (if error message is set on action)
+  notifyError: undefined,
+  // Notification function injected in side effects action context (success and error) to notify warning
+  notifyWarning: undefined,
+  // Function called to return common error message if error message is not provided or error not managed in action. To override locally in action, provide a function that returns _null_.
+  getErrorMessage: undefined,
+});
+```
+
+# Trace actions
+
+To easily trace effects, use **logEnabled** option, that will automatically add a detailed logger.
+
+To trace effects, add a logger development middleware to the store.
+
+These middlewares are deactivated if the `NODE_ENV` during the build is not `development` or `test`.
 
 ## Concise logger
 
 ```typescript
-import { logEffects } from 'state-decorator/middlewares';
+import { logEffects } from 'state-decorator/development';
 
 function Container(props: Props) {
-  const { state, actions } = useLocalStore(getInitialState, actionsImpl, props, { name: 'My Store' }, [logEffects()]);
+  const { state, actions } = useLocalStore({ getInitialState, actions, middlewares: [logEffects()] });
   return <div />;
 }
 ```
@@ -876,7 +1133,7 @@ function logger(...args: any[]) {
 
 const logMiddleware = logEffects(logger);
 
-const store = createStore(getInitialState, actionsImpl, props, options, [logMiddleware]);
+const store = createStore({ getInitialState, actions, middlewares: [logMiddleware] });
 ```
 
 Example:
@@ -889,12 +1146,10 @@ Example:
 ## Detailed Logger
 
 ```typescript
-import { logDetailedEffects } from 'state-decorator/middlewares';
+import { logDetailedEffects } from 'state-decorator/development';
 
 function Container(props: Props) {
-  const { state, actions } = useLocalStore(getInitialState, actionsImpl, props, { name: 'My Store' }, [
-    logDetailedEffects(),
-  ]);
+  const { state, actions } = useLocalStore({ getInitialState, actions, middlewares: [logDetailedEffects()] });
   return <div />;
 }
 ```
@@ -915,15 +1170,17 @@ Example:
  ║ calendarEndDate : null => 2018-08-19T22:00:00.000Z
 ```
 
+Note: In v7, it can be activated by adding `logEnabled: true` in the configuration.
+
 ## Redux devtools
 
 You can connect any StateDecorator store to [Chrome Redux devtools extension](https://chrome.google.com/webstore/detail/redux-devtools/lmhkpmbekcpmknklioeibfkpmmfibljd?hl=en) by adding the `devtools` middleware to the store.
 
 ```typescript
-import { devtools } from 'state-decorator/middlewares';
+import { devtools } from 'state-decorator/development';
 
 function Container(props: Props) {
-  const { state, actions } = useLocalStore(getInitialState, actionsImpl, props, { name: 'My Store' }, [devtools()]);
+  const { state, actions } = useLocalStore({ getInitialState, actions, middlewares: [devtools()] });
   return <div />;
 }
 ```
@@ -935,11 +1192,11 @@ function Container(props: Props) {
   - a new store is created each time state or props are set.
   - it allows to share mock store across tests.
 - The API is chainable: functions are returning a mock store, excepting test functions.
-- On a mock store, we can test the store internals after initialiation, after inbound props have changed, after actions are called.
+- On a mock store, we can test the store internals after initialiation, after inbound props have changed, after actions are called. These test function do not change the internal state of the mock store.
 
 ## Getting started
 
-1. Create and setup a mock store (_createMockFromStore_)
+1. Create and setup a mock store (_createMockFromStore_, _createMockStore_)
 2. Test store after initialization (_onInit_)
 3. Test store after props changes (_onPropsChange_)
 4. Test each action:
@@ -965,7 +1222,8 @@ describe('Todo', () => {
   // this store can be shared accross tests because it is immutable
   const store = createMockFromStore(todoStore)
     // or
-    //   const store = createMockStore(getInitialState, actions, props, options)
+    //   const store = createMockStore(storeConfig, props)
+
     // initial state / props can be set in full form or partial form
     .setPartialState({
       idCount: 3,
@@ -1301,6 +1559,7 @@ If an error is triggered during the action and this error was managed (in _error
 import { ActionError } from 'state-decorator/test';
 
 // asyncManagedError: {
+//   rejectPromiseOnError: true,
 //   getPromise: () => Promise.reject(new MyError()),
 //   errorEffects: ({ s }) => ({ ...s, error: true })
 // },
@@ -1388,6 +1647,13 @@ TypeError: Cannot set property 'crash' of null
 
 ## API
 
+### Create mock store
+
+| Name                | Parameters                                       |                                   |
+| ------------------- | ------------------------------------------------ | --------------------------------- |
+| createMockStore     | (config: StoreConfig, props: Props) => MockStore | Create a mock store from a config |
+| createMockFromStore | (store: StoreAPI) => MockStore                   | Create a mock store from a store  |
+
 ### MockStore
 
 | Function        | Arguments                            | Returns             | Description                                                                                 |
@@ -1427,6 +1693,20 @@ TypeError: Cannot set property 'crash' of null
 - Immutability: each effects **must** return a new state instance (or `null` if there's no change).
 - I recommend using [Immer](https://github.com/immerjs/immer) to manage complex cases (deep nesting). A **immerizeActions** action decorator is provided to decorate each effect with Immer.
 
+# Build
+
+This library provides CJS and ES files.
+
+Webpack users should add this alias rule to prevent importing both (especially when importing another file than `index.js`):
+
+```js
+resolve: {
+  alias: {
+    'state-decorator': 'state-decorator/es',
+  },
+},
+```
+
 # Limitations
 
 - Due to bundle size constraints and used in specific use cases only, a basic function is used to clone state / props / arguments in conflicting actions and optimistic effects use cases. In some edge cases (like clone moment objects, class instances), you must provide a clone implementation like Lodash cloneDeep implementation.
@@ -1437,7 +1717,66 @@ TypeError: Cannot set property 'crash' of null
 
 # Migration
 
-## Step 1: v5 compatibility layer
+## V6 to V7
+
+### Step 1: V6 compatibility layer
+
+Only **useLocalStore** is supported by compatiblity layer.
+
+```diff
+-import useLocalStore from 'state-decorator';
++import useLocalStore from 'state-decorator/v6';
+```
+
+### Step 2: Migrate code
+
+- Merge _getInitialState_, _actions_, _options_ in a single object.
+- Remove state spread in effects
+
+```diff
+- const getInitialState: (p:Props) => ({myProp: ''});
+-
+- const actions: StoreActions<State, Actions, Props> = {
+-  myAction: ({s, args: [v]}) => ({ ...s, myProp: v })
+-}
+-
+- const options: StoreOptions<State, Action, Props> = {
+-   onMount: () => {},
+-   onPropsChange: {
+-     getDeps: () => [],
+-     effects: ({s, p}) => ({ ...s, myProp: p.prop }),
+-   }
+- };
+-
+- function MyComponent(p:Props) {
+-   const {state, actions} = useLocalStore(getInitialState, actions, props, options, [logEffects()]);
+-   return <div>{myProp}</div>;
+- }
+
++ const config:StoreConfig<State, Actions, Props> = {
++   getInitialState: () => ({ myProp: '' }),
++   actions: {
++     myAction: ({args: [v]}) => ({ myProp: v})
++     // or
++     myAction: setArgIn('myProp'),
++   },
++   onMount: () => {},
++   onPropsChange: {
++     getDeps: () => [],
++     effects: ({ p }) => ({ myProp: p.prop })
++   },
++   middlewares: [logEffects()],
++ }
++
++ function MyComponent(p:Props) {
++   const {state, actions} = useLocalStore(config);
++   return <div>{myProp}</div>;
++ }
+```
+
+## V5 to V6
+
+### Step 1: v5 compatibility layer
 
 To use the new engine while still using v5 API, juste import the v5 compatibility layer.
 You can new store in new code.
@@ -1458,26 +1797,26 @@ setGlobalConfig({
 });
 ```
 
-## Step 2: Migrate code but keep v5 tests
+### Step 2: Migrate code but keep v5 tests
 
-### Code
+#### Code
 
-#### Types
+##### Types
 
 | Before                | After        |
 | --------------------- | ------------ |
 | StateDecoratorActions | StoreActions |
 | StateDecoratorOptions | StoreOptions |
 
-#### Optimistic actions
+##### Optimistic actions
 
 If you are using optimistic effects, make sure to set the **optimisticActions** middleware to your stores, see [Optimistic actions](#optimistic-actions).
 
-### Hooks
+#### Hooks
 
 Choose one of _useLocalStore_, _useStore_, _useStoreSlice_.
 
-### Actions
+#### Actions
 
 - rename action properties
 
@@ -1518,9 +1857,9 @@ Choose one of _useLocalStore_, _useStore_, _useStoreSlice_.
   };
 ```
 
-### Options
+#### Options
 
-#### onMount
+##### onMount
 
 ```diff
 - const options: StateDecoratorOptions<S, A, P> = {
@@ -1532,7 +1871,7 @@ Choose one of _useLocalStore_, _useStore_, _useStoreSlice_.
 +} ;
 ```
 
-#### logEnabled
+##### logEnabled
 
 ```diff
 - function Container(props: Props) {
@@ -1548,7 +1887,7 @@ Choose one of _useLocalStore_, _useStore_, _useStoreSlice_.
 + }
 ```
 
-#### Props changes
+##### Props changes
 
 ```diff
 - const options: StateDecoratorOptions<S, A, P> = {
@@ -1570,7 +1909,7 @@ Choose one of _useLocalStore_, _useStore_, _useStoreSlice_.
 +} ;
 ```
 
-### Reuse v5 tests with v6 actions
+#### Reuse v5 tests with v6 actions
 
 ```diff
 - import { testSyncAction, testAsyncAction } from 'state-decorator';
@@ -1578,7 +1917,7 @@ Choose one of _useLocalStore_, _useStore_, _useStoreSlice_.
 + import { testV6SyncAction, testV6AsyncAction } from 'state-decorator/v5_test';
 ```
 
-## Step 3 (optional): Migrate tests
+### Step 3 (optional): Migrate tests
 
 🎊 Congratulations! 🎊
 
@@ -1586,13 +1925,13 @@ Choose one of _useLocalStore_, _useStore_, _useStoreSlice_.
 
 ## TodoApp
 
-[![Edit Todo](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/todo-forked-ml0z6?file=/src/TodoApp.tsx)
+[![Edit Todo](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/todo-v7-m94sm2?file=/src/TodoApp.tsx)
 
 ## Conflicting actions
 
 Show various ways of handling conflicting actions, ie. asynchronous actions triggered when a previous action of same type is still ongoing.
 
-[![Edit ConflictPolicy](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/conflictpolicy-v6-fhqco)
+[![Edit ConflictPolicy](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/conflictpolicy-v7-1bcwht?file=/src/ConflictPolicy.tsx)
 
 ## Parallel actions
 
@@ -1612,7 +1951,7 @@ const parallelActions: StoreActions<State, Actions> = {
 };
 ```
 
-[![Edit Parallel](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/conflictpolicy-v6-fhqco?file=/src/Parallel.tsx)
+[![Edit Parallel](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/conflictpolicy-v7-1bcwht?file=/src/Parallel.tsxx)
 
 # Visual Studio Code user snippet
 
@@ -1626,34 +1965,27 @@ You can add this snippet to quickly create a stateful functional component using
       "import React from 'react';",
       "import { useStore, StoreActions, LoadingProps } from 'state-decorator';",
       "",
-      "export type $1Props = {};",
+      "export type Props = {};",
       "",
-      "export type $1State = {};",
+      "export type State = {};",
       "",
-      "export type $1Actions = {};",
-      "",
-      "type Props = $1Props;",
-      "type State = $1State;",
-      "type Actions = $1Actions;",
+      "export type Actions = {};",
       "",
       "type ViewProps = Props & Actions & State & Pick<LoadingProps<Actions>, 'loadingMap'>;",
       "",
-      "export function getInitialState(p:$1Props): State {",
-      "return {};",
+      "export const storeConfig: StoreConfig<State, Actions, Props> = {",
+      "  getInitialState: (p:$1Props) => ({",
+      "  }),",
+      "  actions: {",
+      "  }",
       "};",
       "",
       "export function $1View(p: ViewProps) {",
       "  return (<div>[$1View]</div>);",
       "}",
       "",
-      "export const actions$1: StoreActions<State, Actions, Props> = {};",
-      "",
-      "export function onMount(actions:$1Actions) {}",
-      "",
-      "const store = createStore(getInitialState, actions$1, { onMount });",
-      "",
       "export default React.memo(function $1(p: $1Props) {",
-      "  const { state:s, actions:a, loadingMap } = useStore(store, p);",
+      "  const { state:s, actions:a, loadingMap } = useLocalStore(config, p);",
       "  return <$1View {...p} {...s} {...a} loadingMap={loadingMap} />;",
       "});"
     ],

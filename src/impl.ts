@@ -1,4 +1,4 @@
-/*! *****************************************************************************
+/* ! *****************************************************************************
 Copyright (c) GlobalSport SAS.
 
 Permission to use, copy, modify, and/or distribute this software for any
@@ -93,7 +93,7 @@ export type AsyncActionExecContext<S, DS, F extends (...args: any[]) => any, A e
   stateRef: Ref<S>;
   derivedStateRef: Ref<DerivedState<DS>>;
   propsRef: Ref<P>;
-  loadingMapRef: Ref<InternalLoadingMap<A>>;
+  loadingParallelMapRef: Ref<InternalLoadingMap<A>>;
   errorMapRef: Ref<ErrorParallelMap<A>>;
   promisesRef: Ref<PromiseMap<A>>;
   conflictActionsRef: Ref<ConflictActionsMap<A>>;
@@ -255,6 +255,7 @@ function clone(obj: any) {
   } catch (e) {
     const msg =
       'StateDecorator: Cannot clone object. Set setCloneFunction on global global with another implementation like lodash/cloneDeep.';
+    // @ts-ignore
     if (process.env.NODE_ENV === 'development') {
       console.error(msg);
       console.error(e.toString());
@@ -520,12 +521,14 @@ export function buildOnPropChangeEffects<S, DS, P>(
   propsRef: Ref<P>,
   indices: number[],
   index: number,
-  isInit: boolean
+  isInit: boolean,
+  getInitialState: (p: P) => S
 ): OnPropsChangeEffectsContext<S, DS, P> {
   const res = buildInvocationContextBase(stateRef, derivedStateRef, propsRef) as OnPropsChangeEffectsContext<S, DS, P>;
   res.indices = indices;
   res.index = index;
   res.isInit = isInit;
+  res.getInitialState = getInitialState;
   return res;
 }
 
@@ -647,11 +650,21 @@ function addSideEffectsContext<S, DS, T extends { s: S; state: S }, A>(
 }
 
 function notInitWarning<A>(actionName: keyof A) {
+  // @ts-ignore
   if (process.env.NODE_ENV === 'development') {
     console.warn(
-      `[state-decorator] ${actionName.toString()} action was called while store is not initialized or destroyed, this is probably a leak`
+      `[state-decorator] ${
+        actionName as string
+      } action was called while store is not initialized or destroyed, this is probably a leak`
     );
   }
+}
+
+function mergeState<S>(stateRef: Ref<S>, newState: Partial<S>, options: StoreOptions<any, any>): S {
+  if (options?.fullStateEffects) {
+    return newState as S;
+  }
+  return newState == null ? null : { ...stateRef.current, ...newState };
 }
 
 /** @internal */
@@ -662,6 +675,7 @@ export function decorateSimpleSyncAction<S, DS, F extends (...args: any[]) => an
   derivedStateRef: Ref<DerivedState<DS>>,
   propsRef: Ref<P>,
   initializedRef: Ref<boolean>,
+  options: StoreOptions<S, A, P, DS>,
   setState: SetStateFunc<S, A>
 ) {
   return (...args: Parameters<F>) => {
@@ -672,7 +686,7 @@ export function decorateSimpleSyncAction<S, DS, F extends (...args: any[]) => an
     }
 
     const ctx = buildInvocationContext(stateRef, derivedStateRef, propsRef, args);
-    const newState = action(ctx);
+    const newState = mergeState(stateRef, action(ctx), options);
     setState(newState, null, actionName, 'effects', false, ctx, false);
   };
 }
@@ -695,7 +709,7 @@ function executeSyncActionImpl<S, DS, F extends (...args: any[]) => any, A exten
 
   let actionDropped = false;
   if (action.effects != null) {
-    const newState: S = action.effects(ctx);
+    const newState: S = mergeState(stateRef, action.effects(ctx), options);
     if (newState === null) {
       actionDropped = true;
     } else {
@@ -800,7 +814,7 @@ function processPromiseSuccess<S, DS, F extends (...args: any[]) => any, A exten
     propsRef,
     promisesRef,
     actionsRef,
-    loadingMapRef,
+    loadingParallelMapRef: loadingMapRef,
     conflictActionsRef,
     actionName,
     options,
@@ -819,7 +833,7 @@ function processPromiseSuccess<S, DS, F extends (...args: any[]) => any, A exten
 
   if (action.effects) {
     try {
-      newState = action.effects(ctx);
+      newState = mergeState(stateRef, action.effects(ctx), options);
     } catch (e) {
       return Promise.reject(new EffectError(e));
     }
@@ -874,7 +888,7 @@ function processPromiseFailed<S, DS, F extends (...args: any[]) => any, A extend
     derivedStateRef,
     propsRef,
     actionsRef,
-    loadingMapRef,
+    loadingParallelMapRef: loadingMapRef,
     errorMapRef,
     promisesRef,
     conflictActionsRef,
@@ -896,7 +910,7 @@ function processPromiseFailed<S, DS, F extends (...args: any[]) => any, A extend
 
   if (action.errorEffects) {
     try {
-      newState = action.errorEffects(ctx);
+      newState = mergeState(stateRef, action.errorEffects(ctx), options);
     } catch (e) {
       error = new EffectError(e, err);
     }
@@ -976,12 +990,13 @@ export function decorateAsyncAction<S, DS, F extends (...args: any[]) => any, A 
     propsRef,
     actionsRef,
     promisesRef,
-    loadingMapRef,
+    loadingParallelMapRef: loadingMapRef,
     errorMapRef,
     initializedRef,
     conflictActionsRef,
     actionName,
     setState,
+    options,
   } = context;
 
   return (...args: Parameters<F>): Promise<any> => {
@@ -1017,7 +1032,7 @@ export function decorateAsyncAction<S, DS, F extends (...args: any[]) => any, A 
     const ctx = buildInvocationContext(stateRef, derivedStateRef, propsRef, args, promiseId);
     if (action.preEffects) {
       try {
-        newState = action.preEffects(ctx);
+        newState = mergeState(stateRef, action.preEffects(ctx), options);
       } catch (error) {
         globalConfig.asyncErrorHandler(
           new EffectError(error),
@@ -1156,7 +1171,7 @@ function handleConflictingAction<A>(
         resolve(void 0);
         break;
       case ConflictPolicy.REJECT:
-        reject(new Error(`An asynchronous action ${actionName.toString()} is already ongoing.`));
+        reject(new Error(`An asynchronous action ${actionName as string} is already ongoing.`));
         break;
       case ConflictPolicy.KEEP_LAST: {
         conflictActions[actionName] = [futureAction];
@@ -1297,8 +1312,8 @@ export function fixDerivedDeps<S, A, P, DS>(options: StoreOptions<S, A, P, DS>) 
       return v1 - v2;
     });
 
-    let sortedKeys: DerivedKey[] = [];
-    let usedSet = new Set<DerivedKey>();
+    const sortedKeys: DerivedKey[] = [];
+    const usedSet = new Set<DerivedKey>();
 
     const len = keys.length;
 
@@ -1341,8 +1356,10 @@ export function onPropChange<S, P, A, DS>(
   oldProps: P,
   actionsRef: Ref<A>,
   options: StoreOptions<S, A, P, DS>,
+  getInitialState: (p: P) => S,
   setState: SetStateFunc<S, A>,
-  isInit: boolean
+  isInit: boolean,
+  isDeferred: boolean
 ) {
   const hasDerivedState = options?.derivedState != null;
 
@@ -1377,7 +1394,7 @@ export function onPropChange<S, P, A, DS>(
       const indices: number[] = [];
 
       if (isInit) {
-        if (propsChange.onMount) {
+        if ((!isDeferred && propsChange.onMount) || (isDeferred && propsChange.onMountDeferred)) {
           propChanged = true;
         } else {
           // skip this onPropsChange
@@ -1401,8 +1418,16 @@ export function onPropChange<S, P, A, DS>(
       }
 
       if (propChanged) {
-        const ctx = buildOnPropChangeEffects(newStateRef, derivedStateRef, propsRef, indices, index, isInit);
-        const newState = propsChange.effects?.(ctx) ?? null;
+        const ctx = buildOnPropChangeEffects(
+          newStateRef,
+          derivedStateRef,
+          propsRef,
+          indices,
+          index,
+          isInit,
+          getInitialState
+        );
+        const newState = mergeState(stateRef, propsChange.effects?.(ctx), options);
 
         if (newState != null) {
           stateChanged = true;
