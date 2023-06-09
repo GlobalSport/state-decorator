@@ -865,11 +865,9 @@ function useStoreImpl<S, A extends DecoratedActions, P, DS = {}>(
  * Store will NOT be destroyed when component is unmouted.
  *
  * @param getInitialState Function to compute initial state from props.
- * @param actionImpl Actions implementation.
  * @param props Owner component props to update state or react on prop changes
- * @param options The store options.
  * @param refreshOnUpdate Whether refresh the component if store state changes.
- * @returns The state, actions and isLoading function.
+ * @returns The Store
  */
 export function useLocalStore<S, A extends DecoratedActions, P, DS = {}>(
   config: StoreConfig<S, A, P, DS>,
@@ -890,6 +888,45 @@ export function useLocalStore<S, A extends DecoratedActions, P, DS = {}>(
   }, []);
 
   return useStoreImpl(storeRef.current, props, refreshOnUpdate);
+}
+
+/**
+ * Binds a store to a component and inject props.
+ * This hook must be the only one used with this store (or else props will the set several times).
+ * The component will be refreshed for every change in the store.
+ * Store will NOT be destroyed when component is unmouted.
+ *
+ * @param getInitialState Function to compute initial state from props.
+ * @param actionImpl Actions implementation.
+ * @param props Owner component props to update state or react on prop changes
+ * @returns the Store.
+ */
+export function useBindStore<S, A extends DecoratedActions, P, DS = {}>(store: StoreApi<S, A, P, DS>, props?: P) {
+  store.setProps(props);
+
+  useSyncExternalStore(store.addStateListener, store.getSnapshot);
+
+  useLayoutEffect(() => {
+    // In development mode, React is calling in order:
+    // - render
+    // - useLayoutEffect
+    // - useEffect
+    // - useLayoutEffect => delete callback
+    // - useEffect => delete callback
+    // - useLayoutEffect
+    // - useEffect
+    //
+    // Here we enforce a initialization of the store after a destroy in the useEffect delete callback
+
+    store.init(props);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    store.invokeOnMountDeferred();
+  }, [store]);
+
+  return store;
 }
 
 export default useLocalStore;

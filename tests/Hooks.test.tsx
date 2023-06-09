@@ -13,6 +13,8 @@ import {
   StoreApi,
   useStoreContextSlice,
   StoreOptions,
+  useBindStore,
+  StoreConfig,
 } from '../src';
 import { getTimeoutPromise } from './utils';
 
@@ -25,7 +27,11 @@ type Actions = {
   setAsyncProp1: (p: string) => Promise<string>;
 };
 
-const actionsImpl: StoreActions<State, Actions, any> = {
+type Props = {
+  prop1: string;
+};
+
+const actionsImpl: StoreActions<State, Actions, Props> = {
   setProp1: ({ args: [p] }) => ({ prop1: p }),
   setAsyncProp1: {
     getPromise: () => getTimeoutPromise(100, 'ok'),
@@ -33,16 +39,16 @@ const actionsImpl: StoreActions<State, Actions, any> = {
   },
 };
 
-const getInitialState = (): State => ({
-  prop1: '',
+const getInitialState = (p: Props): State => ({
+  prop1: p?.prop1 ?? '',
 });
 
-type StoreContextProps = StoreApi<State, Actions, any>;
+type StoreContextProps = StoreApi<State, Actions, Props>;
 
 const StoreContext = createContext<StoreContextProps>(null);
 
 function StoreContextProvider(p: { children: any }) {
-  const store = useLocalStore({ getInitialState, actions: actionsImpl }, false);
+  const store = useLocalStore({ getInitialState, actions: actionsImpl }, { prop1: '' }, false);
   return <StoreContext.Provider value={store}>{p.children}</StoreContext.Provider>;
 }
 
@@ -98,10 +104,37 @@ describe('react hooks', () => {
     expect(store.state.prop1).toEqual('v1');
   });
 
+  it('useBindStore works as expected', () => {
+    const storeConfig: StoreConfig<State, Actions, Props> = {
+      getInitialState,
+      actions: actionsImpl,
+      onPropsChange: {
+        getDeps: (p) => [p.prop1],
+        effects: ({ p }) => ({ prop1: p.prop1 }),
+      },
+    };
+    const store = createStore(storeConfig);
+
+    const { result, rerender } = renderHook((props: Props) => useBindStore(store, props), {
+      initialProps: {
+        prop1: 'initial',
+      },
+    });
+    expect(store.state.prop1).toEqual('initial');
+
+    act(() => {
+      store.actions.setProp1('v1');
+    });
+    expect(store.state.prop1).toEqual('v1');
+
+    rerender({ prop1: 'other' });
+    expect(store.state.prop1).toEqual('other');
+  });
+
   it('useStoreSlice works as expected (props)', () => {
     const store = createStore({ getInitialState, actions: actionsImpl });
     // parent hook will init the store
-    store.init({});
+    store.init({ prop1: '' });
 
     const { result } = renderHook(() => useStoreSlice(store, ['prop1', 'setProp1']));
 
@@ -117,7 +150,7 @@ describe('react hooks', () => {
   it('useStoreSlice works as expected (func)', () => {
     const store = createStore({ getInitialState, actions: actionsImpl });
     // parent hook will init the store
-    store.init({});
+    store.init({ prop1: '' });
 
     const { result } = renderHook(() =>
       useStoreSlice(store, (ctx) => ({

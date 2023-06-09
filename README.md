@@ -152,19 +152,13 @@ export function App(props: Props) => {
 
 # React hooks
 
-| Hook                 | Purpose                                             | Returns | Is component refreshed on store change? | Is store destroyed on unmount? |
-| -------------------- | --------------------------------------------------- | ------- | --------------------------------------- | ------------------------------ |
-| useLocalStore        | Create a store and binds it to the react component. | Store   | if **refreshOnUpdate** is set           | Y                              |
-| useStore             | Binds a store instance to the react component.      | Store   | yes                                     | N                              |
-| useStoreSlice        | Get a slice of a store.                             | Slice   | If slice has changed only               | N                              |
-| useStoreContextSlice | Get a slice of a store stored in a context          | Slice   | If slice has changed only               | N                              |
-
-# React 18 compatibility
-
-V6 is designed to work with a react version supporting hooks (>=16.8) but as React 18 is different
-
-- _useLocalStore_ can be safely used in React 18 (as it's using props drilling).
-- _useStore_ and _useStoreSlice_ **cannot** be used with React 18, v7 version will support these use cases.
+| Hook                 | Purpose                                                       | Returns | Is component refreshed on store change? | Is store destroyed on unmount? |
+| -------------------- | ------------------------------------------------------------- | ------- | --------------------------------------- | ------------------------------ |
+| useLocalStore        | Create a store and binds it to the react component.           | Store   | if **refreshOnUpdate** is set           | Y                              |
+| useStore             | Binds a store instance to the react component.                | Store   | yes                                     | N                              |
+| useBindStore         | Binds a store instance to the react component (inject props). | Store   | yes                                     | N                              |
+| useStoreSlice        | Get a slice of a store.                                       | Slice   | yes                                     | N                              |
+| useStoreContextSlice | Get a slice of a store stored in a context                    | Slice   | If slice has changed only               | N                              |
 
 # Initial state
 
