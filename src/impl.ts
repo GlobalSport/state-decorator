@@ -880,7 +880,7 @@ function processPromiseSuccess<S, DS, F extends (...args: any[]) => any, A exten
     );
   }
 
-  processNextConflictAction(actionName, actionsRef.current, conflictActionsRef.current);
+  processNextConflictAction(context.initializedRef, actionName, actionsRef.current, conflictActionsRef.current);
 
   return promiseResult;
 }
@@ -981,7 +981,7 @@ function processPromiseFailed<S, DS, F extends (...args: any[]) => any, A extend
     );
   }
 
-  processNextConflictAction(actionName, actionsRef.current, conflictActionsRef.current);
+  processNextConflictAction(context.initializedRef, actionName, actionsRef.current, conflictActionsRef.current);
 
   const result = !errorHandled || action.rejectPromiseOnError ? Promise.reject(error) : Promise.resolve();
 
@@ -1211,7 +1211,16 @@ function handleConflictingAction<A>(
 /**
  * Processes next conflicting action (see ConflictPolicy) in the queue.
  */
-function processNextConflictAction<A>(actionName: keyof A, actions: A, conflictActions: ConflictActionsMap<A>) {
+function processNextConflictAction<A>(
+  initRef: Ref<any>,
+  actionName: keyof A,
+  actions: A,
+  conflictActions: ConflictActionsMap<A>
+) {
+  if (!initRef.current) {
+    return;
+  }
+
   const futureActions = conflictActions[actionName];
 
   if (futureActions && futureActions.length > 0) {
@@ -1220,12 +1229,12 @@ function processNextConflictAction<A>(actionName: keyof A, actions: A, conflictA
     if (futureAction) {
       const p = (actions[actionName] as any)(...futureAction.args) as Promise<any>;
       if (p == null) {
-        processNextConflictAction(actionName, actions, conflictActions);
+        processNextConflictAction(initRef, actionName, actions, conflictActions);
       } else {
         p.then((res) => {
           if (res === null) {
             // promise was aborted
-            processNextConflictAction(actionName, actions, conflictActions);
+            processNextConflictAction(initRef, actionName, actions, conflictActions);
           }
           futureAction.resolve(res);
         }).catch((e) => futureAction.reject(e));
