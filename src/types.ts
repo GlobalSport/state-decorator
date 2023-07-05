@@ -440,7 +440,7 @@ export type OnPropsChangeOptions<S, DS, A, P, FxRes = Partial<S>> = {
   onMountDeferred?: boolean;
   getDeps: (p: P) => any[];
   effects?: (ctx: OnPropsChangeEffectsContext<S, DS, P>) => FxRes;
-  sideEffects?: (ctx: OnPropsChangeSideEffectsContext<S, P, A>) => void;
+  sideEffects?: (ctx: OnPropsChangeSideEffectsContext<S, P, A, DS>) => void;
 };
 
 export type StoreOptions<S, A, P = {}, DS = {}, FxRes = Partial<S>> = {
