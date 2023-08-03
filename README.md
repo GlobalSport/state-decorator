@@ -28,17 +28,6 @@ The StateDecorator is a set of React hooks that manage a complex component state
 - New effect helpers
 - See migration details in [migration section](#migration).
 
-# 🏎️ V6: The Store
-
-- The v6 is the merge of all the state decorator features and an architecture freely inspired from [zustand](https://github.com/pmndrs/zustand) (kudos to them).
-- New internal architecture, far simpler and more efficient
-- New state sharing feature
-- New derived state support
-- New test framework
-- Updated terminology (less redux, more consistent)
-- Action context: no more arguments order issue
-- See migration details in [migration section](#migration).
-
 # Getting started
 
 ## Installation
