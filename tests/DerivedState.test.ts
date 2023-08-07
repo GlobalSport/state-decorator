@@ -1,11 +1,12 @@
-import { createStore, StoreActions, StoreOptions } from '../src';
+import { createStore, StoreActions, StoreConfig, StoreOptions } from '../src';
+import { setArgIn } from '../src/helpers';
 
 import Graph from '../src/graph';
 
 describe('Derived state', () => {
   type State = {
-    other: number;
-    filter: string;
+    other: number | null;
+    filter: string | null;
     list: string[];
   };
 
@@ -15,18 +16,18 @@ describe('Derived state', () => {
   };
 
   type Props = {
-    filterIn: string;
-    otherProp: string;
-    effectProp: number;
+    filterIn: string | null;
+    otherProp: string | null;
+    effectProp: number | null;
     checkDS: (ds: DerivedState) => void;
   };
 
   type Actions = {
     setList: (list: string[]) => void;
-    setListSideEffects: (list: string[]) => void;
-    setListDebouncedSideEffects: (list: string[]) => void;
-    setAsyncListSideEffects: (list: string[]) => void;
-    setAsyncErrorListSideEffects: (list: string[]) => void;
+    setListSideEffects: (list: string[]) => Promise<any>;
+    setListDebouncedSideEffects: (list: string[]) => Promise<any>;
+    setAsyncListSideEffects: (list: string[]) => Promise<any>;
+    setAsyncErrorListSideEffects: (list: string[]) => Promise<any>;
     setFilter: (filter: string) => void;
     setOther: (p: number) => void;
   };
@@ -665,5 +666,59 @@ describe('Graph', () => {
     graph.setEdges('derived2', ['derived1']);
 
     expect(graph.isCyclic()).toBeFalsy();
+  });
+});
+
+describe.only('Issues', () => {
+  it('null => undefined', () => {
+    type State = {
+      value1: string | null;
+    };
+
+    type Props = {
+      prop1: any;
+      prop2: any;
+    };
+
+    type DerivedState = {
+      derived1: string;
+    };
+
+    type Actions = {
+      setValue: (v: string) => void;
+    };
+
+    const config: StoreConfig<State, Actions, Props, DerivedState> = {
+      initialState: {
+        value1: null,
+      },
+      actions: {
+        setValue: setArgIn('value1'),
+      },
+      derivedState: {
+        derived1: {
+          getDeps: ({ s, p }) => [p.prop1, p.prop2],
+          get: ({ s }) => '' + s.value1,
+        },
+      },
+    };
+
+    const store = createStore(config);
+
+    store.init({
+      prop1: null,
+      prop2: 'init',
+    });
+
+    const listener = jest.fn();
+
+    store.addStateListener(listener);
+
+    store.setProps({
+      prop1: undefined,
+      prop2: 'changed',
+    });
+
+    expect(listener).toHaveBeenCalled();
   });
 });

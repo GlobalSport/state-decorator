@@ -1276,8 +1276,10 @@ export function computeDerivedValues<S, A, P, DS>(
     if (previousDeps == null) {
       compute = true;
     } else {
-      compute =
-        deps.find((dep, index) => (previousDeps.length < index ? true : !compare(previousDeps[index], dep))) != null;
+      const changedPos = deps.findIndex((dep, index) =>
+        previousDeps.length < index ? true : !compare(previousDeps[index], dep)
+      );
+      compute = changedPos !== -1;
     }
 
     hasChanged = hasChanged || compute;
