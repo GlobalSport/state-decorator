@@ -12,7 +12,6 @@ export type State = {
 };
 
 export type Actions = {
-  onTextChange: (text: string) => void;
   onSaveText: (text: string) => Promise<string>;
 };
 
@@ -36,30 +35,35 @@ function getStoreConfig(conflictPolicy: ConflictPolicy): StoreConfig<State, Acti
       status: 'paused',
     }),
     actions: {
-      onTextChange: {
-        effects: ({ s }) => ({ calls: s.calls + 1 }),
-        sideEffects: ({ args: [text], a }) => a.onSaveText(text),
-      },
       onSaveText: {
+        abortable: true,
         conflictPolicy,
-        preEffects: ({ s }) => ({ status: 'running' }),
-        getPromise: ({ args: [text] }) =>
-          new Promise((resolve) => {
-            window.setTimeout(resolve, 2000, text);
+        preEffects: ({ s }) => ({ status: 'running', calls: s.calls + 1 }),
+        getPromise: ({ args: [text], abortSignal }) =>
+          new Promise((resolve, reject) => {
+            let time = Date.now();
+            const id = window.setTimeout(() => {
+              resolve(text);
+            }, 5000);
+            abortSignal.addEventListener('abort', () => {
+              reject(new Error('aborted'));
+              clearTimeout(id);
+            });
           }),
-        effects: ({ s, res: text }) => ({
-          text,
-          executions: s.executions + 1,
-          status: 'succeeded',
-        }),
+        effects: ({ s, res: text }) => {
+          return {
+            text,
+            executions: s.executions + 1,
+            status: 'succeeded',
+          };
+        },
+        rejectPromiseOnError: true,
       },
     },
   };
 }
 
 function ConflictingPolicy(props: Props) {
-  const { title } = props;
-
   const config = useMemo(() => getStoreConfig(props.conflictPolicy), [props.conflictPolicy]);
 
   const { state, actions } = useLocalStore(config);

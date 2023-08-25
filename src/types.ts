@@ -79,6 +79,11 @@ export enum ConflictPolicy {
    * Reuse the ongoing promise if any and if possible (same arguments). Only for GET requests!
    */
   REUSE = 'reuse',
+
+  /**
+   * Abort current promise if it's marked as abortable (make sure to manage properly the rejection)
+   */
+  ABORT = 'abort',
 }
 
 export type PromiseProvider<S, DS, F extends (...args: any[]) => any, A, P> = (

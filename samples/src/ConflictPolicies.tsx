@@ -31,6 +31,12 @@ function ConflictPolicies() {
         description="Return a rejected promise on a conflicting action call."
         usage="Debug the UI"
       />
+      <ConflictPolicy
+        title="Abort"
+        conflictPolicy={Policy.ABORT}
+        description="The current promise is aborted if possible"
+        usage="Drop a long running promise"
+      />
       <Parallel />
     </React.Fragment>
   );
