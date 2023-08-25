@@ -1,5 +1,5 @@
 import { useContext } from 'react';
-import useLocalStore, { LoadingProps, StoreConfig } from './sd';
+import useLocalStore, { LoadingProps, StoreConfig } from './sd_src';
 import { setResIn } from './sd/helpers';
 import { Context, ContextProps, Provider } from './DeferOnMountContext';
 import { Typography } from '@mui/material';

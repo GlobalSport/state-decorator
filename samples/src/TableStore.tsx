@@ -1,4 +1,4 @@
-import { createStore, StoreConfig } from './sd';
+import { createStore, StoreConfig } from './sd_src';
 import produce from 'immer';
 
 export type Row = {

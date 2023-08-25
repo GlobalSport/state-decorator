@@ -1,6 +1,6 @@
 import { Button, Box, CircularProgress } from '@mui/material';
 import { useState } from 'react';
-import useLocalStore, { ConflictPolicy, StoreConfig } from './sd';
+import useLocalStore, { ConflictPolicy, StoreConfig } from './sd_src';
 import { setResIn } from './sd/helpers';
 
 // TYPES ===============================

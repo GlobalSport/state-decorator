@@ -1,8 +1,8 @@
-import { createStore } from './sd';
+import { createStore } from './sd_src';
 import { devtools } from './sd/development';
 import FlashingBox from './FlashingBox';
 import SliceView from './GlobalStateSliceView';
-import { StoreConfig } from './sd';
+import { StoreConfig } from './sd_src';
 import { setResIn } from './sd/helpers';
 
 // Types

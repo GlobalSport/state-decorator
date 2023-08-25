@@ -1,4 +1,4 @@
-import useLocalStore, { StoreConfig } from './sd';
+import useLocalStore, { StoreConfig } from './sd_src';
 import produce from 'immer';
 import TodoView from './TodoView';
 import { setArgIn } from './sd/helpers';

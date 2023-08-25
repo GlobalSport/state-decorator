@@ -1,5 +1,5 @@
 import { Button, Typography } from '@mui/material';
-import { StoreActions, useLocalStore } from './sd';
+import { StoreActions, useLocalStore } from './sd_src';
 
 type State = {};
 type Actions = {

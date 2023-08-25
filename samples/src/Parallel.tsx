@@ -1,5 +1,5 @@
 import React from 'react';
-import useLocalStore, { StoreConfig, StoreActions, ConflictPolicy, AbortActionCallback, IsLoadingFunc } from './sd';
+import useLocalStore, { StoreConfig, StoreActions, ConflictPolicy, AbortActionCallback, IsLoadingFunc } from './sd_src';
 import ParallelView from './ParallelView';
 
 export type Item = {

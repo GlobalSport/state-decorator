@@ -1,4 +1,4 @@
-import useLocalStore, { StoreActions, AbortActionCallback, ConflictPolicy } from './sd';
+import useLocalStore, { StoreActions, AbortActionCallback, ConflictPolicy } from './sd_src';
 
 import { Status } from './types';
 import ParallelAbortView from './ParallelAbortView';

@@ -1,4 +1,4 @@
-import { useStoreSlice } from './sd';
+import { useStoreSlice } from './sd_src';
 
 import { store } from './GlobalStateSlice';
 import FlashingBox from './FlashingBox';

@@ -1,4 +1,4 @@
-import useLocalStore, { StoreConfig } from './sd';
+import useLocalStore, { StoreConfig } from './sd_src';
 import DebounceView from './DebounceView';
 
 // Types

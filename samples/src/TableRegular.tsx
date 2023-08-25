@@ -13,7 +13,7 @@ import {
 import DeleteIcon from '@mui/icons-material/Delete';
 import ArrowUpIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownIcon from '@mui/icons-material/ArrowDownward';
-import { useStoreSlice } from './sd';
+import { useStoreSlice } from './sd_src';
 import FlashingBox, { useFlashingNode } from './FlashingBox';
 import { memo, useRef } from 'react';
 import { Actions, State, store } from './TableStore';

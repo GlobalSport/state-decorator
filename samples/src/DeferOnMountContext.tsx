@@ -1,5 +1,5 @@
 import React, { createContext } from 'react';
-import useLocalStore, { LoadingProps, StoreConfig } from './sd';
+import useLocalStore, { LoadingProps, StoreConfig } from './sd_src';
 import { setResIn } from './sd/helpers';
 
 // TYPES ===============================

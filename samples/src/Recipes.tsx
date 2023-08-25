@@ -1,7 +1,7 @@
 import React, { createContext, memo } from 'react';
 
 import { Box, TextField, Typography } from '@mui/material';
-import useLocalStore, { createStore, StoreApi, useStoreSlice, useStoreContextSlice, StoreConfig } from './sd';
+import useLocalStore, { createStore, StoreApi, useStoreSlice, useStoreContextSlice, StoreConfig } from './sd_src';
 import FlashingBox from './FlashingBox';
 import { setArgIn } from './sd/helpers';
 

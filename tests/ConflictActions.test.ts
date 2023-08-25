@@ -42,7 +42,7 @@ describe('Conflicting actions', () => {
     sideEffects: ({ s, p }) => {
       p.callback('onDone', s);
     },
-    errorSideEffects: ({ p, s }) => {
+    errorSideEffects: ({ p, s, err }) => {
       p.callbackError('onFail', s);
     },
   };
@@ -99,7 +99,7 @@ describe('Conflicting actions', () => {
             if (value === 'v2') {
               return null;
             } else if (value === 'v3') {
-              return (getFailedTimeoutPromise(50, new Error('v3')) as any) as Promise<string>;
+              return getFailedTimeoutPromise(50, new Error('v3')) as any as Promise<string>;
             }
             return getTimeoutPromise(50, value) as Promise<string>;
           },
@@ -479,6 +479,65 @@ describe('Conflicting actions', () => {
       expect(callbackError).not.toHaveBeenCalled();
       done();
     });
+  });
+
+  it('ABORT works as expected', (done) => {
+    const callback = jest.fn();
+    const callbackError = jest.fn();
+
+    const store = createStore<State, Actions, Props>({
+      getInitialState: () => ({
+        values: [],
+        errors: [],
+      }),
+      actions: {
+        setValue: {
+          ...setValueAction,
+          getPromise: ({ args: [value], abortSignal }) =>
+            new Promise<string>((resolve, reject) => {
+              const timeout = window.setTimeout(resolve, 100, value);
+              abortSignal.addEventListener('abort', () => {
+                window.clearTimeout(timeout);
+                reject(new DOMException('Aborted', 'AbortError'));
+              });
+            }),
+          abortable: true,
+          conflictPolicy: ConflictPolicy.ABORT,
+        },
+      },
+    });
+
+    store.setProps({
+      callback,
+      callbackError,
+    });
+
+    const setValue = store.actions.setValue;
+
+    const noop = () => {};
+    // initial
+    setValue('v1').catch(noop);
+
+    // abort v1, launches v2
+    setValue('v2').catch(noop);
+
+    // must wait v2 is running
+    setTimeout(() => {
+      setValue('v3').catch(noop);
+    }, 50);
+
+    // must wait v3 is running
+    setTimeout(() => {
+      setValue('v4').then(() => {
+        expect(store.state).toEqual({
+          values: ['v4'],
+          errors: ['v1', 'v2', 'v3'],
+        });
+        expect(callback).toHaveBeenCalledTimes(1);
+        expect(callbackError).toHaveBeenCalledTimes(3);
+        done();
+      });
+    }, 100);
   });
 
   it('PARALLEL works as expected', () => {

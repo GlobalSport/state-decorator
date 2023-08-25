@@ -1,6 +1,6 @@
 import { createContext } from 'react';
 
-import { useLocalStore, StoreApi, StoreConfig } from './sd';
+import { useLocalStore, StoreApi, StoreConfig } from './sd_src';
 import { setResIn } from './sd/helpers';
 import FlashingBox from './FlashingBox';
 import SliceView from './LocalStateSliceView';

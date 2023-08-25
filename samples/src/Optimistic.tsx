@@ -1,4 +1,4 @@
-import { createStore, IsLoadingFunc, StoreConfig, useStore } from './sd';
+import { createStore, IsLoadingFunc, StoreConfig, useStore } from './sd_src';
 import { optimisticActions as optimisticActionsMiddleware } from './sd/middlewares';
 
 import OptimisticView from './OptimisticView';

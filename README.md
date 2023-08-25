@@ -478,6 +478,7 @@ It can takes the following values (use **ConflictPolicy** enum), choose the one 
 - **ConflictPolicy.KEEP_ALL** (default): All conflicting action calls will be chained and executed one after the other.
 - **ConflictPolicy.KEEP_LAST**: Only the more recent conflicting action call will be executed after the previously ongoing call is resolved. Use case: editor with auto save feature.
 - **ConflictPolicy.REUSE**: If an action is already ongoing, the promise is reused, if the arguments are the same (shallow comparison). Otherwise fallback to **ConflictPolicy.KEEP_ALL**. Useful for GET requests.
+- **ConflictPolicy.ABORT**: For abortablle actions only, current call is aborted and new call is executed right after.
 - **ConflictPolicy.PARALLEL**: Actions are executed in parallel.
   - Use case: several calls with different parameters.
   - A **getPromiseId** function must be provided to assign an identifier to each call from call arguments.

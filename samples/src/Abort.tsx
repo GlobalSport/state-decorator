@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import useLocalStore, { ConflictPolicy, AbortActionCallback } from './sd';
+import useLocalStore, { ConflictPolicy, AbortActionCallback } from './sd_src';
 import { Status } from './types';
 import AbortView from './AbortView';
 import { StoreConfig } from './sd/types';

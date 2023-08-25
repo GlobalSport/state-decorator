@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import useLocalStore, { ConflictPolicy, StoreConfig } from './sd';
+import useLocalStore, { ConflictPolicy, StoreConfig } from './sd_src';
 import ConflictPolicyView from './ConflictPolicyView';
 import { Status } from './types';
 

@@ -9,7 +9,7 @@
  */
 
 import { useState, createContext, memo } from 'react';
-import { useStoreContextSlice, useLocalStore, StoreApi, StoreConfig } from './sd';
+import { useStoreContextSlice, useLocalStore, StoreApi, StoreConfig } from './sd_src';
 import { useRef } from 'react';
 import FlashingBox from './FlashingBox';
 
@@ -173,7 +173,7 @@ export function StateView() {
           <div>prop2: {state.prop2}</div>
           <div>listFiltered: {state.listFiltered.join(', ')}</div>
           <div>errorMap:</div>
-          {((Object.keys(state.errorMap) as unknown) as (keyof Actions)[]).map((k) => (
+          {(Object.keys(state.errorMap) as unknown as (keyof Actions)[]).map((k) => (
             <div key={k}>{`${k} -> ${state.errorMap[k]?.toString()}`}</div>
           ))}
         </div>
