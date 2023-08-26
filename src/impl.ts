@@ -319,6 +319,10 @@ export function isAsyncGetPromiseGetAction<S, DS, F extends (...args: any[]) => 
 export function computeAsyncActionInput<S, DS, F extends (...args: any[]) => any, A, P, FxRes = S>(
   action: AsyncAction<S, F, A, P, DS, FxRes>
 ): AsyncActionPromise<S, F, A, P, DS, FxRes> {
+  if (action.conflictPolicy === ConflictPolicy.ABORT) {
+    action.abortable = true;
+  }
+
   if (isAsyncGetPromiseGetAction(action)) {
     return {
       ...(action as any),
