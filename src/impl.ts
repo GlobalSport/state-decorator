@@ -1032,7 +1032,8 @@ export function decorateAsyncAction<S, DS, F extends (...args: any[]) => any, A 
     }
 
     if (!isParallel && promises[actionName]?.[promiseId]) {
-      return handleConflictingAction(promises, conflictActionsRef.current, actionName, conflictPolicy, args);
+      const res = handleConflictingAction(promises, conflictActionsRef.current, actionName, conflictPolicy, args);
+      return res;
     }
 
     let newState = null;
@@ -1186,6 +1187,12 @@ function handleConflictingAction<A>(
         conflictActions[actionName] = [futureAction];
         break;
       }
+
+      case ConflictPolicy.ABORT:
+        const abortCtrl = promises[actionName][DEFAULT_PROMISE_ID]?.abortController;
+        abortCtrl?.abort('conflict');
+      // stack to call next one when processing is done
+
       case ConflictPolicy.KEEP_ALL: {
         let stack = conflictActions[actionName];
         if (!stack) {
@@ -1199,6 +1206,7 @@ function handleConflictingAction<A>(
       case ConflictPolicy.REUSE:
         // no-op
         break;
+
       default:
         // will trigger a compilation error if one of the enum values is not processed.
         const exhaustiveCheck: never = policy;
@@ -1223,8 +1231,8 @@ function processNextConflictAction<A>(
 
   const futureActions = conflictActions[actionName];
 
-  if (futureActions && futureActions.length > 0) {
-    const futureAction = conflictActions[actionName].shift();
+  if (futureActions?.length > 0) {
+    const futureAction = futureActions.shift();
 
     if (futureAction) {
       const p = (actions[actionName] as any)(...futureAction.args) as Promise<any>;

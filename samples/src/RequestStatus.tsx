@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useImperativeHandle, forwardRef, useRef } from 'react';
 
 import CircularProgress from '@mui/material/CircularProgress';
 import Box from '@mui/material/Box';
@@ -20,38 +20,40 @@ export type RequestStatusProps = {
   size?: number;
 };
 
-export default function RequestStatus(p: RequestStatusProps) {
+export default forwardRef<{ reset: () => void }, RequestStatusProps>(function RequestStatus(p, ref) {
   const { size = 50, duration, status } = p;
   const [seconds, setSeconds] = useState(0);
-  const [isActive, setIsActive] = useState(false);
 
-  function reset() {
+  function restart() {
     setSeconds(0);
-    setIsActive(false);
   }
 
-  useEffect(() => {
-    let interval: any = null;
-    if (isActive) {
-      interval = setInterval(() => {
-        if (seconds * 1000 === duration) {
-          reset();
-        }
-        setSeconds((seconds) => seconds + 250);
-      }, 250);
-    } else if (!isActive && seconds !== 0) {
-      clearInterval(interval);
-    }
-    return () => clearInterval(interval);
-  }, [isActive, seconds, duration]);
+  useImperativeHandle(
+    ref,
+    () => ({
+      reset: restart,
+    }),
+    []
+  );
 
   useEffect(() => {
+    let interval: any;
     if (status === 'running') {
-      setIsActive(true);
-    } else {
-      reset();
+      interval = setInterval(() => {
+        if (seconds >= duration * 1000) {
+          clearInterval(interval);
+        } else {
+          setSeconds(seconds + 250);
+        }
+      }, 250);
+    } else if (seconds !== 0) {
+      setSeconds(0);
+      clearInterval(interval);
     }
-  }, [status]);
+    return () => {
+      clearInterval(interval);
+    };
+  }, [status, seconds, duration]);
 
   let content: JSX.Element;
 
@@ -69,23 +71,7 @@ export default function RequestStatus(p: RequestStatusProps) {
       content = <ErrorOutlineIcon className={clsx(classes.icon, classes.errored)} />;
       break;
     default:
-      content = (
-        <>
-          <CircularProgress variant="determinate" size={size} value={((seconds / 1000) * 100) / duration} />
-          <Box
-            position="absolute"
-            left={0}
-            top={0}
-            width="100%"
-            height="100%"
-            display="flex"
-            alignItems="center"
-            justifyContent="center"
-          >
-            <Typography>{p.duration - Math.floor(seconds / 1000)}</Typography>
-          </Box>
-        </>
-      );
+      content = <CircularProgress variant="indeterminate" size={size} />;
   }
 
   return (
@@ -95,4 +81,4 @@ export default function RequestStatus(p: RequestStatusProps) {
       </Box>
     </Tooltip>
   );
-}
+});

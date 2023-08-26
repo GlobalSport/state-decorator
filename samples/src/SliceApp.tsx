@@ -4,8 +4,6 @@ import GlobalStateSlice from './GlobalStateSlice';
 import LocalStateSlice from './LocalStateSlice';
 
 function SliceApp() {
-  console.log('SLICE');
-
   return (
     <Box>
       <Box sx={{ mb: 2 }}>

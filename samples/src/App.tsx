@@ -55,10 +55,7 @@ export default function App() {
   const onTabChange = (event: React.ChangeEvent<{}>, newValue: number) => {
     setTabId(newValue);
     window.location.hash = `${newValue}`;
-    console.log('newValue', newValue);
   };
-
-  console.log('tabId', tabId);
 
   return (
     <Box className={classes.root}>
