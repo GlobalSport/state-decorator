@@ -434,6 +434,10 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
 
       options?.onUnmount?.(buildOnUnMountInvocationContext(stateRef, derivedStateRef, propsRef, abortedActions));
 
+      Object.keys(timeoutRef.current).forEach((name) => {
+        clearTimeout(timeoutRef.current[name]);
+      });
+
       propsRef.current = null;
       stateRef.current = null;
       loadingParallelMapRef.current = null;
@@ -444,10 +448,6 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
       conflictActionsRef.current = null;
       derivedStateRef.current = null;
       snapshotRef.current = null;
-
-      Object.keys(timeoutRef.current).forEach((name) => {
-        clearTimeout(timeoutRef.current[name]);
-      });
 
       timeoutRef.current = null;
       stateListeners = {};

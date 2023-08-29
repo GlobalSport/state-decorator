@@ -713,6 +713,7 @@ function executeSyncActionImpl<S, DS, F extends (...args: any[]) => any, A exten
   propsRef: Ref<P>,
   actionsRef: Ref<A>,
   timeoutMap: Ref<TimeoutMap<A>>,
+  initializedRef: Ref<boolean>,
   options: StoreOptions<S, A, P, any>,
   setState: SetStateFunc<S, A>,
   clearError: ClearErrorFunc<A>,
@@ -739,6 +740,9 @@ function executeSyncActionImpl<S, DS, F extends (...args: any[]) => any, A exten
       }
 
       timeoutMap.current[actionName] = setTimeout(() => {
+        if (!initializedRef.current) {
+          return;
+        }
         action.sideEffects?.(
           addSideEffectsContext(ctx, stateRef, derivedStateRef, actionsRef, options.notifyWarning, clearError)
         );
@@ -781,6 +785,10 @@ export function decorateSyncAction<S, DS, F extends (...args: any[]) => any, A e
       }
 
       timeoutMap.current[actionName] = setTimeout(() => {
+        if (!initializedRef.current) {
+          return;
+        }
+
         delete timeoutMap.current[actionName];
         executeSyncActionImpl(
           actionName,
@@ -790,6 +798,7 @@ export function decorateSyncAction<S, DS, F extends (...args: any[]) => any, A e
           propsRef,
           actionsRef,
           timeoutMap,
+          initializedRef,
           options,
           setState,
           clearError,
@@ -805,6 +814,7 @@ export function decorateSyncAction<S, DS, F extends (...args: any[]) => any, A e
         propsRef,
         actionsRef,
         timeoutMap,
+        initializedRef,
         options,
         setState,
         clearError,

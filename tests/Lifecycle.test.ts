@@ -78,6 +78,28 @@ describe('Lifecycle', () => {
 
       store.actions.setProp('test');
     });
+
+    it('Call store if destroyed with timeout side effect', async () => {
+      const store = createStore<State, Action, any>({
+        getInitialState: () => ({ prop: '' }),
+        actions: {
+          setProp: {
+            effects: ({ args: [p] }) => ({ prop: p }),
+            debounceSideEffectsTimeout: 100,
+            sideEffects: () => {
+              throw new Error('side effect was triggered');
+            },
+          },
+        },
+      });
+
+      store.init({});
+
+      store.actions.setProp('test');
+
+      store.destroy();
+      await getTimeoutPromise(200);
+    });
   });
 
   describe('sync action', () => {
