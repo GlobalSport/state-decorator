@@ -669,7 +669,7 @@ describe('Graph', () => {
   });
 });
 
-describe.only('Issues', () => {
+describe('Issues', () => {
   it('null => undefined', () => {
     type State = {
       value1: string | null;
@@ -720,5 +720,75 @@ describe.only('Issues', () => {
     });
 
     expect(listener).toHaveBeenCalled();
+  });
+
+  describe('null tests', () => {
+    type State = {
+      prop: string | null;
+    };
+
+    type Actions = {
+      setProp: (v: string | null) => void;
+    };
+
+    type Props = Record<string, never>;
+
+    type DerivedState = {
+      derived: string | null;
+    };
+
+    const storeConfig: StoreConfig<State, Actions, Props, DerivedState> = {
+      getInitialState: () => ({ prop: null }),
+      actions: {
+        setProp: setArgIn('prop'),
+      },
+      derivedState: {
+        derived: {
+          getDeps: ({ s }) => [s.prop],
+          get: ({ s }) => (s.prop ? `${s.prop}_derived` : null),
+        },
+      },
+    };
+
+    it('computes derived state null => not null', () => {
+      const store = createStore({
+        ...storeConfig,
+        getInitialState: () => ({ prop: null }),
+      });
+      store.init({});
+
+      expect(store.state).toEqual({
+        prop: null,
+        derived: null,
+      });
+
+      store.actions.setProp('value');
+
+      expect(store.state).toEqual({
+        prop: 'value',
+        derived: 'value_derived',
+      });
+    });
+
+    it('computes derived state not null => null', () => {
+      const store = createStore({
+        ...storeConfig,
+        getInitialState: () => ({ prop: 'value' }),
+      });
+
+      store.init({});
+
+      expect(store.state).toEqual({
+        prop: 'value',
+        derived: 'value_derived',
+      });
+
+      store.actions.setProp(null);
+
+      expect(store.state).toEqual({
+        prop: null,
+        derived: null,
+      });
+    });
   });
 });
