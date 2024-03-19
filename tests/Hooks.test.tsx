@@ -3,7 +3,7 @@
  */
 
 import React, { createContext } from 'react';
-import { renderHook, act } from '@testing-library/react-hooks';
+import { renderHook, act, Act } from '@testing-library/react-hooks';
 import {
   useLocalStore,
   useStore,
@@ -19,7 +19,7 @@ import {
 import { getTimeoutPromise } from './utils';
 
 type State = {
-  prop1: string;
+  stateProp1: string;
 };
 
 type Actions = {
@@ -29,18 +29,19 @@ type Actions = {
 
 type Props = {
   prop1: string;
+  prop2?: string;
 };
 
 const actionsImpl: StoreActions<State, Actions, Props> = {
-  setProp1: ({ args: [p] }) => ({ prop1: p }),
+  setProp1: ({ args: [p] }) => ({ stateProp1: p }),
   setAsyncProp1: {
     getPromise: () => getTimeoutPromise(100, 'ok'),
-    effects: ({ args: [p] }) => ({ prop1: p }),
+    effects: ({ args: [p] }) => ({ stateProp1: p }),
   },
 };
 
 const getInitialState = (p: Props): State => ({
-  prop1: p?.prop1 ?? '',
+  stateProp1: p?.prop1 ?? '',
 });
 
 type StoreContextProps = StoreApi<State, Actions, Props>;
@@ -55,18 +56,20 @@ function StoreContextProvider(p: { children: any }) {
 describe('react hooks', () => {
   it('useLocalStore works as expected', () => {
     const { result } = renderHook(() => useLocalStore({ getInitialState, actions: actionsImpl }));
-    expect(result.current.state).toEqual({ prop1: '' });
+    expect(result.current.state).toEqual({ stateProp1: '' });
     act(() => {
       result.current.actions.setProp1('v1');
     });
-    expect(result.current.state).toEqual({ prop1: 'v1' });
+    expect(result.current.state).toEqual({ stateProp1: 'v1' });
   });
 
   it('useLocalStore works as expected', () => {
     const callback = jest.fn();
     const callback2 = jest.fn();
 
-    const options: StoreOptions<State, Actions> = {
+    const storeConfig: StoreConfig<State, Actions, Props> = {
+      getInitialState,
+      actions: actionsImpl,
       onMountDeferred: () => {
         callback();
       },
@@ -79,12 +82,12 @@ describe('react hooks', () => {
       },
     };
 
-    const { result } = renderHook(() => useLocalStore({ getInitialState, actions: actionsImpl, ...options }));
-    expect(result.current.state).toEqual({ prop1: '' });
+    const { result } = renderHook(() => useLocalStore(storeConfig, { prop1: '' }));
+    expect(result.current.state).toEqual({ stateProp1: '' });
     act(() => {
       result.current.actions.setProp1('v1');
     });
-    expect(result.current.state).toEqual({ prop1: 'v1' });
+    expect(result.current.state).toEqual({ stateProp1: 'v1' });
     expect(callback).toHaveBeenCalled();
     expect(callback2).toHaveBeenCalled();
 
@@ -95,13 +98,13 @@ describe('react hooks', () => {
 
   it('useStore works as expected', () => {
     const store = createStore({ getInitialState, actions: actionsImpl });
-    store.init({});
+    store.init({ prop1: '' });
     const { result } = renderHook(() => useStore(store));
-    expect(store.state.prop1).toEqual('');
+    expect(store.state.stateProp1).toEqual('');
     act(() => {
       store.actions.setProp1('v1');
     });
-    expect(store.state.prop1).toEqual('v1');
+    expect(store.state.stateProp1).toEqual('v1');
   });
 
   it('useBindStore works as expected', () => {
@@ -110,7 +113,7 @@ describe('react hooks', () => {
       actions: actionsImpl,
       onPropsChange: {
         getDeps: (p) => [p.prop1],
-        effects: ({ p }) => ({ prop1: p.prop1 }),
+        effects: ({ p }) => ({ stateProp1: p.prop1 }),
       },
     };
     const store = createStore(storeConfig);
@@ -120,31 +123,33 @@ describe('react hooks', () => {
         prop1: 'initial',
       },
     });
-    expect(store.state.prop1).toEqual('initial');
+    expect(store.state.stateProp1).toEqual('initial');
 
     act(() => {
       store.actions.setProp1('v1');
     });
-    expect(store.state.prop1).toEqual('v1');
+    expect(store.state.stateProp1).toEqual('v1');
 
     rerender({ prop1: 'other' });
-    expect(store.state.prop1).toEqual('other');
+    expect(store.state.stateProp1).toEqual('other');
   });
 
   it('useStoreSlice works as expected (props)', () => {
     const store = createStore({ getInitialState, actions: actionsImpl });
     // parent hook will init the store
-    store.init({ prop1: '' });
+    store.init({ prop1: '', prop2: 'prop2' });
 
-    const { result } = renderHook(() => useStoreSlice(store, ['prop1', 'setProp1']));
+    const { result } = renderHook(() => useStoreSlice(store, ['stateProp1', 'setProp1', 'prop2']));
 
-    expect(result.current.prop1).toEqual('');
+    expect(result.current.stateProp1).toEqual('');
+    expect(result.current.prop2).toEqual('prop2');
 
     act(() => {
       result.current.setProp1('v1');
     });
 
-    expect(result.current.prop1).toEqual('v1');
+    expect(result.current.stateProp1).toEqual('v1');
+    expect(result.current.prop2).toEqual('prop2');
   });
 
   it('useStoreSlice works as expected (func)', () => {
@@ -154,7 +159,7 @@ describe('react hooks', () => {
 
     const { result } = renderHook(() =>
       useStoreSlice(store, (ctx) => ({
-        res: ctx.prop1,
+        res: ctx.stateProp1,
         set: ctx.setProp1,
       }))
     );
@@ -174,7 +179,7 @@ describe('react hooks', () => {
     const { result } = renderHook(
       () =>
         useStoreContextSlice(StoreContext, (ctx) => ({
-          res: ctx.prop1,
+          res: ctx.stateProp1,
           set: ctx.setProp1,
         })),
       { wrapper }
@@ -192,14 +197,14 @@ describe('react hooks', () => {
   it('useStoreContextSlice works as expected (props)', () => {
     const wrapper = ({ children }) => <StoreContextProvider>{children}</StoreContextProvider>;
 
-    const { result } = renderHook(() => useStoreContextSlice(StoreContext, ['prop1', 'setProp1']), { wrapper });
+    const { result } = renderHook(() => useStoreContextSlice(StoreContext, ['stateProp1', 'setProp1']), { wrapper });
 
-    expect(result.current.prop1).toEqual('');
+    expect(result.current.stateProp1).toEqual('');
 
     act(() => {
       result.current.setProp1('v1');
     });
 
-    expect(result.current.prop1).toEqual('v1');
+    expect(result.current.stateProp1).toEqual('v1');
   });
 });
