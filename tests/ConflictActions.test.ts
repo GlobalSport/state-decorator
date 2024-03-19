@@ -587,6 +587,54 @@ describe('Conflicting actions', () => {
     });
   });
 
+  it('PARALLEL works as expected and not overridden by getGetPromise', () => {
+    const callback = jest.fn();
+    const callbackError = jest.fn();
+
+    const store = createStore<State, Actions, Props>({
+      getInitialState: () => ({
+        values: [],
+        errors: [],
+      }),
+      actions: {
+        setValue: {
+          ...setValueAction,
+          conflictPolicy: ConflictPolicy.PARALLEL,
+          getPromiseId: (value: string) => value,
+          getGetPromise: setValueAction.getPromise,
+        },
+      },
+    });
+
+    store.setProps({
+      callback,
+      callbackError,
+    });
+
+    const setValue = store.actions.setValue;
+
+    const p1 = setValue('v1');
+
+    expect(store.loadingParallelMap.setValue['v1']).toBeTruthy();
+
+    expect(store.loadingParallelMap.setValue['v2']).toBeFalsy();
+    const p2 = setValue('v2');
+    expect(store.loadingParallelMap.setValue['v2']).toBeTruthy();
+
+    expect(store.loadingParallelMap.setValue['v3']).toBeFalsy();
+    const p3 = setValue('v3');
+    expect(store.loadingParallelMap.setValue['v3']).toBeTruthy();
+
+    return Promise.all([p1, p2, p3]).then(() => {
+      expect(store.state).toEqual({
+        values: ['v1', 'v2', 'v3'],
+        errors: [],
+      });
+      expect(callback).toHaveBeenCalledTimes(3);
+      expect(callbackError).not.toHaveBeenCalled();
+    });
+  });
+
   it('PARALLEL works as expected (error)', () => {
     const callback = jest.fn();
     const callbackError = jest.fn();

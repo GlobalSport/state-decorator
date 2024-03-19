@@ -328,7 +328,7 @@ export function computeAsyncActionInput<S, DS, F extends (...args: any[]) => any
       ...(action as any),
       getPromise: action.getGetPromise,
       retryCount: 3,
-      conflictPolicy: ConflictPolicy.REUSE,
+      conflictPolicy: action.conflictPolicy ?? ConflictPolicy.REUSE,
     };
   }
   return action;
