@@ -148,9 +148,15 @@ export type ContextBase<S, P> = ContextState<S> & {
 
 export type ContextWithDerived<S, DS, P> = ContextBase<S, P> & ContextDerivedStateState<DS>;
 
-export type InvocationContextActions<A> = {
+export type InvocationContextActions<S, A> = {
   actions: A;
   a: A;
+  /**
+   * The state injected in function will probably be incorrect after calling store actions.
+   * You can get the current state using this function.
+   * @returns the current state
+   */
+  getState: () => S;
 };
 
 export type WarningNotifyFunc = {
@@ -167,7 +173,10 @@ export type EffectsInvocationContext<S, DS, F extends (...args: any[]) => any, P
   res: PromiseResult<ReturnType<F>>;
 };
 
-export type GetPromiseInvocationContext<S, DS, F extends (...args: any[]) => any, P, A> = InvocationContextActions<A> &
+export type GetPromiseInvocationContext<S, DS, F extends (...args: any[]) => any, P, A> = InvocationContextActions<
+  S,
+  A
+> &
   InvocationContext<S, DS, F, P> & {
     abortSignal: AbortSignal;
   };
@@ -207,7 +216,7 @@ export type SideEffectsInvocationContext<S, DS, F extends (...args: any[]) => an
   F,
   P
 > &
-  InvocationContextActions<A> &
+  InvocationContextActions<S, A> &
   WarningNotifyFunc &
   ClearError<A>;
 
@@ -217,9 +226,9 @@ export type ErrorSideEffectsInvocationContext<
   F extends (...args: any[]) => any,
   P,
   A
-> = ErrorEffectsInvocationContext<S, DS, F, P> & InvocationContextActions<A> & WarningNotifyFunc;
+> = ErrorEffectsInvocationContext<S, DS, F, P> & InvocationContextActions<S, A> & WarningNotifyFunc;
 
-export type OnMountInvocationContext<S, A, P> = ContextBase<S, P> & InvocationContextActions<A>;
+export type OnMountInvocationContext<S, A, P> = ContextBase<S, P> & InvocationContextActions<S, A>;
 export type AbortedActions<A> = Partial<Record<keyof A, string[]>>;
 export type OnUnMountInvocationContext<S, A, P> = ContextBase<S, P> & { abortedActions: AbortedActions<A> };
 

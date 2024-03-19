@@ -507,7 +507,7 @@ export function buildOnMountInvocationContext<S, DS, A, P>(
   propsRef: Ref<P>,
   actionsRef: Ref<A>
 ): OnMountInvocationContext<S, A, P> {
-  return addContextActions(buildInvocationContextBase(stateRef, derivedStateRef, propsRef), actionsRef);
+  return addContextActions(buildInvocationContextBase(stateRef, derivedStateRef, propsRef), stateRef, actionsRef);
 }
 
 /** @internal */
@@ -608,6 +608,7 @@ function buildPromiseActionContext<S, DS, F extends (...args: any[]) => any, P, 
 ): GetPromiseInvocationContext<S, DS, F, P, A> {
   const res = addContextActions(
     buildInvocationContext(stateRef, derivedStateRef, propsRef, args, promiseId),
+    stateRef,
     actionsRef
   ) as GetPromiseInvocationContext<S, DS, F, P, A>;
   res.abortSignal = abortSignal;
@@ -624,11 +625,16 @@ export function addStateToContext<T, S>(ctx: T, stateRef: Ref<S>): T & ContextSt
 }
 
 /** @internal */
-export function addContextActions<T, A>(ctx: T, actionsRef: Ref<A>): T & InvocationContextActions<A> {
-  const newCtx = ctx as T & InvocationContextActions<A>;
+export function addContextActions<T, S, A>(
+  ctx: T,
+  stateRef: Ref<S>,
+  actionsRef: Ref<A>
+): T & InvocationContextActions<S, A> {
+  const newCtx = ctx as T & InvocationContextActions<S, A>;
 
   newCtx.actions = actionsRef.current;
   newCtx.a = actionsRef.current;
+  newCtx.getState = () => stateRef.current;
   return newCtx;
 }
 
@@ -640,9 +646,9 @@ function addSideEffectsContext<S, DS, T extends { s: S; state: S }, A>(
   actionsRef: Ref<A>,
   notifyWarning: NotifyFunc,
   clearError: ClearErrorFunc<A>
-): T & InvocationContextActions<A> & WarningNotifyFunc & ClearError<A> & ContextDerivedStateState<DS> {
-  const res = addContextActions(ctx, actionsRef) as T &
-    InvocationContextActions<A> &
+): T & InvocationContextActions<S, A> & WarningNotifyFunc & ClearError<A> & ContextDerivedStateState<DS> {
+  const res = addContextActions(ctx, stateRef, actionsRef) as T &
+    InvocationContextActions<S, A> &
     WarningNotifyFunc &
     ClearError<A> &
     ContextDerivedStateState<DS>;
@@ -1493,7 +1499,7 @@ export function onPropChange<S, P, A, DS>(
     sideEffects.forEach((sideEffectInfo) => {
       const onPropChange = onPropsChanges[sideEffectInfo.index];
       onPropChange.sideEffects({
-        ...addStateToContext(addContextActions(sideEffectInfo.ctx, actionsRef), newStateRef),
+        ...addStateToContext(addContextActions(sideEffectInfo.ctx, newStateRef, actionsRef), newStateRef),
         indices: sideEffectInfo.indices,
       });
     });

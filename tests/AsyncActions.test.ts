@@ -14,7 +14,7 @@
 
 import { EffectError, globalConfig } from '../src/impl';
 import { createStore, setGlobalConfig } from '../src/index';
-import { StoreAction, StoreActions } from '../src/types';
+import { StoreAction, StoreActions, StoreConfig } from '../src/types';
 import { getFailedTimeoutPromise, getTimeoutPromise } from './utils';
 
 describe('Async action', () => {
@@ -1103,5 +1103,113 @@ describe('Async action', () => {
         return Promise.reject(e);
       }
     }
+  });
+
+  describe('getState injection', () => {
+    it('in getPromise', () => {
+      type S = {
+        value: string;
+      };
+
+      type A = {
+        action: (v: string) => Promise<string>;
+        main: () => Promise<string>;
+      };
+
+      const storeConfig: StoreConfig<S, A> = {
+        initialState: { value: '' },
+        actions: {
+          action: {
+            getPromise: ({ args: [v] }) => Promise.resolve(v),
+            effects: ({ res }) => ({
+              value: res,
+            }),
+          },
+          main: {
+            getPromise: async ({ a, getState }) => {
+              await a.action('v1');
+              expect(getState().value).toEqual('v1');
+              await a.action('v2');
+              expect(getState().value).toEqual('v2');
+              return 'ok';
+            },
+          },
+        },
+      };
+
+      const store = createStore(storeConfig);
+      store.init({});
+
+      return store.actions.main();
+    });
+
+    it('in sideEffects', () => {
+      type S = {
+        value: string;
+      };
+
+      type A = {
+        action: (v: string) => Promise<string>;
+        main: () => void;
+      };
+
+      const storeConfig: StoreConfig<S, A> = {
+        initialState: { value: '' },
+        actions: {
+          action: {
+            getPromise: ({ args: [v] }) => Promise.resolve(v),
+            effects: ({ res }) => ({
+              value: res,
+            }),
+          },
+          main: {
+            sideEffects: async ({ a, getState }) => {
+              await a.action('v1');
+              expect(getState().value).toEqual('v1');
+              await a.action('v2');
+              expect(getState().value).toEqual('v2');
+              return 'ok';
+            },
+          },
+        },
+      };
+
+      const store = createStore(storeConfig);
+      store.init({});
+
+      return store.actions.main();
+    });
+
+    it('in onMount', async () => {
+      type S = {
+        value: string;
+      };
+
+      type A = {
+        action: (v: string) => Promise<string>;
+      };
+
+      const storeConfig: StoreConfig<S, A> = {
+        initialState: { value: '' },
+        actions: {
+          action: {
+            getPromise: ({ args: [v] }) => Promise.resolve(v),
+            effects: ({ res }) => ({
+              value: res,
+            }),
+          },
+        },
+
+        onMount: async ({ a, getState }) => {
+          await a.action('v1');
+          expect(getState().value).toEqual('v1');
+          await a.action('v2');
+          expect(getState().value).toEqual('v2');
+        },
+      };
+
+      const store = createStore(storeConfig);
+      store.init({});
+    });
   });
 });

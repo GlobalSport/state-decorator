@@ -204,10 +204,11 @@ export type StoreApi<S, A extends DecoratedActions, P, DS = {}> = {
   /**
    * Returns a snapshot of the current state of the store.
    */
-  getSnapshot(): StateListenerContext<S, DS, A>;
+  getSnapshot(): StateListenerContext<S, DS, A, P>;
 };
 
-export type StateListenerContext<S, DS, A extends DecoratedActions> = S &
+export type StateListenerContext<S, DS, A extends DecoratedActions, P> = P &
+  S &
   DS &
   A &
   Pick<
@@ -243,7 +244,7 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
   const promisesRef = createRef<PromiseMap<A>>();
   const conflictActionsRef = createRef<ConflictActionsMap<A>>();
   const initializedRef = createRef(false);
-  const snapshotRef = createRef<StateListenerContext<S, DS, A>>();
+  const snapshotRef = createRef<StateListenerContext<S, DS, A, P>>();
 
   const middlewaresRef = createRef<Middleware<S, A, P>[]>([]);
 
@@ -636,6 +637,7 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
 
   function updateSnapshot() {
     snapshotRef.current = {
+      ...propsRef.current,
       ...actionsRef.current,
       ...stateRef.current,
       ...derivedStateRef.current.state,
@@ -708,7 +710,7 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
 
 type useStoreSlice<S, A extends DecoratedActions, P, DS, SLICE> = (
   store: StoreApi<S, A, P, DS>,
-  slicer: (ctx: StateListenerContext<S, DS, A>) => SLICE
+  slicer: (ctx: StateListenerContext<S, DS, A, P>) => SLICE
 ) => SLICE;
 
 /**
@@ -719,7 +721,7 @@ type useStoreSlice<S, A extends DecoratedActions, P, DS, SLICE> = (
  */
 export function useStoreSlice<S, A extends DecoratedActions, P, DS, SLICE>(
   store: StoreApi<S, A, P, DS>,
-  slicerFunc: (ctx: StateListenerContext<S, DS, A>) => SLICE
+  slicerFunc: (ctx: StateListenerContext<S, DS, A, P>) => SLICE
 ): SLICE;
 
 /**
@@ -733,23 +735,24 @@ export function useStoreSlice<
   A extends DecoratedActions,
   P,
   DS,
-  K extends keyof StateListenerContext<S, DS, A>,
+  K extends keyof StateListenerContext<S, DS, A, P>,
   KL extends keyof A
 >(
   store: StoreApi<S, A, P, DS>,
   properties: K[]
-): Pick<StateListenerContext<S, DS, A>, K> & { loadingMap: LoadingMap<Pick<A, KL>> };
+): Pick<StateListenerContext<S, DS, A, P>, K> & { loadingMap: LoadingMap<Pick<A, KL>> };
 
 export function useStoreSlice<S, A extends DecoratedActions, P, DS>(store: StoreApi<S, A, P, DS>, funcOrArr: any) {
   const slicerFunc = useMemo(
-    () => (funcOrArr instanceof Function ? funcOrArr : (ctx: StateListenerContext<S, DS, A>) => pick(ctx, funcOrArr)),
+    () =>
+      funcOrArr instanceof Function ? funcOrArr : (ctx: StateListenerContext<S, DS, A, P>) => pick(ctx, funcOrArr),
     [funcOrArr]
   );
 
   return useSyncExternalStoreWithSelector(
     store.addStateListener,
     store.getSnapshot,
-    store.getSnapshot,
+    undefined,
     slicerFunc,
     globalConfig.comparator
   );
@@ -778,7 +781,7 @@ export function useStore<S, A extends DecoratedActions, P, DS>(store: StoreApi<S
  */
 export function useStoreContextSlice<S, A extends DecoratedActions, P, DS, SLICE>(
   storeContext: Context<StoreApi<S, A, P, DS>>,
-  slicerFunc: (ctx: StateListenerContext<S, DS, A>) => SLICE
+  slicerFunc: (ctx: StateListenerContext<S, DS, A, P>) => SLICE
 ): SLICE;
 
 /**
@@ -793,12 +796,12 @@ export function useStoreContextSlice<
   A extends DecoratedActions,
   P,
   DS,
-  K extends keyof StateListenerContext<S, DS, A>,
+  K extends keyof StateListenerContext<S, DS, A, P>,
   KL extends keyof A
 >(
   storeContext: Context<StoreApi<S, A, P, DS>>,
   properties: K[]
-): Pick<StateListenerContext<S, DS, A>, K> & { loadingMap: LoadingMap<Pick<A, KL>> };
+): Pick<StateListenerContext<S, DS, A, P>, K> & { loadingMap: LoadingMap<Pick<A, KL>> };
 
 export function useStoreContextSlice<S, A extends DecoratedActions, P, DS>(
   storeContext: Context<StoreApi<S, A, P, DS>>,
