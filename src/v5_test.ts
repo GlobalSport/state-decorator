@@ -229,6 +229,7 @@ export function testV6AdvancedSyncAction<S, F extends (...args: any[]) => any, A
           res: null,
           result: null,
           promiseId: null,
+          getState: () => null,
           clearError: () => {},
         });
       },
@@ -273,6 +274,7 @@ export function testV6AsyncAction<S, F extends (...args: any[]) => any, A, P>(
             state: s,
             props: p,
             actions: a,
+            getState: () => null,
             promiseId: null,
           });
         }
@@ -287,6 +289,7 @@ export function testV6AsyncAction<S, F extends (...args: any[]) => any, A, P>(
           state: s,
           props: p,
           actions: a,
+          getState: () => null,
           promiseId: null,
         });
       },
@@ -304,6 +307,7 @@ export function testV6AsyncAction<S, F extends (...args: any[]) => any, A, P>(
             state: s,
             props: p,
             actions: a,
+            getState: () => null,
             promiseId: null,
           });
         }
@@ -396,6 +400,7 @@ export function testV6AsyncAction<S, F extends (...args: any[]) => any, A, P>(
           actions: a,
           result: res,
           promiseId: actionIn.getPromiseId?.(...args),
+          getState: () => null,
           clearError: () => {},
         });
       },
@@ -414,6 +419,7 @@ export function testV6AsyncAction<S, F extends (...args: any[]) => any, A, P>(
           props: p,
           actions: a,
           error: err,
+          getState: () => null,
           promiseId: actionIn.getPromiseId?.(...args),
         });
       },

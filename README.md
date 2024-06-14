@@ -171,20 +171,21 @@ export const CounterContainer = () => {
 
 The action context contain all the data needed to implement the actions. It contains the action arguments and the injected data.
 
-| Property      | Alias | Availability                   | Description                                             |
-| ------------- | ----- | ------------------------------ | ------------------------------------------------------- |
-| state         | s     | everywhere                     | Current state                                           |
-| args          |       | action related                 | Action arguments                                        |
-| props         | p     | everywhere                     | Current bound component props                           |
-| actions       | a     | side effects / onMount         | Store actions (decorated)                               |
-| result        | res   | promise effects / side effects | The promise result                                      |
-| error         | err   | error effects / side effects   | The promise error                                       |
-| derived       | ds    | everywhere                     | The derived state (from props/state)                    |
-| promiseId     |       | asynchronous actions callbacks | Parallel asynchronous actions promise identifier        |
-| notifyWarning |       | side effects                   | Injected function if set at store or global level       |
-| clearError    |       | side effects                   | Clear an error from ErrorMap                            |
-| indices       |       | onPropsChange                  | Indices in the getDeps array of changed props           |
-| isInit        |       | onPropsChange                  | Whether the onPropsCHange is executed during init phase |
+| Property      | Alias    | Availability                        | Description                                                            |
+| ------------- | -------- | ----------------------------------- | ---------------------------------------------------------------------- |
+| state         | s        | everywhere                          | Current state                                                          |
+| args          |          | action related                      | Action arguments                                                       |
+| props         | p        | everywhere                          | Current bound component props                                          |
+| actions       | a        | getPromise / side effects / onMount | Store actions (decorated)                                              |
+| result        | res      | promise effects / side effects      | The promise result                                                     |
+| error         | err      | error effects / side effects        | The promise error                                                      |
+| derived       | ds       | everywhere                          | The derived state (from props/state)                                   |
+| promiseId     |          | asynchronous actions callbacks      | Parallel asynchronous actions promise identifier                       |
+| getState      | getState | getPromise / side effects / onMount | A function to get the current state (after an action call for example) |
+| notifyWarning |          | side effects                        | Injected function if set at store or global level                      |
+| clearError    |          | side effects                        | Clear an error from ErrorMap                                           |
+| indices       |          | onPropsChange                       | Indices in the getDeps array of changed props                          |
+| isInit        |          | onPropsChange                       | Whether the onPropsCHange is executed during init phase                |
 
 # Actions
 

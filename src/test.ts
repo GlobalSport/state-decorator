@@ -242,6 +242,7 @@ export function createMockStoreV6<S, A extends DecoratedActions, P = {}, DS = {}
       const newPropsRef = createRef({ ...propsRef.current, ...newProps });
       const derivedStateRef = createRef<DerivedState<DS>>({ state: null, deps: {} });
       const actionsRef = getActionsRef(actions as any, mockActions);
+
       const setState: SetStateFunc<S, A> = (newStateIn, _newLoadingMap, _actionName, _actionType, _isAsync) => {
         if (newStateIn != null) {
           newStateRef.current = newStateIn;
