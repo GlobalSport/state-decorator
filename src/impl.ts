@@ -191,6 +191,17 @@ export type GlobalConfig = {
   retryOnErrorFunction: RetryOnErrorFunction;
 
   /**
+   * First retry timeout. Every retry will wait x
+   */
+  autoRetryTimeout: number;
+
+  /**
+   * Number of retries in case of error (failed to fetch).
+   * If <code>0</code>, retry is globally disabled.
+   */
+  autoRetryCount: number;
+
+  /**
    * Global notification function that will called when an asynchronous action succeeded,
    * if and only if, an error message is specified for this action using
    * <code>getErrorMessage</code>.
@@ -236,6 +247,8 @@ export const globalConfig: GlobalConfig = {
   notifyWarning: undefined,
   getErrorMessage: undefined,
   defaultMiddlewares: [],
+  autoRetryCount: undefined,
+  autoRetryTimeout: undefined,
 };
 
 export function setGlobalConfig(overrideConfig: Partial<GlobalConfig>) {
@@ -327,7 +340,8 @@ export function computeAsyncActionInput<S, DS, F extends (...args: any[]) => any
     return {
       ...(action as any),
       getPromise: action.getGetPromise,
-      retryCount: 3,
+      retryDelaySeed: globalConfig.autoRetryTimeout ?? 1000,
+      retryCount: globalConfig.autoRetryCount ?? 3,
       conflictPolicy: action.conflictPolicy ?? ConflictPolicy.REUSE,
     };
   }
