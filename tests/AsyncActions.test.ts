@@ -307,9 +307,7 @@ describe('Async action', () => {
       notifyError,
     });
 
-    const listener = jest.fn(() => {
-      console.log(store.state, store.loadingMap.successActionWithSideEffect, store.loadingMap.successAction);
-    });
+    const listener = jest.fn();
 
     store.addStateListener(listener);
     store.setProps({

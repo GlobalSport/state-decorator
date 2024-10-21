@@ -267,8 +267,6 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
   function notifyStateListeners() {
     updateSnapshot();
 
-    console.log('notifyStateListeners');
-
     Object.keys(stateListeners).forEach((listenerId) => {
       // listeners can be removed while calling updates (!)
       stateListeners[listenerId]?.();
