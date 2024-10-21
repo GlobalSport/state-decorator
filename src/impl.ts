@@ -61,8 +61,9 @@ export type SetStateFunc<S, A> = (
   isAsync: boolean,
   actionCtx: any,
   propsChanged: boolean,
-  isInit?: boolean
-) => void;
+  isInit?: boolean,
+  disableNotify?: boolean
+) => () => void;
 
 /** @internal */
 export type PromiseMap<A> = {
@@ -101,6 +102,7 @@ export type AsyncActionExecContext<S, DS, F extends (...args: any[]) => any, A e
   conflictActionsRef: Ref<ConflictActionsMap<A>>;
   actionsRef: Ref<A>;
   initializedRef: Ref<boolean>;
+  stateFlagRef: Ref<boolean>;
   timeoutRef: Ref<TimeoutMap<A>>;
   options: StoreOptions<S, A, P, any>;
   setState: SetStateFunc<S, A>;
@@ -851,6 +853,7 @@ function processPromiseSuccess<S, DS, F extends (...args: any[]) => any, A exten
   const {
     action,
     stateRef,
+    stateFlagRef,
     derivedStateRef,
     propsRef,
     promisesRef,
@@ -880,14 +883,18 @@ function processPromiseSuccess<S, DS, F extends (...args: any[]) => any, A exten
     }
   }
 
-  setState(
+  stateFlagRef.current = false;
+
+  const notifyStateListeners = setState(
     newState,
     buildLoadingMap(loadingMapRef.current, actionName, promiseId, false),
     actionName,
     'effects',
     true,
     ctx,
-    false
+    false,
+    false,
+    true
   );
 
   const notifySuccess = options.notifySuccess || globalConfig.notifySuccess;
@@ -910,6 +917,12 @@ function processPromiseSuccess<S, DS, F extends (...args: any[]) => any, A exten
     action.sideEffects(
       addSideEffectsContext(ctx, stateRef, derivedStateRef, actionsRef, globalConfig.notifyWarning, clearError)
     );
+  }
+
+  console.log(actionName, 'processPromiseSuccess > stateFlagRef.current', stateFlagRef.current);
+
+  if (!stateFlagRef.current) {
+    notifyStateListeners();
   }
 
   processNextConflictAction(context.initializedRef, actionName, actionsRef.current, conflictActionsRef.current);
