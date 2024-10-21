@@ -246,6 +246,7 @@ export function createMockStoreV6<S, A extends DecoratedActions, P = {}, DS = {}
         if (newStateIn != null) {
           newStateRef.current = newStateIn;
         }
+        return () => {};
       };
 
       const res = this.onPropsChangeImpl(
@@ -311,6 +312,7 @@ export function createMockStoreV6<S, A extends DecoratedActions, P = {}, DS = {}
         if (newStateIn != null) {
           newStateRef.current = newStateIn;
         }
+        return () => {};
       };
 
       // sync
@@ -475,6 +477,7 @@ export function createMockStoreAction<S, A extends DecoratedActions, F extends (
     },
     call(...args) {
       const newStateRef = createRef<S>({ ...stateRef.current });
+      const stateFlagRef = createRef<boolean>(false);
       const derivedStateRef = createRef<DerivedState<DS>>({ state: null, deps: {} });
       computeDerivedValues(newStateRef, propsRef, derivedStateRef, options);
 
@@ -487,6 +490,7 @@ export function createMockStoreAction<S, A extends DecoratedActions, F extends (
         if (newStateIn != null) {
           newStateRef.current = newStateIn;
         }
+        return () => {};
       };
 
       const action = actions[actionName];
@@ -562,6 +566,7 @@ export function createMockStoreAction<S, A extends DecoratedActions, F extends (
             promisesRef,
             conflictActionsRef,
             initializedRef,
+            stateFlagRef,
             options,
             setState,
             stateRef: newStateRef,

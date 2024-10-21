@@ -244,6 +244,7 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
   const promisesRef = createRef<PromiseMap<A>>();
   const conflictActionsRef = createRef<ConflictActionsMap<A>>();
   const initializedRef = createRef(false);
+  const stateFlagRef = createRef(false);
   const snapshotRef = createRef<StateListenerContext<S, DS, A, P>>();
 
   const middlewaresRef = createRef<Middleware<S, A, P>[]>([]);
@@ -470,12 +471,13 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
     isAsync: boolean,
     actionCtx: any,
     propsChanged: boolean = false,
-    init = false
+    init = false,
+    preventNotify = false
   ) {
     let hasChanged = false;
 
     if (!initializedRef.current) {
-      return;
+      return notifyStateListeners;
     }
 
     let newLoadingMap = newLoadingMapIn;
@@ -522,14 +524,20 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
       computeDerivedValues(stateRef, propsRef, derivedStateRef, options);
       if (!init) {
         stateRef.current = newState || stateRef.current;
-        notifyStateListeners();
+        if (!preventNotify) {
+          stateFlagRef.current = true;
+          notifyStateListeners();
+        }
       }
     } else if (propsChanged) {
       const derivedChanged = computeDerivedValues(stateRef, propsRef, derivedStateRef, options);
-      if (derivedChanged && !init) {
+      if (derivedChanged && !init && !preventNotify) {
+        stateFlagRef.current = true;
         notifyStateListeners();
       }
     }
+
+    return notifyStateListeners;
   }
 
   const keys = Object.keys(actionsImpl) as (keyof A)[];
@@ -558,6 +566,7 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
         promisesRef,
         conflictActionsRef,
         initializedRef,
+        stateFlagRef,
         options,
         setState,
         clearError,

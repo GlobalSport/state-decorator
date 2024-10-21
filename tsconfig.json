@@ -14,7 +14,6 @@
     "noImplicitThis": true,
     "noImplicitAny": true,
     "strictNullChecks": false,
-    "suppressImplicitAnyIndexErrors": true,
     "allowSyntheticDefaultImports": true
   },
   "include": ["src/**/*.ts*"],
