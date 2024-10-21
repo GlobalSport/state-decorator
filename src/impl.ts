@@ -915,8 +915,6 @@ function processPromiseSuccess<S, DS, F extends (...args: any[]) => any, A exten
     );
   }
 
-  console.log(actionName, 'processPromiseSuccess > stateFlagRef.current', stateFlagRef.current);
-
   if (!stateFlagRef.current) {
     notifyStateListeners();
   }
