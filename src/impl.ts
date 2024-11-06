@@ -1231,7 +1231,6 @@ function handleConflictingAction<A>(
         break;
       }
       case ConflictPolicy.PARALLEL:
-      case ConflictPolicy.REUSE:
         // no-op
         break;
 
