@@ -1283,7 +1283,8 @@ export function computeDerivedValues<S, A, P, DS>(
   s: Ref<S>,
   p: Ref<P>,
   derivedStateRef: Ref<DerivedState<DS>>,
-  options: StoreOptions<S, A, P, DS>
+  options: StoreOptions<S, A, P, DS>,
+  derivedStateOverrideRef: Ref<DS> = null
 ): boolean {
   if (options?.derivedState == null) {
     return false;
@@ -1300,32 +1301,36 @@ export function computeDerivedValues<S, A, P, DS>(
   derivedStateRef.current.state = keys.reduce((acc, propName) => {
     let compute = false;
 
-    const derivedCfg = options.derivedState[propName];
-    const previousDeps = depsMap[propName];
-    const deps = derivedCfg.getDeps?.(ctx) ?? [];
-
-    if (derivedCfg.derivedDeps) {
-      derivedCfg.derivedDeps.forEach((k) => deps.push(acc[k] ?? derivedStateRef.current?.state?.[k]));
-    }
-
-    if (previousDeps == null) {
-      compute = true;
+    if (derivedStateOverrideRef?.current?.[propName]) {
+      acc[propName] = derivedStateOverrideRef.current?.[propName];
     } else {
-      const changedPos = deps.findIndex((dep, index) =>
-        previousDeps.length < index ? true : !compare(previousDeps[index], dep)
-      );
-      compute = changedPos !== -1;
-    }
+      const derivedCfg = options.derivedState[propName];
+      const previousDeps = depsMap[propName];
+      const deps = derivedCfg.getDeps?.(ctx) ?? [];
 
-    hasChanged = hasChanged || compute;
+      if (derivedCfg.derivedDeps) {
+        derivedCfg.derivedDeps.forEach((k) => deps.push(acc[k] ?? derivedStateRef.current?.state?.[k]));
+      }
 
-    // update cache of previous deps
-    depsMap[propName] = deps;
+      if (previousDeps == null) {
+        compute = true;
+      } else {
+        const changedPos = deps.findIndex((dep, index) =>
+          previousDeps.length < index ? true : !compare(previousDeps[index], dep)
+        );
+        compute = changedPos !== -1;
+      }
 
-    if (compute) {
-      acc[propName] = options.derivedState[propName].get(addDerivedStateContext(ctx, acc));
-    } else {
-      acc[propName] = derivedStateRef.current.state[propName];
+      hasChanged = hasChanged || compute;
+
+      // update cache of previous deps
+      depsMap[propName] = deps;
+
+      if (compute) {
+        acc[propName] = options.derivedState[propName].get(addDerivedStateContext(ctx, acc));
+      } else {
+        acc[propName] = derivedStateRef.current.state[propName];
+      }
     }
 
     return acc;

@@ -1,4 +1,4 @@
-import { StoreActions, StoreOptions } from '../src/types';
+import { StoreActions, StoreConfig, StoreOptions } from '../src/types';
 import { createMockStore, setMockFactory, createMockFromStore, ActionError } from '../src/test';
 import { createStore, EffectError } from '../src';
 
@@ -786,6 +786,62 @@ describe('createMockStore', () => {
     const { state } = await action.call();
 
     expect(state.prop3).toEqual('res');
+  });
+
+  it('allow to override derived state', async () => {
+    type State = {
+      v: number;
+      v2: number | null;
+    };
+    type Props = {
+      prop: number;
+    };
+    type DerivedState = {
+      der1: number;
+      der2: number;
+    };
+    type Actions = {
+      onChange: () => void;
+    };
+
+    const config: StoreConfig<State, Actions, Props, DerivedState> = {
+      initialState: {
+        v: 10,
+        v2: null,
+      },
+      actions: {
+        onChange: ({ ds }) => ({ v2: ds.der1 * 5 }),
+      },
+      derivedState: {
+        der1: {
+          getDeps: ({ s, p }) => [s.v, p.prop],
+          get: ({ s, p }) => s.v * p.prop,
+        },
+        der2: {
+          derivedDeps: ['der1'],
+          get: ({ ds }) => ds.der1 * 10,
+        },
+      },
+    };
+
+    const mockStore = createMockStore(config, { prop: 2 });
+
+    const res1 = await mockStore.getAction('onChange').call();
+
+    expect(res1.state.der1).toEqual(20);
+    expect(res1.state.der2).toEqual(200);
+    expect(res1.state.v2).toEqual(100);
+
+    const res2 = await mockStore
+      .getAction('onChange')
+      .setPartialDerivedStateOverride({
+        der1: 5,
+      })
+      .call();
+
+    expect(res2.state.der1).toEqual(5);
+    expect(res2.state.der2).toEqual(50);
+    expect(res2.state.v2).toEqual(25);
   });
 
   describe('onMount', () => {

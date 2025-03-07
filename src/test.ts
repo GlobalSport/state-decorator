@@ -77,6 +77,11 @@ type MockStoreAction<S, A extends DecoratedActions, F extends (...args: any[]) =
   setPartialProps: (props: Partial<P>) => MockStoreAction<S, A, F, P, DS>;
 
   /**
+   * Creates a new store using store props overriden by specified props.
+   */
+  setPartialDerivedStateOverride: (derivedState: Partial<DS>) => MockStoreAction<S, A, F, P, DS>;
+
+  /**
    * Set implementations to some actions to test side effects.
    */
   setMockActions: (implementation: MockActionImpl<A>) => MockStoreAction<S, A, F, P, DS>;
@@ -206,7 +211,7 @@ export function createMockStoreV6<S, A extends DecoratedActions, P = {}, DS = {}
 
   function getState(newStateRef: Ref<S> = undefined, newPropsRef: Ref<P> = undefined) {
     const derivedStateRef = createRef<DerivedState<DS>>({ state: null, deps: {} });
-    computeDerivedValues(newStateRef || stateRef, newPropsRef || propsRef, derivedStateRef, options);
+    computeDerivedValues(newStateRef || stateRef, newPropsRef || propsRef, derivedStateRef, options, createRef({}));
     return {
       ...(newStateRef?.current || stateRef.current),
       ...(derivedStateRef.current.state || ({} as DS)),
@@ -237,6 +242,7 @@ export function createMockStoreV6<S, A extends DecoratedActions, P = {}, DS = {}
     setPartialProps(p) {
       return cloneStore(undefined, { ...propsRef.current, ...p }) as MockStore<S, A, P, DS>;
     },
+
     onPropsChange(newProps: Partial<P>, init = false) {
       const newStateRef = createRef(stateRef.current);
       const newPropsRef = createRef({ ...propsRef.current, ...newProps });
@@ -274,7 +280,7 @@ export function createMockStoreV6<S, A extends DecoratedActions, P = {}, DS = {}
       init?: boolean,
       isDeferred?: boolean
     ) {
-      computeDerivedValues(stateRef, propsRef, newDerivedStateRef, options);
+      computeDerivedValues(stateRef, propsRef, newDerivedStateRef, options, createRef({}));
 
       onPropChange(
         newStateRef,
@@ -415,9 +421,11 @@ export function createMockStoreAction<S, A extends DecoratedActions, F extends (
   props: P,
   promiseRes: Promise<F> | Error,
   options: StoreOptions<S, A, P, DS>,
-  mockActions: Partial<Record<keyof A, (...args: any[]) => any>>
+  mockActions: Partial<Record<keyof A, (...args: any[]) => any>>,
+  derivedStateOverride: Partial<DS> = {}
 ): MockStoreAction<S, A, F, P, DS> {
   const stateRef = createRef<S>(state);
+  const derivedStateOverrideRef = createRef<Partial<DS>>(derivedStateOverride);
   const propsRef = createRef<P>(props);
   const promiseResult = promiseRes;
 
@@ -425,7 +433,8 @@ export function createMockStoreAction<S, A extends DecoratedActions, F extends (
     newState: S,
     newProps: P,
     promiseRes: Promise<F> | Error,
-    newMockActions: Partial<Record<keyof A, (...args: any[]) => any>> = mockActions
+    newMockActions: Partial<Record<keyof A, (...args: any[]) => any>> = mockActions,
+    newDerivedState: Partial<DS> = null
   ) {
     return createMockStoreAction(
       newState ?? stateRef.current,
@@ -434,13 +443,20 @@ export function createMockStoreAction<S, A extends DecoratedActions, F extends (
       newProps ?? propsRef.current,
       promiseRes ?? promiseResult,
       options,
-      newMockActions
+      newMockActions,
+      newDerivedState ?? derivedStateOverrideRef.current
     );
   }
 
   function getState(newStateRef: Ref<S> = undefined, newPropsRef: Ref<P> = undefined) {
     const derivedStateRef = createRef<DerivedState<DS>>({ state: null, deps: {} });
-    computeDerivedValues(newStateRef ?? stateRef, newPropsRef ?? propsRef, derivedStateRef, options);
+    computeDerivedValues(
+      newStateRef ?? stateRef,
+      newPropsRef ?? propsRef,
+      derivedStateRef,
+      options,
+      derivedStateOverrideRef
+    );
     return {
       ...(newStateRef?.current || stateRef.current),
       ...(derivedStateRef.current.state || ({} as DS)),
@@ -453,6 +469,9 @@ export function createMockStoreAction<S, A extends DecoratedActions, F extends (
     },
     setState(s) {
       return cloneStoreAction(s, undefined, undefined) as MockStoreAction<S, A, F, P, DS>;
+    },
+    setPartialDerivedStateOverride(ds) {
+      return cloneStoreAction(undefined, undefined, undefined, undefined, ds) as MockStoreAction<S, A, F, P, DS>;
     },
     setProps(p) {
       return cloneStoreAction(undefined, p, undefined) as MockStoreAction<S, A, F, P, DS>;
@@ -476,7 +495,14 @@ export function createMockStoreAction<S, A extends DecoratedActions, F extends (
     call(...args) {
       const newStateRef = createRef<S>({ ...stateRef.current });
       const derivedStateRef = createRef<DerivedState<DS>>({ state: null, deps: {} });
-      computeDerivedValues(newStateRef, propsRef, derivedStateRef, options);
+      computeDerivedValues(newStateRef, propsRef, derivedStateRef, options, derivedStateOverrideRef);
+
+      if (Object.keys(derivedStateOverrideRef.current).length > 0) {
+        derivedStateRef.current.state = {
+          ...derivedStateRef.current.state,
+          ...derivedStateOverrideRef.current,
+        };
+      }
 
       // create mock action to test side effects
       const actionsRef = getActionsRef(actions as any, mockActions);
