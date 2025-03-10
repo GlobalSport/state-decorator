@@ -20,6 +20,7 @@ import Abort from './Abort';
 
 import PropsChangeOnMount from './PropsChangeOnMount';
 import DeferOnMount from './DeferOnMount';
+import { OptimRefresh } from './OptimRefresh';
 
 type TabPanelProps = {
   children?: ReactNode;
@@ -81,6 +82,7 @@ export default function App() {
           <Tab label="Error" />
           <Tab label="Recipes" />
           <Tab label="Defer onMount" />
+          <Tab label="Optim" />
         </Tabs>
         <Box flex={1} className={classes.content}>
           <TabPanel tabId={tabId} index={0}>
@@ -119,6 +121,9 @@ export default function App() {
           </TabPanel>
           <TabPanel tabId={tabId} index={11}>
             <DeferOnMount />
+          </TabPanel>
+          <TabPanel tabId={tabId} index={12}>
+            <OptimRefresh />
           </TabPanel>
         </Box>
       </Paper>
