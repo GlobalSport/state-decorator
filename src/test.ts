@@ -588,6 +588,7 @@ export function createMockStoreAction<S, A extends DecoratedActions, F extends (
             promisesRef,
             conflictActionsRef,
             initializedRef,
+            timeoutRef: createRef({}),
             options,
             setState,
             stateRef: newStateRef,

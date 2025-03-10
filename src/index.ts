@@ -441,6 +441,9 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
 
       propsRef.current = null;
       stateRef.current = null;
+      // Lifecycle tests
+      // allow to call action without crash
+      // actionsRef.current = null;
       loadingParallelMapRef.current = null;
       loadingMapRef.current = null;
       loadingRef.current = null;
@@ -558,6 +561,7 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
         promisesRef,
         conflictActionsRef,
         initializedRef,
+        timeoutRef,
         options,
         setState,
         clearError,

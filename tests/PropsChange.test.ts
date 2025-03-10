@@ -363,4 +363,25 @@ describe('onPropsChange', () => {
       expect(callback2).not.toHaveBeenCalled();
     });
   });
+
+  it('onPropsChange on destroyed store', () => {
+    const store = createStore<State, Actions, Props>({
+      getInitialState,
+      actions: actions,
+      onPropsChange: options.onPropsChange,
+    });
+
+    store.init({
+      input: '',
+      input2: '',
+    });
+
+    store.destroy();
+
+    // should not crash
+    store.setProps({
+      input: '2',
+      input2: '3',
+    });
+  });
 });
