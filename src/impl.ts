@@ -101,6 +101,7 @@ export type AsyncActionExecContext<S, DS, F extends (...args: any[]) => any, A e
   conflictActionsRef: Ref<ConflictActionsMap<A>>;
   actionsRef: Ref<A>;
   initializedRef: Ref<boolean>;
+  timeoutRef: Ref<TimeoutMap<A>>;
   options: StoreOptions<S, A, P, any>;
   setState: SetStateFunc<S, A>;
   clearError: ClearErrorFunc<A>;
@@ -433,6 +434,7 @@ export function buildErrorMap<A>(map: ErrorParallelMap<A>) {
 /** @internal */
 export function retryPromiseDecorator<S, DS, F extends (...args: any[]) => Promise<any>, A, P>(
   promiseProvider: PromiseProvider<S, DS, F, A, P>,
+  registerTimeout: (timeoutId: ReturnType<typeof setTimeout>) => void,
   maxCalls = 1,
   delay = 1000,
   isRetryError: (e: Error) => boolean = () => true
@@ -452,12 +454,14 @@ export function retryPromiseDecorator<S, DS, F extends (...args: any[]) => Promi
             return Promise.reject(e);
           }
           return new Promise((resolve, reject) => {
-            setTimeout(() => {
-              const p = promiseProvider(ctx);
-              call(callCount + 1, p)
-                .then(resolve)
-                .catch(reject);
-            }, delay * callCount);
+            registerTimeout(
+              setTimeout(() => {
+                const p = promiseProvider(ctx);
+                call(callCount + 1, p)
+                  .then(resolve)
+                  .catch(reject);
+              }, delay * callCount)
+            );
           });
         }
         return Promise.reject(e);
@@ -1026,6 +1030,7 @@ export function decorateAsyncAction<S, DS, F extends (...args: any[]) => any, A 
     derivedStateRef,
     propsRef,
     actionsRef,
+    timeoutRef,
     promisesRef,
     loadingParallelMapRef: loadingMapRef,
     errorMapRef,
@@ -1096,6 +1101,11 @@ export function decorateAsyncAction<S, DS, F extends (...args: any[]) => any, A 
 
     const promiseProvider = retryPromiseDecorator(
       action.getPromise,
+      (timeoutId) => {
+        if (timeoutRef.current) {
+          timeoutRef.current[actionName] = timeoutId;
+        }
+      },
       retryCount ? 1 + retryCount : 1,
       retryDelaySeed,
       isTriggerRetryError || globalConfig.retryOnErrorFunction
@@ -1284,7 +1294,7 @@ export function computeDerivedValues<S, A, P, DS>(
   p: Ref<P>,
   derivedStateRef: Ref<DerivedState<DS>>,
   options: StoreOptions<S, A, P, DS>,
-  derivedStateOverrideRef: Ref<DS> = null
+  derivedStateOverrideRef: Ref<Partial<DS>> = null
 ): boolean {
   if (options?.derivedState == null) {
     return false;
@@ -1421,6 +1431,11 @@ export function onPropChange<S, P, A, DS>(
   isInit: boolean,
   isDeferred: boolean
 ) {
+  // store is destroyed
+  if (stateRef.current == null) {
+    return;
+  }
+
   const hasDerivedState = options?.derivedState != null;
 
   if (options.onPropsChange == null) {

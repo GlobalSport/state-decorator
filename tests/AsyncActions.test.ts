@@ -12,9 +12,9 @@
  * @jest-environment jsdom
  */
 
-import { EffectError, globalConfig } from '../src/impl';
-import { createStore, setGlobalConfig } from '../src/index';
-import { StoreAction, StoreActions } from '../src/types';
+import { EffectError, globalConfig, Ref } from '../src/impl';
+import { createStore, setGlobalConfig, StoreApi } from '../src/index';
+import { StoreAction, StoreActions, StoreConfig } from '../src/types';
 import { getFailedTimeoutPromise, getTimeoutPromise } from './utils';
 
 describe('Async action', () => {
@@ -365,6 +365,63 @@ describe('Async action', () => {
     expect(isLoading('successAction')).toBeFalsy();
 
     return promise;
+  });
+
+  it('call another action on error but store trashed', (done) => {
+    type State = {
+      a: number;
+    };
+    type Actions = {
+      a1: () => Promise<number>;
+      a2: () => Promise<number>;
+    };
+    type Props = {};
+
+    let callCount = 0;
+
+    const ref: Ref<StoreApi<State, Actions, Props>> = {
+      current: null,
+    };
+
+    const config: StoreConfig<State, Actions, Props> = {
+      initialState: { a: 1 },
+      actions: {
+        a1: {
+          retryCount: 1,
+          retryDelaySeed: 20,
+          getPromise: ({ a }) => {
+            if (callCount === 0) {
+              callCount++;
+
+              setTimeout(() => {
+                ref.current.destroy();
+                setTimeout(() => {
+                  done();
+                }, 50);
+              }, 10);
+              return Promise.reject(new TypeError());
+            }
+
+            done.fail();
+
+            const p = a.a2();
+
+            return p;
+          },
+          effects: ({ res }) => ({ a: res }),
+        },
+        a2: {
+          getPromise: () => Promise.resolve(10),
+        },
+      },
+    };
+
+    const store = createStore(config);
+    ref.current = store;
+
+    store.init({});
+
+    store.actions.a1().catch();
   });
 
   it('error action', (done) => {
