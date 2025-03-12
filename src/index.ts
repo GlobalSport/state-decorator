@@ -244,7 +244,7 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
   const promisesRef = createRef<PromiseMap<A>>();
   const conflictActionsRef = createRef<ConflictActionsMap<A>>();
   const initializedRef = createRef(false);
-  const stateFlagRef = createRef(false);
+  const needNotifyListenersRef = createRef(false);
   const snapshotRef = createRef<StateListenerContext<S, DS, A, P>>();
 
   const middlewaresRef = createRef<Middleware<S, A, P>[]>([]);
@@ -266,6 +266,8 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
 
   function notifyStateListeners() {
     updateSnapshot();
+
+    needNotifyListenersRef.current = false;
 
     Object.keys(stateListeners).forEach((listenerId) => {
       // listeners can be removed while calling updates (!)
@@ -528,14 +530,12 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
       if (!init) {
         stateRef.current = newState || stateRef.current;
         if (!preventNotify) {
-          stateFlagRef.current = true;
           notifyStateListeners();
         }
       }
     } else if (propsChanged) {
       const derivedChanged = computeDerivedValues(stateRef, propsRef, derivedStateRef, options);
       if (derivedChanged && !init && !preventNotify) {
-        stateFlagRef.current = true;
         notifyStateListeners();
       }
     }
@@ -570,7 +570,7 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
         conflictActionsRef,
         initializedRef,
         timeoutRef,
-        stateFlagRef,
+        needNotifyListenersRef,
         options,
         setState,
         clearError,
@@ -586,6 +586,7 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
         actionsRef,
         initializedRef,
         timeoutRef,
+        needNotifyListenersRef,
         options,
         setState,
         clearError

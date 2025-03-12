@@ -496,7 +496,7 @@ export function createMockStoreAction<S, A extends DecoratedActions, F extends (
     },
     call(...args) {
       const newStateRef = createRef<S>({ ...stateRef.current });
-      const stateFlagRef = createRef<boolean>(false);
+      const needNotifyListenersRef = createRef<boolean>(false);
       const derivedStateRef = createRef<DerivedState<DS>>({ state: null, deps: {} });
       computeDerivedValues(newStateRef, propsRef, derivedStateRef, options, derivedStateOverrideRef);
 
@@ -547,6 +547,7 @@ export function createMockStoreAction<S, A extends DecoratedActions, F extends (
           actionsRef as any,
           createRef(true),
           null,
+          createRef(false),
           options,
           setState,
           (_: keyof A) => {}
@@ -593,7 +594,7 @@ export function createMockStoreAction<S, A extends DecoratedActions, F extends (
             conflictActionsRef,
             initializedRef,
             timeoutRef: createRef({}),
-            stateFlagRef,
+            needNotifyListenersRef,
             options,
             setState,
             stateRef: newStateRef,

@@ -44,7 +44,9 @@ describe('createMockStore', () => {
   };
 
   const actions: StoreActions<State, Actions, Props> = {
-    setProp1: ({ args: [v] }) => ({ prop1: v }),
+    setProp1: ({ args: [v] }) => {
+      return { prop1: v };
+    },
     setProp4: ({ args: [v] }) => ({ prop4: v }),
     setProp2: {
       effects: ({ args: [v] }) => ({ prop2: v }),

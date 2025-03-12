@@ -102,7 +102,7 @@ export type AsyncActionExecContext<S, DS, F extends (...args: any[]) => any, A e
   conflictActionsRef: Ref<ConflictActionsMap<A>>;
   actionsRef: Ref<A>;
   initializedRef: Ref<boolean>;
-  stateFlagRef: Ref<boolean>;
+  needNotifyListenersRef: Ref<boolean>;
   timeoutRef: Ref<TimeoutMap<A>>;
   options: StoreOptions<S, A, P, any>;
   setState: SetStateFunc<S, A>;
@@ -734,6 +734,7 @@ function executeSyncActionImpl<S, DS, F extends (...args: any[]) => any, A exten
   actionsRef: Ref<A>,
   timeoutMap: Ref<TimeoutMap<A>>,
   initializedRef: Ref<boolean>,
+  needNotifyListenersRef: Ref<boolean>,
   options: StoreOptions<S, A, P, any>,
   setState: SetStateFunc<S, A>,
   clearError: ClearErrorFunc<A>,
@@ -741,13 +742,28 @@ function executeSyncActionImpl<S, DS, F extends (...args: any[]) => any, A exten
 ) {
   const ctx = buildEffectsInvocationContext(stateRef, derivedStateRef, propsRef, args, undefined);
 
+  let notifyStateListeners;
   let actionDropped = false;
   if (action.effects != null) {
     const newState: S = mergeState(stateRef, action.effects(ctx), options.fullStateEffects);
     if (newState === null) {
       actionDropped = true;
     } else {
-      setState(newState, undefined, actionName, 'effects', false, ctx, false);
+      const mustNotifyNow = action.debounceSideEffectsTimeout != null || action.sideEffects == null;
+
+      needNotifyListenersRef.current = !mustNotifyNow;
+
+      notifyStateListeners = setState(
+        newState,
+        undefined,
+        actionName,
+        'effects',
+        false,
+        ctx,
+        false,
+        false,
+        !mustNotifyNow
+      );
     }
   }
 
@@ -768,10 +784,16 @@ function executeSyncActionImpl<S, DS, F extends (...args: any[]) => any, A exten
         );
         delete timeoutMap.current[actionName];
       }, action.debounceSideEffectsTimeout);
+
+      // no need to call notifyStateListeners
     } else {
       action.sideEffects?.(
         addSideEffectsContext(ctx, stateRef, derivedStateRef, actionsRef, options.notifyWarning, clearError)
       );
+
+      if (needNotifyListenersRef.current) {
+        notifyStateListeners?.();
+      }
     }
   }
 }
@@ -786,6 +808,7 @@ export function decorateSyncAction<S, DS, F extends (...args: any[]) => any, A e
   actionsRef: Ref<A>,
   initializedRef: Ref<boolean>,
   timeoutMap: Ref<TimeoutMap<A>>,
+  needNotifyListenersRef: Ref<boolean>,
   options: StoreOptions<S, A, P, any>,
   setState: SetStateFunc<S, A>,
   clearError: ClearErrorFunc<A>
@@ -819,6 +842,7 @@ export function decorateSyncAction<S, DS, F extends (...args: any[]) => any, A e
           actionsRef,
           timeoutMap,
           initializedRef,
+          needNotifyListenersRef,
           options,
           setState,
           clearError,
@@ -835,6 +859,7 @@ export function decorateSyncAction<S, DS, F extends (...args: any[]) => any, A e
         actionsRef,
         timeoutMap,
         initializedRef,
+        needNotifyListenersRef,
         options,
         setState,
         clearError,
@@ -853,7 +878,7 @@ function processPromiseSuccess<S, DS, F extends (...args: any[]) => any, A exten
   const {
     action,
     stateRef,
-    stateFlagRef,
+    needNotifyListenersRef,
     derivedStateRef,
     propsRef,
     promisesRef,
@@ -883,7 +908,7 @@ function processPromiseSuccess<S, DS, F extends (...args: any[]) => any, A exten
     }
   }
 
-  stateFlagRef.current = false;
+  needNotifyListenersRef.current = true;
 
   const notifyStateListeners = setState(
     newState,
@@ -919,7 +944,7 @@ function processPromiseSuccess<S, DS, F extends (...args: any[]) => any, A exten
     );
   }
 
-  if (!stateFlagRef.current) {
+  if (needNotifyListenersRef.current) {
     notifyStateListeners();
   }
 
