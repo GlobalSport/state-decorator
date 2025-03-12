@@ -7,9 +7,9 @@ import { useRef, useEffect } from 'react';
  * @param {Array} dependencies - Tableau de dépendances à surveiller (comme pour useEffect)
  * @param {Object} state - État du composant à surveiller (optionnel)
  */
-const useLogger = (componentName: string, props: Object) => {
+const useLogger = (componentName: string, props: Record<string, any>) => {
   // Référence aux props et état précédents
-  const prevPropsRef = useRef(props);
+  const prevPropsRef = useRef<any>(props);
   const renderCountRef = useRef(0);
 
   useEffect(() => {
@@ -31,7 +31,7 @@ const useLogger = (componentName: string, props: Object) => {
     if (propsChanges.length > 0) {
       console.log(
         `[${componentName}] Rendu #${renderCountRef.current} causé par changement de props:`,
-        propsChanges.reduce((acc, key) => {
+        propsChanges.reduce<Record<string, any>>((acc, key) => {
           acc[key] = {
             de: prevProps[key],
             vers: props[key],
