@@ -33,7 +33,7 @@ describe('Advanced synchronous action', () => {
     },
     sideEffects: {
       sideEffects: ({ s, p }) => {
-        p.callbackSideEffects(s);
+        p.callbackSideEffects?.(s);
       },
     },
     setEffectsDebounced: {
@@ -132,6 +132,116 @@ describe('Advanced synchronous action', () => {
       prop1: 'coucou',
       prop2: 23,
     });
+  });
+
+  it('action in sideEffects - do not trigger too many notifyStateListeners', () => {
+    const callback = jest.fn();
+    const callbackSideEffects = jest.fn();
+    const callbackCancelled = jest.fn();
+    const notifySuccess = jest.fn();
+    const notifyError = jest.fn();
+
+    const actionsImpl: StoreActions<State, Actions, Props> = {
+      ...actions,
+      setProp2: {
+        effects: ({ args: [p] }) => ({ prop2: p }),
+        sideEffects: ({ s, a }) => {
+          a.setProp1(`sideEffect ${s.prop2}`);
+        },
+      },
+    };
+
+    const store = createStore({
+      getInitialState,
+      actions: actionsImpl,
+      notifySuccess,
+      notifyError,
+    });
+
+    const listener = jest.fn();
+
+    store.addStateListener(listener);
+    store.setProps({
+      callback,
+      callbackCancelled,
+      callbackSideEffects,
+    });
+
+    store.actions.setProp2(12);
+
+    // call 1 => init
+    // call 2 => 1st + 2nd action effects
+
+    // non optim would be:
+    // call 1 => init
+    // call 2 => 1st effects
+    // call 3 => 2nd effects
+    expect(listener).toHaveBeenCalledTimes(2);
+    expect(notifyError).not.toHaveBeenCalled();
+
+    expect(store.state).toEqual({
+      prop1: `sideEffect 12`,
+      prop2: 12,
+    });
+
+    expect(callbackCancelled).not.toHaveBeenCalled();
+  });
+
+  it('action in sideEffects - no optim if debounced side effects', (done) => {
+    const callback = jest.fn();
+    const callbackSideEffects = jest.fn();
+    const callbackCancelled = jest.fn();
+    const notifySuccess = jest.fn();
+    const notifyError = jest.fn();
+
+    const actionsImpl: StoreActions<State, Actions, Props> = {
+      ...actions,
+      setProp1: {
+        effects: ({ args: [p] }) => ({ prop1: p }),
+      },
+      setProp2: {
+        effects: ({ args: [p] }) => ({ prop2: p }),
+        sideEffects: ({ s, a }) => {
+          a.setProp1(`sideEffect ${s.prop2}`);
+        },
+        debounceSideEffectsTimeout: 50,
+      },
+    };
+
+    const store = createStore({
+      getInitialState,
+      actions: actionsImpl,
+      notifySuccess,
+      notifyError,
+    });
+
+    const listener = jest.fn(() => {});
+
+    store.addStateListener(listener);
+    store.setProps({
+      callback,
+      callbackCancelled,
+      callbackSideEffects,
+    });
+
+    store.actions.setProp2(12);
+
+    setTimeout(() => {
+      // call 1 => init
+      // call 2 => 1st effects - cannot optimize !
+      // call 3 => 2nd effects
+      expect(listener).toHaveBeenCalledTimes(3);
+
+      expect(notifyError).not.toHaveBeenCalled();
+
+      expect(store.state).toEqual({
+        prop1: `sideEffect 12`,
+        prop2: 12,
+      });
+
+      expect(callbackCancelled).not.toHaveBeenCalled();
+      done();
+    }, 100);
   });
 
   it('debounced side effects', (done) => {

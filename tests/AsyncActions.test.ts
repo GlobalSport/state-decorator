@@ -32,6 +32,7 @@ describe('Async action', () => {
 
   type Actions = {
     successAction: (p: string) => Promise<string>;
+    successActionWithSideEffect: (p: string) => Promise<string>;
     errorAction: (p: string) => Promise<any>;
     errorActionGetErrorMsg: (p: string) => Promise<any>;
     errorActionDefaultErrorMsg: (p: string) => Promise<any>;
@@ -56,10 +57,10 @@ describe('Async action', () => {
   };
 
   const baseAction: StoreAction<State, Actions['successAction'], Actions, Props> = {
-    preEffects: ({ s }) => ({ prop1: 'pre' }),
+    preEffects: () => ({ prop1: 'pre' }),
     getPromise: () => Promise.resolve('resolved'),
-    effects: ({ s, res: prop1, args: [prop2] }) => ({ prop1, prop2 }),
-    errorEffects: ({ s, err }) => ({ error: err.message }),
+    effects: ({ res: prop1, args: [prop2] }) => ({ prop1, prop2 }),
+    errorEffects: ({ err }) => ({ error: err.message }),
     sideEffects: ({ s, p }) => {
       p.callback('onDone', s);
     },
@@ -72,6 +73,12 @@ describe('Async action', () => {
 
   const actionsImpl: StoreActions<State, Actions, Props> = {
     successAction: { ...baseAction },
+    successActionWithSideEffect: {
+      ...baseAction,
+      sideEffects: ({ a, args: [p] }) => {
+        a.successAction(p + '_side');
+      },
+    },
     errorAction: {
       ...baseAction,
       getPromise: () => Promise.reject(new Error('failed!')),
@@ -273,6 +280,64 @@ describe('Async action', () => {
     expect(isLoading('successAction')).toBeTruthy();
     expect(store.loading).toBeTruthy();
     expect(store.loadingMap.successAction).toBeTruthy();
+
+    return promise;
+  });
+
+  it('action in sideEffects - do not trigger too many notifyStateListeners', () => {
+    const callback = jest.fn();
+    const callbackError = jest.fn();
+    const callbackCancel = jest.fn();
+    const notifySuccess = jest.fn();
+    const notifyError = jest.fn();
+
+    const actions: StoreActions<State, Actions, Props> = {
+      ...actionsImpl,
+      successAction: {
+        getPromise: () => Promise.resolve('resolved'),
+        effects: ({ res: prop1, args: [prop2] }) => ({ prop1, prop2 }),
+        errorEffects: ({ err }) => ({ error: err.message }),
+      },
+    };
+
+    const store = createStore({
+      getInitialState,
+      actions,
+      notifySuccess,
+      notifyError,
+    });
+
+    const listener = jest.fn();
+
+    store.addStateListener(listener);
+    store.setProps({
+      callback,
+      callbackError,
+      callbackCancel,
+    });
+
+    const { isLoading } = store;
+
+    const promise = store.actions.successActionWithSideEffect('result');
+
+    promise.then(() => {
+      // call 1 => init
+      // call 2 => 1st action load
+      // call 3 => 2nd action load
+      // call 4 => effect of 2nd action
+      expect(listener).toHaveBeenCalledTimes(4);
+      expect(notifyError).not.toHaveBeenCalled();
+
+      expect(store.state).toEqual({
+        prop1: 'resolved',
+        prop2: 'result_side',
+        error: '',
+      });
+
+      expect(callbackCancel).not.toHaveBeenCalled();
+
+      expect(isLoading('successAction')).toBeFalsy();
+    });
 
     return promise;
   });

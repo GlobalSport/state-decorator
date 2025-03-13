@@ -252,6 +252,7 @@ export function createMockStoreV6<S, A extends DecoratedActions, P = {}, DS = {}
         if (newStateIn != null) {
           newStateRef.current = newStateIn;
         }
+        return () => {};
       };
 
       const res = this.onPropsChangeImpl(
@@ -317,6 +318,7 @@ export function createMockStoreV6<S, A extends DecoratedActions, P = {}, DS = {}
         if (newStateIn != null) {
           newStateRef.current = newStateIn;
         }
+        return () => {};
       };
 
       // sync
@@ -494,6 +496,7 @@ export function createMockStoreAction<S, A extends DecoratedActions, F extends (
     },
     call(...args) {
       const newStateRef = createRef<S>({ ...stateRef.current });
+      const needNotifyListenersRef = createRef<boolean>(false);
       const derivedStateRef = createRef<DerivedState<DS>>({ state: null, deps: {} });
       computeDerivedValues(newStateRef, propsRef, derivedStateRef, options, derivedStateOverrideRef);
 
@@ -513,6 +516,7 @@ export function createMockStoreAction<S, A extends DecoratedActions, F extends (
         if (newStateIn != null) {
           newStateRef.current = newStateIn;
         }
+        return () => {};
       };
 
       const action = actions[actionName];
@@ -543,6 +547,7 @@ export function createMockStoreAction<S, A extends DecoratedActions, F extends (
           actionsRef as any,
           createRef(true),
           null,
+          createRef(false),
           options,
           setState,
           (_: keyof A) => {}
@@ -589,6 +594,7 @@ export function createMockStoreAction<S, A extends DecoratedActions, F extends (
             conflictActionsRef,
             initializedRef,
             timeoutRef: createRef({}),
+            needNotifyListenersRef,
             options,
             setState,
             stateRef: newStateRef,

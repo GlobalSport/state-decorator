@@ -61,8 +61,9 @@ export type SetStateFunc<S, A> = (
   isAsync: boolean,
   actionCtx: any,
   propsChanged: boolean,
-  isInit?: boolean
-) => void;
+  isInit?: boolean,
+  disableNotify?: boolean
+) => () => void;
 
 /** @internal */
 export type PromiseMap<A> = {
@@ -101,6 +102,7 @@ export type AsyncActionExecContext<S, DS, F extends (...args: any[]) => any, A e
   conflictActionsRef: Ref<ConflictActionsMap<A>>;
   actionsRef: Ref<A>;
   initializedRef: Ref<boolean>;
+  needNotifyListenersRef: Ref<boolean>;
   timeoutRef: Ref<TimeoutMap<A>>;
   options: StoreOptions<S, A, P, any>;
   setState: SetStateFunc<S, A>;
@@ -732,6 +734,7 @@ function executeSyncActionImpl<S, DS, F extends (...args: any[]) => any, A exten
   actionsRef: Ref<A>,
   timeoutMap: Ref<TimeoutMap<A>>,
   initializedRef: Ref<boolean>,
+  needNotifyListenersRef: Ref<boolean>,
   options: StoreOptions<S, A, P, any>,
   setState: SetStateFunc<S, A>,
   clearError: ClearErrorFunc<A>,
@@ -739,13 +742,28 @@ function executeSyncActionImpl<S, DS, F extends (...args: any[]) => any, A exten
 ) {
   const ctx = buildEffectsInvocationContext(stateRef, derivedStateRef, propsRef, args, undefined);
 
+  let notifyStateListeners;
   let actionDropped = false;
   if (action.effects != null) {
     const newState: S = mergeState(stateRef, action.effects(ctx), options.fullStateEffects);
     if (newState === null) {
       actionDropped = true;
     } else {
-      setState(newState, undefined, actionName, 'effects', false, ctx, false);
+      const mustNotifyNow = action.debounceSideEffectsTimeout != null || action.sideEffects == null;
+
+      needNotifyListenersRef.current = !mustNotifyNow;
+
+      notifyStateListeners = setState(
+        newState,
+        undefined,
+        actionName,
+        'effects',
+        false,
+        ctx,
+        false,
+        false,
+        !mustNotifyNow
+      );
     }
   }
 
@@ -766,10 +784,16 @@ function executeSyncActionImpl<S, DS, F extends (...args: any[]) => any, A exten
         );
         delete timeoutMap.current[actionName];
       }, action.debounceSideEffectsTimeout);
+
+      // no need to call notifyStateListeners
     } else {
       action.sideEffects?.(
         addSideEffectsContext(ctx, stateRef, derivedStateRef, actionsRef, options.notifyWarning, clearError)
       );
+
+      if (needNotifyListenersRef.current) {
+        notifyStateListeners?.();
+      }
     }
   }
 }
@@ -784,6 +808,7 @@ export function decorateSyncAction<S, DS, F extends (...args: any[]) => any, A e
   actionsRef: Ref<A>,
   initializedRef: Ref<boolean>,
   timeoutMap: Ref<TimeoutMap<A>>,
+  needNotifyListenersRef: Ref<boolean>,
   options: StoreOptions<S, A, P, any>,
   setState: SetStateFunc<S, A>,
   clearError: ClearErrorFunc<A>
@@ -817,6 +842,7 @@ export function decorateSyncAction<S, DS, F extends (...args: any[]) => any, A e
           actionsRef,
           timeoutMap,
           initializedRef,
+          needNotifyListenersRef,
           options,
           setState,
           clearError,
@@ -833,6 +859,7 @@ export function decorateSyncAction<S, DS, F extends (...args: any[]) => any, A e
         actionsRef,
         timeoutMap,
         initializedRef,
+        needNotifyListenersRef,
         options,
         setState,
         clearError,
@@ -851,6 +878,7 @@ function processPromiseSuccess<S, DS, F extends (...args: any[]) => any, A exten
   const {
     action,
     stateRef,
+    needNotifyListenersRef,
     derivedStateRef,
     propsRef,
     promisesRef,
@@ -880,14 +908,18 @@ function processPromiseSuccess<S, DS, F extends (...args: any[]) => any, A exten
     }
   }
 
-  setState(
+  needNotifyListenersRef.current = true;
+
+  const notifyStateListeners = setState(
     newState,
     buildLoadingMap(loadingMapRef.current, actionName, promiseId, false),
     actionName,
     'effects',
     true,
     ctx,
-    false
+    false,
+    false,
+    true
   );
 
   const notifySuccess = options.notifySuccess || globalConfig.notifySuccess;
@@ -910,6 +942,10 @@ function processPromiseSuccess<S, DS, F extends (...args: any[]) => any, A exten
     action.sideEffects(
       addSideEffectsContext(ctx, stateRef, derivedStateRef, actionsRef, globalConfig.notifyWarning, clearError)
     );
+  }
+
+  if (needNotifyListenersRef.current) {
+    notifyStateListeners();
   }
 
   processNextConflictAction(context.initializedRef, actionName, actionsRef.current, conflictActionsRef.current);
