@@ -6,3 +6,4 @@ updates:
       interval: "daily"
     allow:
       - dependency-name: "fast-deep-equal"
+      - dependency-type: "production"
