@@ -13,7 +13,7 @@ OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 PERFORMANCE OF THIS SOFTWARE.
 ***************************************************************************** */
 import useSyncExternalStoreWithSelectorExports from 'use-sync-external-store/shim/with-selector';
-import useSyncExternalStoreExports from 'use-sync-external-store/shim/index';
+import useSyncExternalStoreExports from 'use-sync-external-store/shim';
 
 import { Context, useContext, useEffect, useLayoutEffect, useMemo, useReducer, useRef } from 'react';
 import {
