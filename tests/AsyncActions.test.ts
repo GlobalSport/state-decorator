@@ -1226,4 +1226,35 @@ describe('Async action', () => {
       }
     }
   });
+
+  describe('isErrorManaged in top', () => {
+    type State = {
+      prop: string;
+    };
+
+    type Actions = {
+      actionWithError: () => Promise<void>;
+    };
+
+    const storeConfig: StoreConfig<State, Actions, object> = {
+      isErrorManaged: true,
+      getInitialState: () => ({ prop: '' }),
+      actions: {
+        actionWithError: {
+          getPromise: () => Promise.reject(new Error('failure')),
+          effects: () => ({ prop: 'done' }),
+        },
+      },
+    };
+
+    it('works', () => {
+      const store = createStore(storeConfig);
+      store.init({});
+
+      return store.actions.actionWithError().then(() => {
+        expect(store.state).toEqual({ prop: '' });
+        expect(store.errorMap.actionWithError).toBeInstanceOf(Error);
+      });
+    });
+  });
 });
