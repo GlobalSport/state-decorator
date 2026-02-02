@@ -117,6 +117,8 @@ export type SyncAction<S, F extends (...args: any[]) => any, A, P, DS, FxRes = P
    * Function that calls side effects, ie. effects that are not changing the state directly.
    */
   sideEffects?: (ctx: SideEffectsInvocationContext<S, DS, F, P, A>) => void;
+
+  getSuccessMessage?: (ctx: SuccessMessageInvocationContext<S, DS, F, P>) => string;
 };
 
 /**

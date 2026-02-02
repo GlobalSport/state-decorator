@@ -742,8 +742,9 @@ function executeSyncActionImpl<S, DS, F extends (...args: any[]) => any, A exten
 ) {
   const ctx = buildEffectsInvocationContext(stateRef, derivedStateRef, propsRef, args, undefined);
 
-  let notifyStateListeners;
+  let notifyStateListeners: () => void = null;
   let actionDropped = false;
+
   if (action.effects != null) {
     const newState: S = mergeState(stateRef, action.effects(ctx), options.fullStateEffects);
     if (newState === null) {
@@ -768,7 +769,32 @@ function executeSyncActionImpl<S, DS, F extends (...args: any[]) => any, A exten
   }
 
   if (!actionDropped) {
-    if (action.debounceSideEffectsTimeout > 0) {
+    const executeSideEffects = (shouldNotify: boolean) => {
+      action.sideEffects?.(
+        addSideEffectsContext(ctx, stateRef, derivedStateRef, actionsRef, options.notifyWarning, clearError)
+      );
+
+      if (shouldNotify && needNotifyListenersRef.current) {
+        notifyStateListeners?.();
+      }
+
+      const notifySuccess = options.notifySuccess || globalConfig.notifySuccess;
+
+      if (notifySuccess) {
+        let msg: string;
+
+        if (action.getSuccessMessage) {
+          msg = action.getSuccessMessage(ctx);
+        }
+
+        if (msg) {
+          notifySuccess(msg);
+        }
+      }
+    };
+
+    // if  no sideEffects, debounceSideEffectsTimeout is ignored
+    if (action.debounceSideEffectsTimeout > 0 && action.sideEffects) {
       const timeout = timeoutMap.current[actionName];
 
       if (timeout) {
@@ -779,21 +805,14 @@ function executeSyncActionImpl<S, DS, F extends (...args: any[]) => any, A exten
         if (!initializedRef.current) {
           return;
         }
-        action.sideEffects?.(
-          addSideEffectsContext(ctx, stateRef, derivedStateRef, actionsRef, options.notifyWarning, clearError)
-        );
         delete timeoutMap.current[actionName];
+
+        executeSideEffects(false);
       }, action.debounceSideEffectsTimeout);
 
       // no need to call notifyStateListeners
     } else {
-      action.sideEffects?.(
-        addSideEffectsContext(ctx, stateRef, derivedStateRef, actionsRef, options.notifyWarning, clearError)
-      );
-
-      if (needNotifyListenersRef.current) {
-        notifyStateListeners?.();
-      }
+      executeSideEffects(true);
     }
   }
 }
