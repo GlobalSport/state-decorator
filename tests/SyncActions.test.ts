@@ -30,11 +30,13 @@ describe('Advanced synchronous action', () => {
       sideEffects: ({ s, p }) => {
         p.callback(s);
       },
+      getSuccessMessage: () => `prop2`,
     },
     sideEffects: {
       sideEffects: ({ s, p }) => {
         p.callbackSideEffects?.(s);
       },
+      getSuccessMessage: () => `sideEffects`,
     },
     setEffectsDebounced: {
       effects: ({ args: [p] }) => ({ prop2: p }),
@@ -42,6 +44,7 @@ describe('Advanced synchronous action', () => {
         p.callback(s);
       },
       debounceTimeout: 50,
+      getSuccessMessage: () => `setEffectsDebounced`,
     },
     setSideEffectsDebounced: {
       effects: ({ args: [p] }) => ({ prop2: p }),
@@ -49,10 +52,12 @@ describe('Advanced synchronous action', () => {
         p.callback(s);
       },
       debounceSideEffectsTimeout: 50,
+      getSuccessMessage: () => `setSideEffectsDebounced`,
     },
     setSideEffectsDebounced2: {
       effects: ({ args: [p] }) => ({ prop2: p }),
       debounceSideEffectsTimeout: 50,
+      getSuccessMessage: () => `setSideEffectsDebounced2`,
     },
     setCancelled: { effects: () => null, sideEffects: ({ p }) => p.callbackCancelled() },
   };
@@ -63,7 +68,9 @@ describe('Advanced synchronous action', () => {
   });
 
   it('works as expected', () => {
-    const store = createStore({ getInitialState, actions });
+    const notifySuccess = jest.fn();
+
+    const store = createStore({ getInitialState, actions, notifySuccess });
     const listener = jest.fn();
     const callback = jest.fn();
     const callbackSideEffects = jest.fn();
@@ -94,6 +101,7 @@ describe('Advanced synchronous action', () => {
     });
 
     setProp2(23);
+    expect(notifySuccess).toHaveBeenCalledWith('prop2');
 
     expect(listener).toHaveBeenCalledTimes(3);
 
@@ -121,6 +129,8 @@ describe('Advanced synchronous action', () => {
 
     // allow to call sideEffects only
     sideEffects();
+    expect(notifySuccess).toHaveBeenCalledTimes(2);
+    expect(notifySuccess).toHaveBeenCalledWith('sideEffects');
 
     // not called
     expect(listener).toHaveBeenCalledTimes(3);
@@ -245,7 +255,9 @@ describe('Advanced synchronous action', () => {
   });
 
   it('debounced side effects', (done) => {
-    const store = createStore({ getInitialState, actions });
+    const notifySuccess = jest.fn();
+
+    const store = createStore({ getInitialState, actions, notifySuccess });
 
     const listener = jest.fn();
     const callback = jest.fn((s: State) => {});
@@ -271,6 +283,7 @@ describe('Advanced synchronous action', () => {
         prop1: '',
         prop2: 23,
       });
+      expect(notifySuccess).toHaveBeenCalledWith('setSideEffectsDebounced');
       done();
     }, 75);
 
@@ -278,7 +291,9 @@ describe('Advanced synchronous action', () => {
   });
 
   it('debounced no side effects', (done) => {
-    const store = createStore({ getInitialState, actions });
+    const notifySuccess = jest.fn();
+
+    const store = createStore({ getInitialState, actions, notifySuccess });
 
     const listener = jest.fn();
     const callback = jest.fn((s: State) => {});
@@ -292,12 +307,21 @@ describe('Advanced synchronous action', () => {
 
     setDebounced(23);
 
+    setTimeout(() => {
+      expect(store.state).toEqual({
+        prop1: '',
+        prop2: 23,
+      });
+      expect(notifySuccess).toHaveBeenCalledWith('setSideEffectsDebounced2');
+      done();
+    }, 75);
+
     // should not crash
-    done();
   });
 
   it('debounced effects', (done) => {
-    const store = createStore({ getInitialState, actions });
+    const notifySuccess = jest.fn();
+    const store = createStore({ getInitialState, actions, notifySuccess });
 
     const listener = jest.fn();
     const callback = jest.fn((s: State) => {});
@@ -325,6 +349,9 @@ describe('Advanced synchronous action', () => {
         prop1: '',
         prop2: 23,
       });
+
+      expect(notifySuccess).toHaveBeenCalledWith('setEffectsDebounced');
+
       done();
     }, 75);
 
