@@ -6,7 +6,10 @@
   "module": "es/index.js",
   "types": "index.d.ts",
   "private": true,
-  "repository": "git@github.com:GlobalSport/state-decorator.git",
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/GlobalSport/state-decorator.git"
+  },
   "author": "Damien Garbarino <d.garbarino@mycoachsport.com>",
   "license": "MIT",
   "sideEffects": false,
