@@ -541,7 +541,7 @@ export function buildOnUnMountInvocationContext<S, DS, A, P>(
 }
 
 /** @internal */
-export function buildOnPropChangeEffects<S, DS, P>(
+function buildOnPropChangeEffects<S, DS, P>(
   stateRef: Ref<S>,
   derivedStateRef: Ref<DerivedState<DS>>,
   propsRef: Ref<P>,
@@ -635,7 +635,7 @@ function buildPromiseActionContext<S, DS, F extends (...args: any[]) => any, P, 
 }
 
 /** @internal */
-export function addStateToContext<T, S>(ctx: T, stateRef: Ref<S>): T & ContextState<S> {
+function addStateToContext<T, S>(ctx: T, stateRef: Ref<S>): T & ContextState<S> {
   const newCtx = ctx as T & ContextState<S>;
 
   newCtx.state = stateRef.current;
@@ -644,7 +644,7 @@ export function addStateToContext<T, S>(ctx: T, stateRef: Ref<S>): T & ContextSt
 }
 
 /** @internal */
-export function addContextActions<T, A>(ctx: T, actionsRef: Ref<A>): T & InvocationContextActions<A> {
+function addContextActions<T, A>(ctx: T, actionsRef: Ref<A>): T & InvocationContextActions<A> {
   const newCtx = ctx as T & InvocationContextActions<A>;
 
   newCtx.actions = actionsRef.current;
