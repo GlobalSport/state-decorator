@@ -205,6 +205,18 @@ export type StoreApi<S, A extends DecoratedActions, P, DS = {}> = {
    * Returns a snapshot of the current state of the store.
    */
   getSnapshot(): StateListenerContext<S, DS, A, P>;
+
+  /**
+   * Registers a listener on a dependent store and calls `setProps` on this store (merging current props)
+   * whenever any of the specified `props` changes in `depStore`.
+   * @param depStore The store to listen to.
+   * @param props List of state property names from `depStore` to watch.
+   * @returns An unregister function that stops listening.
+   */
+  listenToStoreProps<DepS extends Partial<P>, K extends keyof DepS>(
+    depStore: StoreApi<DepS, any, any, any>,
+    props: K[]
+  ): StateListenerUnregister;
 };
 
 export type StateListenerContext<S, DS, A extends DecoratedActions, P> = P &
@@ -669,6 +681,28 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
     return snapshotRef.current;
   }
 
+  function listenToStoreProps<DepS extends Partial<P>, K extends keyof DepS>(
+    depStore: StoreApi<DepS, any, any, any>,
+    props: K[]
+  ): StateListenerUnregister {
+    let prevValues = depStore.state ? pick(depStore.state, props) : ({} as Pick<DepS, K>);
+
+    return depStore.addStateListener(() => {
+      const depState = depStore.state;
+      if (!depState) {
+        return;
+      }
+
+      const newValues = pick(depState, props);
+      const hasChanged = props.some((prop) => !Object.is(prevValues[prop], newValues[prop]));
+
+      if (hasChanged) {
+        prevValues = newValues;
+        setProps({ ...propsRef.current, ...newValues } as P);
+      }
+    });
+  }
+
   return {
     getConfig,
     setProps,
@@ -680,6 +714,7 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
     clearError,
     getSnapshot,
     invokeOnMountDeferred,
+    listenToStoreProps,
     get actions() {
       return actionsRef.current;
     },
