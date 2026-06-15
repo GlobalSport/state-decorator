@@ -173,6 +173,41 @@ describe('react hooks', () => {
     expect(result.current.res).toEqual('v1');
   });
 
+  it('useStoreSlice works as expected (func + deps)', () => {
+    const store = createStore({ getInitialState, actions: actionsImpl });
+    store.init({ prop1: '' });
+
+    // External dependency that the slicer function closes over
+    let multiplier = 1;
+
+    const { result, rerender } = renderHook(() =>
+      useStoreSlice(
+        store,
+        (ctx) => ({
+          res: ctx.stateProp1 ? `${ctx.stateProp1}_${multiplier}` : '',
+          set: ctx.setProp1,
+        }),
+        [multiplier]
+      )
+    );
+
+    expect(result.current.res).toEqual('');
+
+    act(() => {
+      result.current.set('v1');
+    });
+
+    // multiplier=1 → appended "_1"
+    expect(result.current.res).toEqual('v1_1');
+
+    // Change the external dependency and rerender to trigger memo update
+    multiplier = 2;
+    rerender();
+
+    // Now the slicer re-runs with the new multiplier
+    expect(result.current.res).toEqual('v1_2');
+  });
+
   it('useStoreContextSlice works as expected (func)', () => {
     const wrapper = ({ children }) => <StoreContextProvider>{children}</StoreContextProvider>;
 

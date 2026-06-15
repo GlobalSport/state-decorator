@@ -770,7 +770,8 @@ type useStoreSlice<S, A extends DecoratedActions, P, DS, SLICE> = (
  */
 export function useStoreSlice<S, A extends DecoratedActions, P, DS, SLICE>(
   store: StoreApi<S, A, P, DS>,
-  slicerFunc: (ctx: StateListenerContext<S, DS, A, P>) => SLICE
+  slicerFunc: (ctx: StateListenerContext<S, DS, A, P>) => SLICE,
+  deps?: any[]
 ): SLICE;
 
 /**
@@ -791,11 +792,16 @@ export function useStoreSlice<
   properties: K[]
 ): Pick<StateListenerContext<S, DS, A, P>, K> & { loadingMap: LoadingMap<Pick<A, KL>> };
 
-export function useStoreSlice<S, A extends DecoratedActions, P, DS>(store: StoreApi<S, A, P, DS>, funcOrArr: any) {
+export function useStoreSlice<S, A extends DecoratedActions, P, DS>(
+  store: StoreApi<S, A, P, DS>,
+  funcOrArr: any,
+  deps: any[] = []
+) {
   const slicerFunc = useMemo(
     () =>
       funcOrArr instanceof Function ? funcOrArr : (ctx: StateListenerContext<S, DS, A, P>) => pick(ctx, funcOrArr),
-    [funcOrArr]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [funcOrArr, ...deps]
   );
 
   return useSyncExternalStoreWithSelector(
