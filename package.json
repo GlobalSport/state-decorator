@@ -1,6 +1,6 @@
 {
   "name": "state-decorator",
-  "version": "7.6.0",
+  "version": "7.6.1",
   "description": "React state management library",
   "main": "index.js",
   "module": "es/index.js",
