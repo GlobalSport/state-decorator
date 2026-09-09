@@ -324,6 +324,10 @@ function useStateDecorator<S, A extends DecoratedActions, P>(
 
   storeRef.current.setProps(props);
 
+  // Registered before the init/runMountEffects layout effect below so the listener is already attached
+  // when runMountEffects() notifies (it fires from a layout effect too, so still before paint - no flash).
+  // Otherwise, state changes made by mount-time onPropsChange effects (onMount: true) would render stale
+  // on first paint since nothing would be subscribed yet to schedule the re-render.
   useLayoutEffect(
     () =>
       storeRef.current.addStateListener(() => {
@@ -331,6 +335,16 @@ function useStateDecorator<S, A extends DecoratedActions, P>(
       }),
     []
   );
+
+  useLayoutEffect(() => {
+    // setProps() above already calls init() during render for the first render pass, but under React 18+
+    // concurrent rendering that render pass may be discarded and retried with a fresh store (storeRef.current
+    // is created lazily above). runMountEffects() is deferred to this effect (which only runs for the render
+    // that actually commits) so onMount only fires once per real mount, not once per discarded render attempt.
+    storeRef.current.init(props);
+    storeRef.current.runMountEffects();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const store = storeRef.current;
 

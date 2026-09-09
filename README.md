@@ -6,6 +6,42 @@
 
 The StateDecorator is a set of React hooks that manage a complex component state in an easy, testable and deterministic way.
 
+## Table of contents
+
+- [Features](#features)
+- [V7: Partial state and new hooks](#v7-partial-state-and-new-hooks)
+- [V8: Better React 19 compatibility](#v8-better-react-19-compatibility)
+- [Getting started](#getting-started)
+- [React hooks](#react-hooks)
+- [StoreApi](#storeapi)
+- [Initial state](#initial-state)
+- [Action context](#action-context)
+- [Actions](#actions)
+- [Synchronous actions](#synchronous-actions)
+- [Asynchronous actions](#asynchronous-actions)
+  - [Error management](#ErrorManagement)
+  - [Conflicting actions](#ConflictingActions)
+- [Global / local Stores and State sharing](#GlobalLocalStores)
+- [Derived state](#derived-state)
+- [Global configuration](#global-configuration)
+- [Trace actions](#trace-actions)
+  - [Concise logger](#concise-logger)
+  - [Detailed Logger](#detailed-logger)
+  - [Redux devtools](#redux-devtools)
+- [Unit testing](#unit-testing)
+  - [Example](#example)
+  - [Error testing](#error-testing)
+  - [API](#api)
+- [Immutability](#immutability)
+- [Build](#build)
+- [Limitations](#limitations)
+- [Migration](#migration)
+  - [V7 to V8](#v7-to-v8)
+  - [V6 to V7](#v6-to-v7)
+  - [V5 to V6](#v5-to-v6)
+- [Examples](#examples)
+- [Visual Studio Code user snippet](#visual-studio-code-user-snippet)
+
 # Features
 
 - Deterministic state changes (clear separation of effects and side effects)
@@ -26,6 +62,11 @@ The StateDecorator is a set of React hooks that manage a complex component state
 - New **useStoreContextSlice** hook was added to get a slice of a store in a context.
 - New **onMountDeferred** to execute initialization code after initial render
 - New effect helpers
+- See migration details in [migration section](#migration).
+
+# V8: Better React 19 compatibility
+
+- Fixed a React 18+/19 concurrent rendering issue: **onMount** (and **onPropsChange** entries flagged **onMount: true**) used to run during **init()**, which can itself run during render. Under concurrent rendering, a discarded and retried render attempt could trigger these side effects (e.g. data fetches) more than once per real mount. They are now deferred to a new **runMountEffects()** store method, called once from a layout effect after the render that actually commits — see [Call actions on mount](#call-actions-on-mount).
 - See migration details in [migration section](#migration).
 
 # Getting started
@@ -141,13 +182,40 @@ export function App(props: Props) => {
 
 # React hooks
 
-| Hook                 | Purpose                                                       | Returns | Is component refreshed on store change? | Is store destroyed on unmount? |
-| -------------------- | ------------------------------------------------------------- | ------- | --------------------------------------- | ------------------------------ |
-| useLocalStore        | Create a store and binds it to the react component.           | Store   | if **refreshOnUpdate** is set           | Y                              |
-| useStore             | Binds a store instance to the react component.                | Store   | yes                                     | N                              |
-| useBindStore         | Binds a store instance to the react component (inject props). | Store   | yes                                     | N                              |
-| useStoreSlice        | Get a slice of a store.                                       | Slice   | yes                                     | N                              |
-| useStoreContextSlice | Get a slice of a store stored in a context                    | Slice   | If slice has changed only               | N                              |
+| Hook                 | Purpose                                                                                                             | Returns | Is component refreshed on store change? | Is store destroyed on unmount? |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------- | ------- | --------------------------------------- | ------------------------------ |
+| useLocalStore        | Create a store and binds it to the react component.                                                                 | Store   | if **refreshOnUpdate** is set           | Y                              |
+| useStore             | Subscribes the component to a store instance already owned/initialized elsewhere (does not call `init`/`setProps`). | Store   | yes                                     | N                              |
+| useBindStore         | Binds a store instance to the react component (inject props).                                                       | Store   | yes                                     | N                              |
+| useStoreSlice        | Get a slice of a store.                                                                                             | Slice   | yes                                     | N                              |
+| useStoreContextSlice | Get a slice of a store stored in a context                                                                          | Slice   | If slice has changed only               | N                              |
+
+# StoreApi
+
+Whatever hook is used (or a plain `createStore`), the resulting store exposes the same **StoreApi**:
+
+| Member                               | Signature                                              | Description                                                                                                                                                                                                                                                                   |
+| ------------------------------------ | ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| state                                | `S & DS`                                               | Current state, merged with derived state if any.                                                                                                                                                                                                                              |
+| actions                              | `A`                                                    | Decorated actions, ready to call.                                                                                                                                                                                                                                             |
+| loading                              | `boolean`                                              | `true` if at least one asynchronous action is currently loading.                                                                                                                                                                                                              |
+| loadingMap                           | `LoadingMap<A>`                                        | Per-action loading flags (computed on access).                                                                                                                                                                                                                                |
+| errorMap                             | `ErrorMap<A>`                                          | Per-action error map (computed on access).                                                                                                                                                                                                                                    |
+| loadingParallelMap                   | `LoadingParallelMap<A>`                                | Per-action, per-`promiseId` loading flags for parallel actions.                                                                                                                                                                                                               |
+| errorParallelMap                     | `ErrorParallelMap<A>`                                  | Per-action, per-`promiseId` error map for parallel actions.                                                                                                                                                                                                                   |
+| `init(p)`                            | `(p: P) => void`                                       | Initializes the store with the given props: computes initial state, runs `onPropsChange` effects. Called automatically by **useLocalStore** / **useBindStore**.                                                                                                               |
+| `runMountEffects()`                  | `() => void`                                           | Runs **onMount** (and `onPropsChange` entries flagged `onMount: true`) exactly once. Must be called after `init()`, from an effect (never a render body). Called automatically by **useLocalStore** / **useBindStore** — see [Call actions on mount](#call-actions-on-mount). |
+| `setProps(p)`                        | `(p: P) => void`                                       | Updates the store with new props, triggering matching `onPropsChange` entries.                                                                                                                                                                                                |
+| `destroy()`                          | `() => void`                                           | Destroys the store: runs **onUnmount**, clears listeners/timers. Called automatically when a **useLocalStore**-owned component unmounts.                                                                                                                                      |
+| `abortAction(name, promiseId?)`      | `(actionName: keyof A, promiseId?: string) => boolean` | Aborts a running asynchronous action marked `abortable`. See [Abort asynchronous action](#abort-asynchronous-action).                                                                                                                                                         |
+| `addStateListener(listener)`         | `(listener: () => void) => unregister`                 | Subscribes to state changes; returns an unregister function.                                                                                                                                                                                                                  |
+| `isLoading(...)`                     | `IsLoadingFunc<A>`                                     | Returns `true` if any of the given action names (or `[name, promiseId]` tuples) are loading.                                                                                                                                                                                  |
+| `clearError(...)`                    | `ClearErrorFunc<A>`                                    | Clears the error of an action marked `isErrorManaged: true`.                                                                                                                                                                                                                  |
+| `getConfig()`                        | `() => StoreConfig<S, A, P, DS>`                       | Returns the store's configuration.                                                                                                                                                                                                                                            |
+| `getSnapshot()`                      | `() => StateListenerContext<S, DS, A, P>`              | Returns a snapshot of the current state/props/actions. Used internally (e.g. by `useSyncExternalStore`).                                                                                                                                                                      |
+| `listenToStoreProps(depStore, keys)` | `(depStore: StoreApi, keys: K[]) => unregister`        | Subscribes to another store's state changes and mirrors the listed properties into this store's props (via `setProps`) whenever they change. Returns an unregister function.                                                                                                  |
+
+**Note**: most of these methods (`init`, `runMountEffects`, `destroy`, `setProps`) are lifecycle methods already called for you by **useLocalStore** and **useBindStore**. You only need to call them yourself when driving a store outside these two hooks — e.g. a plain **createStore** used without React, or read through **useStore** / **useStoreSlice** (which only subscribe, they don't own the lifecycle).
 
 # Initial state
 
@@ -648,7 +716,7 @@ const actions: StoreActions<State, Actions> = {
 
 ## Call actions on mount
 
-When store is created (for example whe React component in mounted), the **onMount** option is called.
+When the store is mounted, the **onMount** option is called.
 
 ```typescript
 import { StoreConfig } from 'state-decorator';
@@ -662,9 +730,19 @@ const config: StoreConfig<State, Actions, Props> = {
 };
 ```
 
-After React component is mounted using _useLocalStore_, the **onMountDeferred** option is called (in a _useEffect_).
-The **onMount** is called _during_ the render of the hooks. If the onMount code is containing a function that is changing parent state,
-React will not update the parent state and will issue a warning.
+**onMount** (and any **onPropsChange** entry flagged **onMount: true**, see below) is _not_ called by **init()**. It is called by **runMountEffects()**, a separate store method that must be called once, after **init()**, from a React layout/passive effect (never from a render body) — **useLocalStore** and **useBindStore** already call it for you automatically, since these are the hooks that own the store's lifecycle (they call `init`/`runMountEffects`/`destroy`). **useStore** does not: it only subscribes to a store that is already initialized and mounted elsewhere (e.g. by `useBindStore`, `useLocalStore`, or manual code), so it never calls `init` or `runMountEffects` itself.
+
+If you use **createStore** without any of these hooks (a store driven entirely outside React, e.g. `store.init(props)` called directly), you are responsible for calling `store.runMountEffects()` yourself once after `init()` — otherwise **onMount** (and any props change effects flagged `onMount: true`) will never run.
+
+```typescript
+const store = createStore(config);
+store.init(props);
+store.runMountEffects(); // required if the store isn't bound via useLocalStore / useBindStore
+```
+
+**onMount** is called from a layout effect (_useLayoutEffect_), synchronously right after mount and before paint. **onMountDeferred** is called from a passive effect (_useEffect_), after paint.
+
+Use **onMount** for state changes that should be visible on first paint (e.g. avoiding a flash of missing data). Use **onMountDeferred** for work that doesn't need to block paint (e.g. expensive initialization, or work that depends on child components' own effects/refs having already run).
 
 ```typescript
 import { StoreConfig } from 'state-decorator';
@@ -735,7 +813,7 @@ const config: StoreConfig<State, Actions, Props> = {
 
 ## OnMount
 
-If the onMount flag is set on the props change configuration, the effects and side effects will be executed at the store creation when the component is mounted.
+If the onMount flag is set on the props change configuration, the effects and side effects will be executed when **runMountEffects()** is called (see [Call actions on mount](#call-actions-on-mount) above) — automatically after mount when using **useLocalStore** / **useStore** / **useBindStore**, or manually via `store.runMountEffects()` if the store isn't bound to any of these hooks.
 
 It allows to trigger same actions at creation time and when the dependencies props are changed.
 
@@ -786,7 +864,7 @@ const config: StoreConfig<State, Actions, Props> = {
 - Use several prop change configurations to separate dependencies between props and have simple definition.
 - Use onMount flag to have a more systematic and simpler code.
 
-# Global / local Stores and State sharing
+# <a name="GlobalLocalStores"></a>Global / local Stores and State sharing
 
 There are two ways to share state and actions:
 
@@ -825,13 +903,13 @@ export const store = createStore(getInitialState, userAppActions);
 
 // In another file
 import { memo } from 'react';
-import { useStore } from 'state-decorator';
+import { useBindStore } from 'state-decorator';
 import store from './GlobalStore';
 
-// Bind to react component
+// Bind to react component and inject props
 // Each time the store state changes, a re-render is done.
 export function Container(props: Props) {
-  const { state, actions } = useStore(store, props);
+  const { state, actions } = useBindStore(store, props);
   return (
     <div>
       <Title text={state.title} />
@@ -1046,7 +1124,7 @@ const store = createStore<State, Actions, Props, DerivedState>({
 });
 
 export function App(props: Props) {
-  const { state } = useStore(store, props);
+  const { state } = useBindStore(store, props);
   // state contains the store state and derived state
   return (
     <div>
@@ -1700,6 +1778,20 @@ resolve: {
   - Solution: the **Actions** interface must either extends **DecoratedActions** interface or be a **type**.
 
 # Migration
+
+## V7 to V8
+
+No breaking changes for **useLocalStore** / **useStore** / **useBindStore** users — they behave the same, no code change needed.
+
+The only breaking change concerns code using **createStore** directly without any of these hooks: **onMount** (and **onPropsChange** entries flagged **onMount: true**) is no longer called by **init()**. It is now called by a new **runMountEffects()** store method, which you must call once yourself, right after **init()**:
+
+```diff
+ const store = createStore(config);
+ store.init(props);
++store.runMountEffects();
+```
+
+If you skip this, **onMount** (and `onMount`-flagged **onPropsChange** entries) will simply never run. See [Call actions on mount](#call-actions-on-mount) for details.
 
 ## V6 to V7
 
