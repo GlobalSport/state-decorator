@@ -161,6 +161,12 @@ export type StoreApi<S, A extends DecoratedActions, P, DS = {}> = {
   readonly init: (p: P) => void;
 
   /**
+   * Runs onMount (and onPropsChange entries flagged onMount) exactly once for this store instance.
+   * Must be called from an effect (useLayoutEffect/useEffect), never from a render body.
+   */
+  readonly runMountEffects: () => void;
+
+  /**
    * Update the store with the specified props
    */
   readonly setProps: (p: P) => void;
@@ -256,6 +262,7 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
   const promisesRef = createRef<PromiseMap<A>>();
   const conflictActionsRef = createRef<ConflictActionsMap<A>>();
   const initializedRef = createRef(false);
+  const mountEffectsRanRef = createRef(false);
   const needNotifyListenersRef = createRef(false);
   const snapshotRef = createRef<StateListenerContext<S, DS, A, P>>();
 
@@ -382,6 +389,25 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
 
       computeDerivedValues(stateRef, propsRef, derivedStateRef, options);
 
+      notifyStateListeners();
+      // end init
+    }
+  }
+
+  // Runs onMount (and onPropsChange entries flagged onMount) exactly once per initialized store instance.
+  //
+  // This is intentionally NOT run from init(): init() can run during the render phase (via setProps,
+  // called directly in component render bodies for state-decorator hooks), and under React 18+ concurrent
+  // rendering a component's render body can be invoked more than once for a single eventual commit. When
+  // the store itself is created lazily in a useRef during render (see useLocalStore), a discarded render
+  // attempt gets a fresh store instance, so firing onMount from init() would re-trigger real, uncancellable
+  // side effects (e.g. data fetches) once per discarded render attempt. Deferring these effects to
+  // runMountEffects(), called only from a useLayoutEffect/useEffect, guarantees they run only for the store
+  // instance that is actually part of the committed render, since a discarded fiber's effects never run.
+  function runMountEffects() {
+    if (initializedRef.current && !mountEffectsRanRef.current) {
+      mountEffectsRanRef.current = true;
+
       // manage PropsChange with onMount
       onPropChange(
         stateRef,
@@ -401,7 +427,6 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
       }
 
       notifyStateListeners();
-      // end init
     }
   }
 
@@ -471,6 +496,7 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
       timeoutRef.current = null;
       stateListeners = {};
       initializedRef.current = false;
+      mountEffectsRanRef.current = false;
 
       middlewaresRef.current.forEach((m) => {
         m.destroy?.();
@@ -708,6 +734,7 @@ export function createStore<S, A extends DecoratedActions, P, DS = {}>(
     setProps,
     addStateListener,
     init,
+    runMountEffects,
     destroy,
     isLoading,
     abortAction,
@@ -889,6 +916,19 @@ function useStoreImpl<S, A extends DecoratedActions, P, DS = {}>(
 
   store.setProps(props);
 
+  // Registered before the init/runMountEffects layout effect below so the listener is already attached
+  // when runMountEffects() notifies (it fires from a layout effect too, so still before paint - no flash).
+  // Otherwise, state changes made by mount-time onPropsChange effects (onMount: true) would render stale
+  // on first paint since nothing would be subscribed yet to schedule the re-render.
+  useLayoutEffect(() => {
+    if (refreshOnUpdate) {
+      return storeRef.current.addStateListener(() => {
+        forceRefresh();
+      });
+    }
+    return undefined;
+  }, [refreshOnUpdate]);
+
   useLayoutEffect(() => {
     // In development mode, React is calling in order:
     // - render
@@ -902,17 +942,9 @@ function useStoreImpl<S, A extends DecoratedActions, P, DS = {}>(
     // Here we enforce a initialization of the store after a destroy in the useEffect delete callback
 
     store.init(props);
+    store.runMountEffects();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  useLayoutEffect(() => {
-    if (refreshOnUpdate) {
-      return storeRef.current.addStateListener(() => {
-        forceRefresh();
-      });
-    }
-    return undefined;
-  }, [refreshOnUpdate]);
 
   return store;
 }
@@ -977,6 +1009,7 @@ export function useBindStore<S, A extends DecoratedActions, P, DS = {}>(store: S
     // Here we enforce a initialization of the store after a destroy in the useEffect delete callback
 
     store.init(props);
+    store.runMountEffects();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

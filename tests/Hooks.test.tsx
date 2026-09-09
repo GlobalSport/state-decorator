@@ -4,6 +4,8 @@
 
 import React, { createContext } from 'react';
 import { renderHook, act, Act } from '@testing-library/react-hooks';
+import * as ReactDOM from 'react-dom';
+import { act as domAct } from 'react-dom/test-utils';
 import {
   useLocalStore,
   useStore,
@@ -94,6 +96,55 @@ describe('react hooks', () => {
     // use store API
     result.current.destroy();
     expect(result.current.state).toBeNull();
+  });
+
+  it('useLocalStore calls onMount exactly once on mount', () => {
+    const onMount = jest.fn();
+
+    const storeConfig: StoreConfig<State, Actions, Props> = {
+      getInitialState,
+      actions: actionsImpl,
+      onMount,
+    };
+
+    renderHook(() => useLocalStore(storeConfig, { prop1: '' }));
+
+    expect(onMount).toHaveBeenCalledTimes(1);
+  });
+
+  it('useLocalStore reflects an onMount-flagged onPropsChange effect on first paint', () => {
+    // Regression test: onMount-flagged onPropsChange effects (and onMount itself) are applied from a
+    // layout effect (runMountEffects), not during render. The state listener that schedules the
+    // re-render must already be registered by the time that effect fires, or the first paint would
+    // render stale (missing the mount-time effect) until some unrelated update happened to occur.
+    //
+    // This must assert on actual DOM output (not `store.state`, a live getter that reflects internal
+    // state regardless of whether a re-render was ever triggered) to catch a missed re-render.
+    const storeConfig: StoreConfig<State, Actions, Props> = {
+      getInitialState,
+      actions: actionsImpl,
+      onPropsChange: {
+        getDeps: () => [],
+        effects: () => ({ stateProp1: 'from-mount-effect' }),
+        onMount: true,
+      },
+    };
+
+    function TestComponent() {
+      const store = useLocalStore(storeConfig, { prop1: 'initial' });
+      return <div>{store.state.stateProp1}</div>;
+    }
+
+    const container = document.createElement('div');
+    domAct(() => {
+      ReactDOM.render(<TestComponent />, container);
+    });
+
+    expect(container.textContent).toEqual('from-mount-effect');
+
+    domAct(() => {
+      ReactDOM.unmountComponentAtNode(container);
+    });
   });
 
   it('useStore works as expected', () => {

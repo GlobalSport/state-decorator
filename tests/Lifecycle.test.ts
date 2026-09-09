@@ -357,7 +357,7 @@ describe('Lifecycle', () => {
       expect(callback).toHaveBeenCalledTimes(1);
     });
 
-    it('onMount is called on init', () => {
+    it('onMount is called on runMountEffects', () => {
       const onMount = jest.fn();
       const store = createStore<State, Action, any>({
         getInitialState: () => ({ prop: '' }),
@@ -368,6 +368,10 @@ describe('Lifecycle', () => {
       });
 
       store.init({});
+
+      expect(onMount).not.toHaveBeenCalled();
+
+      store.runMountEffects();
 
       expect(onMount).toHaveBeenCalled();
 
@@ -397,6 +401,10 @@ describe('Lifecycle', () => {
     const callback = jest.fn();
 
     store.init({ callback });
+
+    expect(callback).not.toHaveBeenCalled();
+
+    store.runMountEffects();
 
     expect(callback).toHaveBeenCalled();
   });
@@ -481,9 +489,11 @@ describe('Lifecycle', () => {
       store.init({
         propIn: 'init',
       });
+      store.runMountEffects();
 
-      // side effect + onMount
-      expect(callback).toHaveBeenCalledTimes(1);
+      // init() notifies once (base state ready), runMountEffects() notifies again after
+      // applying the onMount-flagged onPropsChange effect
+      expect(callback).toHaveBeenCalledTimes(2);
 
       expect(store.state).toEqual({
         prop1: 'init',
@@ -525,9 +535,11 @@ describe('Lifecycle', () => {
       store.init({
         propIn: 'init',
       });
+      store.runMountEffects();
 
-      // side effect + onMount
-      expect(callback).toHaveBeenCalledTimes(2);
+      // init() notifies once (base state ready), runMountEffects() notifies again after
+      // applying the onMount-flagged onPropsChange side effect
+      expect(callback).toHaveBeenCalledTimes(3);
 
       expect(store.state).toEqual({
         prop1: 'effect',
@@ -630,9 +642,11 @@ describe('Lifecycle', () => {
       store.init({
         propIn: 'init',
       });
+      store.runMountEffects();
 
-      // side effect + onMount
-      expect(callback).toHaveBeenCalledTimes(2);
+      // init() notifies once (base state ready), runMountEffects() notifies again after
+      // applying the onMount-flagged onPropsChange effect + side effect
+      expect(callback).toHaveBeenCalledTimes(3);
 
       expect(store.state).toEqual({
         prop1: 'init',
