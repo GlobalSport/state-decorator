@@ -1,9 +1,9 @@
 import { OptimisticViewProps } from './Optimistic';
 
 import { Button, Box, Typography } from '@mui/material';
-import PlayArrowIcon from '@mui/icons-material/PlayArrow';
-import RotateLeftIcon from '@mui/icons-material/RotateLeft';
-import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
+import { PlayArrow as PlayArrowIcon } from '@mui/icons-material';
+import { RotateLeft as RotateLeftIcon } from '@mui/icons-material';
+import { ErrorOutline as ErrorOutlineIcon } from '@mui/icons-material';
 
 import RequestStatus from './RequestStatus';
 

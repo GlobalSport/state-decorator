@@ -2,9 +2,9 @@ import { memo } from 'react';
 
 import { Button, Box } from '@mui/material';
 
-import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
-import CancelIcon from '@mui/icons-material/Cancel';
-import PlayIcon from '@mui/icons-material/PlayArrow';
+import { ErrorOutline as ErrorOutlineIcon } from '@mui/icons-material';
+import { Cancel as CancelIcon } from '@mui/icons-material';
+import { PlayArrow as PlayIcon } from '@mui/icons-material';
 
 import RequestStatus from './RequestStatus';
 import { AbortViewProps } from './Abort';
