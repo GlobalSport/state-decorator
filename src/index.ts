@@ -965,9 +965,7 @@ export function useLocalStore<S, A extends DecoratedActions, P, DS = {}>(
   refreshOnUpdate: boolean = true
 ) {
   const storeRef = useRef<StoreApi<S, A, P, DS>>();
-  if (storeRef.current == null) {
-    storeRef.current = createStore(config);
-  }
+  storeRef.current ??= createStore(config);
 
   useEffect(() => {
     storeRef.current.invokeOnMountDeferred();

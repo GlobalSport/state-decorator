@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 import { Typography, Box, Button, TextField } from '@mui/material';
-import CancelIcon from '@mui/icons-material/Cancel';
+import { Cancel as CancelIcon } from '@mui/icons-material';
 
 import { Item, ParallelAbortViewProps } from './ParallelAbort';
 import RequestStatus from './RequestStatus';

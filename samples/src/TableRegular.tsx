@@ -10,9 +10,9 @@ import {
   IconButton,
 } from '@mui/material';
 
-import DeleteIcon from '@mui/icons-material/Delete';
-import ArrowUpIcon from '@mui/icons-material/ArrowUpward';
-import ArrowDownIcon from '@mui/icons-material/ArrowDownward';
+import { Delete as DeleteIcon } from '@mui/icons-material';
+import { ArrowUpward as ArrowUpIcon } from '@mui/icons-material';
+import { ArrowDownward as ArrowDownIcon } from '@mui/icons-material';
 import { useStoreSlice } from './sd_src';
 import FlashingBox, { useFlashingNode } from './FlashingBox';
 import { memo, useRef } from 'react';

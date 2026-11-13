@@ -48,6 +48,7 @@ const storeConfig: StoreConfig<State, Actions> = {
 // Actions implementation
 
 const store = createStore(storeConfig);
+store.init(null);
 
 // Container that is managing the state using usetateDecorator hook
 const OptimisticApp = () => {

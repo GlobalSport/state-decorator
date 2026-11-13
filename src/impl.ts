@@ -361,7 +361,7 @@ export function buildLoadingMap<A>(
   if (loading) {
     return {
       ...source,
-      [actionName]: { ...(source[actionName] || {}), [promiseId]: loading },
+      [actionName]: { ...source[actionName], [promiseId]: loading },
     };
   }
   const res = {
@@ -381,7 +381,7 @@ export function updateErrorMap<A>(
   if (error) {
     return {
       ...source,
-      [actionName]: { ...(source[actionName] || {}), [promiseId]: error },
+      [actionName]: { ...source[actionName], [promiseId]: error },
     };
   }
 
@@ -1174,7 +1174,7 @@ export function decorateAsyncAction<S, DS, F extends (...args: any[]) => any, A 
 
     if (p != null) {
       promises[actionName] = {
-        ...(promises[actionName] || {}),
+        ...promises[actionName],
         [promiseId || DEFAULT_PROMISE_ID]: {
           abortController,
           promise: p,
@@ -1425,7 +1425,7 @@ export function fixDerivedDeps<S, A, P, DS>(options: StoreOptions<S, A, P, DS>) 
   for (const key of keys) {
     const deps = options.derivedState[key].derivedDeps ?? [];
     hasDeps = hasDeps || deps.length > 0;
-    depsSet[key] = deps.concat();
+    depsSet[key] = [...deps];
   }
 
   // 2 no cycles => compute order

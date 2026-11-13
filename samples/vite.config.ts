@@ -5,6 +5,9 @@ import sassDts from 'vite-plugin-sass-dts';
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  resolve: {
+    dedupe: ['react', 'react-dom'],
+  },
   optimizeDeps: {
     include: ['@mui/material/Tooltip', '@emotion/styled'],
   },
@@ -14,7 +17,7 @@ export default defineConfig({
       allGenerate: true,
       global: {
         generate: true,
-        outFile: path.resolve(__dirname, './src/style.d.ts'),
+        outFile: path.resolve(import.meta.dirname,'./src/style.d.ts'),
       },
     }),
   ],

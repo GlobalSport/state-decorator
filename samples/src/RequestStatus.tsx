@@ -5,10 +5,10 @@ import Box from '@mui/material/Box';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 
-import PauseCircleOutlineIcon from '@mui/icons-material/PauseCircleOutline';
-import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
-import CancelIcon from '@mui/icons-material/Cancel';
-import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import { PauseCircleOutline as PauseCircleOutlineIcon } from '@mui/icons-material';
+import { ErrorOutline as ErrorOutlineIcon } from '@mui/icons-material';
+import { Cancel as CancelIcon } from '@mui/icons-material';
+import { CheckCircleOutline as CheckCircleOutlineIcon } from '@mui/icons-material';
 import { Status } from './types';
 
 import classes from './RequestStatus.module.css';
