@@ -11,6 +11,7 @@ The StateDecorator is a set of React hooks that manage a complex component state
 - [Features](#features)
 - [V7: Partial state and new hooks](#v7-partial-state-and-new-hooks)
 - [V8: Better React 19 compatibility](#v8-better-react-19-compatibility)
+- [V9: ES-only build and legacy removal](#v9-es-only-build-and-legacy-removal)
 - [Getting started](#getting-started)
 - [React hooks](#react-hooks)
 - [StoreApi](#storeapi)
@@ -36,9 +37,9 @@ The StateDecorator is a set of React hooks that manage a complex component state
 - [Build](#build)
 - [Limitations](#limitations)
 - [Migration](#migration)
+  - [V8 to V9](#v8-to-v9)
   - [V7 to V8](#v7-to-v8)
   - [V6 to V7](#v6-to-v7)
-  - [V5 to V6](#v5-to-v6)
 - [Examples](#examples)
 - [Visual Studio Code user snippet](#visual-studio-code-user-snippet)
 
@@ -67,6 +68,13 @@ The StateDecorator is a set of React hooks that manage a complex component state
 # V8: Better React 19 compatibility
 
 - Fixed a React 18+/19 concurrent rendering issue: **onMount** (and **onPropsChange** entries flagged **onMount: true**) used to run during **init()**, which can itself run during render. Under concurrent rendering, a discarded and retried render attempt could trigger these side effects (e.g. data fetches) more than once per real mount. They are now deferred to a new **runMountEffects()** store method, called once from a layout effect after the render that actually commits — see [Call actions on mount](#call-actions-on-mount).
+- See migration details in [migration section](#migration).
+
+# V9: ES-only build and legacy removal
+
+- The **v5** and **v6** compatibility layers were removed: the `state-decorator/v5`, `state-decorator/v5_test` and `state-decorator/v6` entry points no longer exist.
+- The package is now ES modules only: the CommonJS build and the `es/` folder were removed, the output is not transpiled (ESNext, it was ES5) and the ES files are now at the package root. A bundler is required.
+- The library is now built with [rolldown](https://rolldown.rs).
 - See migration details in [migration section](#migration).
 
 # Getting started
@@ -1757,17 +1765,15 @@ TypeError: Cannot set property 'crash' of null
 
 # Build
 
-This library provides CJS and ES files.
+This library provides ES modules only, with untranspiled ESNext output: it is meant to be consumed through a bundler (webpack, Vite, Rollup, esbuild...) that transpiles it for your target browsers. Each entry point (`index`, `helpers`, `middlewares`, `development`, `test`) is a file at the package root, and no bundler alias is needed.
 
-Webpack users should add this alias rule to prevent importing both (especially when importing another file than `index.js`):
+It is built with [rolldown](https://rolldown.rs):
 
-```js
-resolve: {
-  alias: {
-    'state-decorator': 'state-decorator/es',
-  },
-},
-```
+- `yarn bundle` builds the production bundles (minified) in `lib` and emits the type declarations with `tsc`
+- `yarn bundle:dev` builds non-minified bundles
+- `yarn build` runs `yarn bundle` and prepares `lib` for publication
+
+`process.env.NODE_ENV` is not replaced at build time: the development tools (`state-decorator/development`) rely on your own bundler defining it.
 
 # Limitations
 
@@ -1778,6 +1784,24 @@ resolve: {
   - Solution: the **Actions** interface must either extends **DecoratedActions** interface or be a **type**.
 
 # Migration
+
+## V8 to V9
+
+### Legacy compatibility layers removed
+
+The following entry points were removed, along with everything they exported (**useStateDecorator**, **StateDecoratorActions**, the **testV6\*** helpers...):
+
+- `state-decorator/v5`
+- `state-decorator/v5_test`
+- `state-decorator/v6`
+
+If your code still imports one of them, migrate it to the current API **before** upgrading, using the guides of a previous release (the V5 to V6 guide only exists in the README of v8.0.0). The V6 to V7 guide below describes the code changes.
+
+### ES modules only
+
+- The CommonJS build was removed: `main` and `module` now both point to the ES file `index.js`, so `require('state-decorator')` is no longer supported. A bundler (webpack, Vite, Rollup, esbuild...) is required.
+- The `es/` folder was removed: the ES files are now at the package root, like the former CommonJS ones. Imports like `state-decorator/helpers` or `state-decorator/middlewares` are unchanged, but deep imports of `state-decorator/es/...` must drop the `es/` segment (`state-decorator/es/helpers` becomes `state-decorator/helpers`). The webpack alias `'state-decorator': 'state-decorator/es'` must be removed.
+- The output is ESNext instead of ES5: it is not transpiled, so your bundler must transpile `state-decorator` (e.g. include it in your Babel/SWC rules if `node_modules` is excluded) for the browsers you support.
 
 ## V7 to V8
 
@@ -1794,17 +1818,6 @@ The only breaking change concerns code using **createStore** directly without an
 If you skip this, **onMount** (and `onMount`-flagged **onPropsChange** entries) will simply never run. See [Call actions on mount](#call-actions-on-mount) for details.
 
 ## V6 to V7
-
-### Step 1: V6 compatibility layer
-
-Only **useLocalStore** is supported by compatiblity layer.
-
-```diff
--import useLocalStore from 'state-decorator';
-+import useLocalStore from 'state-decorator/v6';
-```
-
-### Step 2: Migrate code
 
 - Merge _getInitialState_, _actions_, _options_ in a single object.
 - Remove state spread in effects
@@ -1849,153 +1862,6 @@ Only **useLocalStore** is supported by compatiblity layer.
 +   return <div>{myProp}</div>;
 + }
 ```
-
-## V5 to V6
-
-### Step 1: v5 compatibility layer
-
-To use the new engine while still using v5 API, juste import the v5 compatibility layer.
-You can new store in new code.
-
-```diff
--import useStateDecorator, { StateDecoratorActions } from 'state-decorator';
-+import useStateDecorator, { StateDecoratorActions } from 'state-decorator/v5';
-```
-
-If you are using optimistic effects, make sure to set the **optimisticActions** middleware as a default middleware, see [Optimistic actions](#optimistic-actions).
-
-```typescript
-import { setGlobalConfig } from 'state-decorator';
-import { optimisticActions } from 'state-decorator/middlewares';
-
-setGlobalConfig({
-  defaultMiddlewares: [optimisticActions()],
-});
-```
-
-### Step 2: Migrate code but keep v5 tests
-
-#### Code
-
-##### Types
-
-| Before                | After        |
-| --------------------- | ------------ |
-| StateDecoratorActions | StoreActions |
-| StateDecoratorOptions | StoreOptions |
-
-##### Optimistic actions
-
-If you are using optimistic effects, make sure to set the **optimisticActions** middleware to your stores, see [Optimistic actions](#optimistic-actions).
-
-#### Hooks
-
-Choose one of _useLocalStore_, _useStore_, _useStoreSlice_.
-
-#### Actions
-
-- rename action properties
-
-| Before            | After             |
-| ----------------- | ----------------- |
-| action            | effects           |
-| onActionDone      | sideEffects       |
-| preReducer        | preEffects        |
-| optimisticReducer | optimisticEffects |
-| reducer           | effects           |
-| errorReducer      | errorEffects      |
-| onDone            | sideEffects       |
-| onFail            | errorSideEffects  |
-| promise           | getPromise        |
-| promiseGet        | getGetPromise     |
-| successMessage    | getSuccessMessage |
-| errorMessage      | getErrorMessage   |
-
-- replace argumtents by action context
-
-```diff
-- const actions: StateDecoratorActions<S, A, P> = {
-+ const actions: StoreActions<S, A, P> = {
-    loadList: {
--     promise: ([id], s, p, a) => {
-+     getPromise: ({ s, args: [id], p, a }) => {
-        /* ... */
-      },
--     reducer: (s, res) => ({
-+     effects: ({ s, res }) => ({
-        /* ... */
-      }),
--     errorReducer: (s, err) => ({
-+     errorEffects: ({ s, err }) => ({
-        /* ... */
-      }),
-    },
-  };
-```
-
-#### Options
-
-##### onMount
-
-```diff
-- const options: StateDecoratorOptions<S, A, P> = {
--   onMount: (actions, props, state) => { /* initial side effects */ }
-- };
-
-+ const options: StoreOptions<S, A, P> = {
-+   onMount: ({state, props, actions}) => { /* initial side effects */ }
-+} ;
-```
-
-##### logEnabled
-
-```diff
-- function Container(props: Props) {
--   const { state, actions } = useStateDecorator(getInitialState, actionsImpl, props, { logEnabled: true });
--   return <div />;
-- }
-
-+ import { logDetailedEffects } from 'state-decorator/middlewares';
-+
-+ function Container(props: Props) {
-+   const { state, actions } = useLocalStore(getInitialState, actionsImpl, props, {}, [logDetailedEffects()]);
-+   return <div />;
-+ }
-```
-
-##### Props changes
-
-```diff
-- const options: StateDecoratorOptions<S, A, P> = {
--   getPropsRefValues: (p) => [],
--   onPropsChangeReducer: (s, p, indices) => ({ ...s /* new state */ }),
--   onPropsChange: (s, p, a, indices) => {
--     /* side effects */
--   },
-- };
-
-+ const options: StoreOptions<S, A, P> = {
-+   onPropsChange: {
-+     getDeps: (p) => [],
-+     effects: ({ s, p, indices }) => ({ ...s /* new state */ }),
-+     sideEffects: ({ s, p, a, indices }) => {
-+       /* side effects */
-+     },
-+   },
-+} ;
-```
-
-#### Reuse v5 tests with v6 actions
-
-```diff
-- import { testSyncAction, testAsyncAction } from 'state-decorator';
-
-+ import { testV6SyncAction, testV6AsyncAction } from 'state-decorator/v5_test';
-```
-
-### Step 3 (optional): Migrate tests
-
-🎊 Congratulations! 🎊
 
 # Examples
 
